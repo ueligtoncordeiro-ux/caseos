@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Backend API (FastAPI · porta 8000)",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["backend/start.sh"],
+      "port": 8000,
+      "cwd": ".",
+      "description": "FastAPI + Uvicorn com hot-reload. Cria venv, instala dependências e inicia em http://localhost:8000. Swagger em /docs."
+    },
+    {
+      "name": "Frontend Static (HTML · porta 5500)",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "5500"],
+      "port": 5500,
+      "cwd": ".",
+      "description": "Servidor estático para landing.html, login.html, dashboard.html e index.html em http://localhost:5500."
+    },
+    {
+      "name": "Docker Compose (API + PostgreSQL)",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "up", "--build"],
+      "port": 8000,
+      "cwd": "backend",
+      "description": "Sobe API (porta 8000) + PostgreSQL (porta 5432) via Docker Compose. Produção-like com 2 workers Uvicorn."
+    }
+  ]
+}

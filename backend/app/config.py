@@ -1,0 +1,61 @@
+from pydantic_settings import BaseSettings
+from functools import lru_cache
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Carrega o .env explicitamente antes do pydantic (resolve problema com espaços no caminho)
+_ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=_ENV_FILE, override=True)
+
+
+class Settings(BaseSettings):
+    anthropic_api_key: str = ""
+    openai_api_key: str = ""
+    gemini_api_key: str = ""
+    pubmed_api_key: str = ""
+    semantic_scholar_api_key: str = ""
+    polite_email: str = "rccs@exemplo.com"
+    resend_api_key: str = ""
+    resend_from_email: str = "RCCS <noreply@rccs.com.br>"
+    sherpa_romeo_api_key: str = ""  # disponível após julho/2026
+
+    database_url: str = "sqlite+aiosqlite:///./rccs.db"
+
+    secret_key: str = "dev-secret-key-troque-em-producao"
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 480
+
+    environment: str = "development"
+    frontend_url: str = "http://localhost:5500"
+    log_level: str = "INFO"
+
+    max_pipeline_timeout: int = 900
+    max_agent_timeout: int = 120
+
+    docx_output_dir: str = "./docx_output"
+
+    # ── Google OAuth ──────────────────────────────────────────────────────────
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = "http://localhost:8000/auth/google/callback"
+
+    # ── Stripe ────────────────────────────────────────────────────────────────
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_pro_price_id: str = ""
+    stripe_inst_price_id: str = ""
+
+    # ── Token TTL ─────────────────────────────────────────────────────────────
+    refresh_token_expire_days: int = 30
+
+    class Config:
+        env_file = str(_ENV_FILE)
+        extra = "ignore"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+
+settings = get_settings()

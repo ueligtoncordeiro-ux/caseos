@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>neuraxIA CaseOS · Acesso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --acid:    #C8FF00;
+  --obsidian:#0A0A0B;
+  --slate:   #1C1C1E;
+  --white:   #FFFFFF;
+  --light:   #F7F7F5;
+  --border:  #E9E9E7;
+  --gray:    #787774;
+  --muted:   #ACABA8;
+  --red:     #E53E3E;
+  --amber:   #D97706;
+  --green:   #16A34A;
+  --head:    'Space Grotesk', sans-serif;
+  --body:    'Inter', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: var(--body);
+  background: var(--light);
+  color: var(--obsidian);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Layout split ── */
+.login-wrap {
+  display: flex;
+  width: 100%;
+  max-width: 960px;
+  min-height: 100vh;
+  align-items: stretch;
+}
+
+/* ── Brand panel (left) ── */
+.brand-panel {
+  flex: 1;
+  background: var(--obsidian);
+  padding: 60px 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+.brand-panel::before {
+  content: '';
+  position: absolute;
+  bottom: -120px; right: -120px;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(200,255,0,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.brand-logo { display: flex; align-items: center; gap: 12px; }
+.brand-logo svg { width: 36px; height: 36px; flex-shrink: 0; }
+.brand-wordmark { display: flex; flex-direction: column; line-height: 1.1; }
+.brand-neura {
+  font-family: var(--head);
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--gray);
+}
+.brand-neura span { color: var(--acid); }
+.brand-name {
+  font-family: var(--head);
+  font-size: 18px; font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--white);
+}
+.brand-name span { color: var(--acid); }
+
+.brand-content { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 48px 0; }
+.brand-tagline {
+  font-family: var(--head);
+  font-size: 34px; font-weight: 700;
+  letter-spacing: -0.025em; line-height: 1.2;
+  color: var(--white);
+  margin-bottom: 20px;
+}
+.brand-tagline em { font-style: normal; color: var(--acid); }
+.brand-desc { font-size: 15px; color: var(--gray); line-height: 1.65; margin-bottom: 36px; }
+
+/* Mock pipeline card */
+.mock-card {
+  background: #111;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 18px 20px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.mock-title {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #555;
+  margin-bottom: 12px;
+  font-family: var(--body);
+  font-weight: 600;
+}
+.mock-line { display: flex; gap: 10px; align-items: center; }
+.mock-check { color: var(--acid); font-size: 13px; }
+.mock-label { color: #888; flex: 1; }
+.mock-score { color: var(--acid); font-weight: 700; font-size: 16px; }
+
+.brand-footer { font-size: 12px; color: #444; }
+.brand-footer a { color: var(--gray); text-decoration: none; transition: color 0.15s; }
+.brand-footer a:hover { color: var(--white); }
+
+/* ── Form panel (right) ── */
+.form-panel {
+  width: 420px;
+  flex-shrink: 0;
+  background: var(--white);
+  padding: 52px 48px 40px;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+}
+
+.form-header { margin-bottom: 32px; }
+.form-title {
+  font-family: var(--head);
+  font-size: 24px; font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--obsidian);
+  margin-bottom: 6px;
+}
+.form-sub { font-size: 14px; color: var(--gray); line-height: 1.5; }
+
+/* Alert */
+.alert {
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13.5px;
+  margin-bottom: 20px;
+  display: none;
+  line-height: 1.5;
+}
+.alert.error   { background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626; }
+.alert.success { background: #F0FFF4; border: 1px solid #BBF7D0; color: #16A34A; }
+.alert.info    { background: #FFFBEB; border: 1px solid #FDE68A; color: #D97706; }
+
+/* Google button */
+.btn-google {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: var(--body);
+  font-size: 14px; font-weight: 500;
+  color: var(--obsidian);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  margin-bottom: 20px;
+  text-decoration: none;
+}
+.btn-google:hover {
+  border-color: #bbb;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+}
+.google-icon { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* Divider */
+.divider {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 22px;
+}
+.divider::before, .divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+.divider span {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); flex-shrink: 0;
+}
+
+/* Fields */
+.field { margin-bottom: 18px; }
+.field label {
+  display: block;
+  font-size: 12px; font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--slate);
+  margin-bottom: 7px;
+}
+.field input {
+  width: 100%;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--obsidian);
+  font-family: var(--body);
+  font-size: 14px;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.field input:focus {
+  border-color: var(--obsidian);
+  box-shadow: 0 0 0 3px rgba(10,10,11,0.07);
+}
+.field input::placeholder { color: var(--muted); }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+.field-row .field { margin-bottom: 0; }
+
+/* Forgot */
+.forgot {
+  font-size: 12px; color: var(--gray);
+  float: right; margin-top: -12px; margin-bottom: 18px;
+  cursor: pointer; transition: color 0.15s;
+  text-decoration: none;
+}
+.forgot:hover { color: var(--obsidian); text-decoration: underline; }
+
+/* Checkbox */
+.check-field {
+  display: flex; align-items: flex-start; gap: 10px; margin-bottom: 22px;
+}
+.check-field input[type="checkbox"] {
+  width: 16px; height: 16px;
+  accent-color: var(--obsidian);
+  flex-shrink: 0; margin-top: 2px; cursor: pointer;
+}
+.check-field label {
+  font-size: 12px; color: var(--gray); line-height: 1.55; cursor: pointer;
+}
+.check-field a { color: var(--obsidian); text-decoration: underline; text-underline-offset: 2px; }
+
+/* Primary button */
+.btn-primary {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--obsidian);
+  color: var(--white);
+  font-family: var(--head);
+  font-size: 14px; font-weight: 600;
+  padding: 13px;
+  border: none; border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.12s;
+  margin-bottom: 18px;
+  letter-spacing: -0.01em;
+}
+.btn-primary:hover { opacity: 0.87; transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+/* Switch mode */
+.switch-mode { text-align: center; font-size: 13px; color: var(--gray); }
+.switch-mode a {
+  color: var(--obsidian); font-weight: 600;
+  text-decoration: underline; text-underline-offset: 2px;
+  cursor: pointer; transition: opacity 0.15s;
+}
+.switch-mode a:hover { opacity: 0.7; }
+
+/* Password strength */
+.pw-strength {
+  height: 3px; background: var(--border);
+  border-radius: 3px; margin-top: 8px; overflow: hidden;
+}
+.pw-strength-bar {
+  height: 100%; border-radius: 3px;
+  transition: width 0.3s, background 0.3s; width: 0%;
+}
+
+/* Plano badge */
+.plano-badge {
+  display: inline-block;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--obsidian);
+  border: 1px solid var(--border);
+  background: #F0F0EE;
+  padding: 3px 10px; border-radius: 4px;
+  margin-left: 8px; vertical-align: middle;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .login-wrap { flex-direction: column; max-width: 100%; min-height: auto; }
+  .brand-panel { display: none; }
+  .form-panel {
+    width: 100%; border-left: none;
+    padding: 40px 28px 32px;
+    min-height: 100vh;
+  }
+  .form-header { margin-bottom: 24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="login-wrap">
+  <!-- ═══════════ BRAND PANEL ═══════════ -->
+  <div class="brand-panel">
+    <div class="brand-logo">
+      <svg viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="44" height="36" rx="7" stroke="#C8FF00" stroke-width="2.6"/>
+        <line x1="10" y1="20" x2="20" y2="20" stroke="#C8FF00" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M38 14 L28 20 L38 26" stroke="#C8FF00" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M20 38 L15 54" stroke="#C8FF00" stroke-width="2.6" stroke-linecap="round"/>
+      </svg>
+      <div class="brand-wordmark">
+        <span class="brand-neura">NEURA<span>XIA</span></span>
+        <span class="brand-name">Case<span>OS</span></span>
+      </div>
+    </div>
+
+    <div class="brand-content">
+      <div class="brand-tagline">
+        Relatos de caso.<br><em>Publicáveis</em> em minutos.
+      </div>
+      <div class="brand-desc">
+        Pipeline multi-agente com IA para médicos e pesquisadores brasileiros.
+        Do formulário ao artigo com CARE Score e referências PubMed.
+      </div>
+      <div class="mock-card">
+        <div class="mock-title">Pipeline CaseOS — ao vivo</div>
+        <div class="mock-line">
+          <span class="mock-check">✓</span>
+          <span class="mock-label">Agente Escritor</span>
+          <span style="color:#555;font-size:11px">8 seções</span>
+        </div>
+        <div class="mock-line">
+          <span class="mock-check">✓</span>
+          <span class="mock-label">Revisor CARE 2013</span>
+          <span style="color:#555;font-size:11px">13/13</span>
+        </div>
+        <div class="mock-line">
+          <span class="mock-check">✓</span>
+          <span class="mock-label">Bibliógrafo PubMed</span>
+          <span style="color:#555;font-size:11px">12 refs</span>
+        </div>
+        <div class="mock-line" style="margin-top:6px;padding-top:10px;border-top:1px solid #222">
+          <span class="mock-label" style="color:#666">CARE Score</span>
+          <span class="mock-score">92/100</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="brand-footer">
+      <a href="landing.html">← Voltar ao início</a>
+      &nbsp;·&nbsp;
+      <a href="#">Termos</a>
+      &nbsp;·&nbsp;
+      <a href="#">Privacidade</a>
+    </div>
+  </div>
+
+  <!-- ═══════════ FORM PANEL ═══════════ -->
+  <div class="form-panel">
+    <!-- Alert global -->
+    <div class="alert" id="alertBox"></div>
+
+    <!-- ════ VIEW: LOGIN ════ -->
+    <div id="viewLogin">
+      <div class="form-header">
+        <h1 class="form-title">Bem-vindo de volta.</h1>
+        <p class="form-sub">Entre na sua conta para continuar sua pesquisa.</p>
+      </div>
+
+      <a class="btn-google" href="http://localhost:8000/auth/google" id="btnGoogle">
+        <svg class="google-icon" viewBox="0 0 24 24" fill="none">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Continuar com Google
+      </a>
+
+      <div class="divider"><span>ou</span></div>
+
+      <form id="formLogin" onsubmit="submitLogin(event)">
+        <div class="field">
+          <label>E-mail</label>
+          <input type="email" id="loginEmail" placeholder="medico@hospital.com.br" required autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Senha</label>
+          <input type="password" id="loginSenha" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <a class="forgot" onclick="showView('viewForgot')">Esqueci a senha</a>
+        <br style="clear:both">
+        <button class="btn-primary" type="submit" id="btnLogin">Entrar →</button>
+      </form>
+
+      <div class="switch-mode">
+        Não tem conta? <a onclick="showView('viewRegister')">Cadastre-se grátis</a>
+      </div>
+    </div>
+
+    <!-- ════ VIEW: CADASTRO ════ -->
+    <div id="viewRegister" style="display:none">
+      <div class="form-header">
+        <h1 class="form-title">Criar conta.</h1>
+        <p class="form-sub">Grátis — 1 relato por mês incluído.</p>
+      </div>
+
+      <a class="btn-google" href="http://localhost:8000/auth/google" id="btnGoogleReg">
+        <svg class="google-icon" viewBox="0 0 24 24" fill="none">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Cadastrar com Google
+      </a>
+
+      <div class="divider"><span>ou preencha</span></div>
+
+      <form id="formRegister" onsubmit="submitRegister(event)">
+        <div class="field-row">
+          <div class="field">
+            <label>Nome completo *</label>
+            <input type="text" id="regNome" placeholder="Dr. João Silva" required autocomplete="name">
+          </div>
+          <div class="field">
+            <label>CRM / CRO <span style="color:var(--muted);font-size:10px">(opcional)</span></label>
+            <input type="text" id="regCrm" placeholder="CRM-SP 123456">
+          </div>
+        </div>
+        <div class="field">
+          <label>E-mail *</label>
+          <input type="email" id="regEmail" placeholder="medico@hospital.com.br" required autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Senha *</label>
+          <input type="password" id="regSenha" placeholder="Mínimo 8 caracteres"
+                 required autocomplete="new-password" oninput="avaliarSenha(this.value)">
+          <div class="pw-strength"><div class="pw-strength-bar" id="pwBar"></div></div>
+        </div>
+
+        <div class="check-field">
+          <input type="checkbox" id="lgpdCheck">
+          <label for="lgpdCheck">
+            Aceito os <a href="#">Termos de Uso</a> e a <a href="#">Política de Privacidade</a>.
+            Confirmo que os dados clínicos inseridos são anonimizados conforme a LGPD.
+          </label>
+        </div>
+
+        <button class="btn-primary" type="submit" id="btnRegister">Criar conta grátis →</button>
+      </form>
+
+      <div class="switch-mode">
+        Já tem conta? <a onclick="showView('viewLogin')">Entrar</a>
+      </div>
+    </div>
+
+    <!-- ════ VIEW: ESQUECI A SENHA ════ -->
+    <div id="viewForgot" style="display:none">
+      <div class="form-header">
+        <h1 class="form-title">Recuperar acesso.</h1>
+        <p class="form-sub">Enviaremos um link de redefinição para seu e-mail.</p>
+      </div>
+
+      <form id="formForgot" onsubmit="submitForgot(event)">
+        <div class="field">
+          <label>E-mail da conta</label>
+          <input type="email" id="forgotEmail" placeholder="medico@hospital.com.br" required>
+        </div>
+        <button class="btn-primary" type="submit" id="btnForgot">Enviar link de recuperação</button>
+      </form>
+
+      <div class="switch-mode" style="margin-top:8px">
+        <a onclick="showView('viewLogin')">← Voltar ao login</a>
+      </div>
+    </div>
+
+    <!-- ════ VIEW: REDEFINIR SENHA ════ -->
+    <div id="viewReset" style="display:none">
+      <div class="form-header">
+        <h1 class="form-title">Nova senha.</h1>
+        <p class="form-sub">Escolha uma senha segura para sua conta.</p>
+      </div>
+
+      <form id="formReset" onsubmit="submitReset(event)">
+        <div class="field">
+          <label>Nova senha</label>
+          <input type="password" id="resetSenha" placeholder="Mínimo 8 caracteres"
+                 required oninput="avaliarSenha(this.value)">
+          <div class="pw-strength"><div class="pw-strength-bar" id="pwBar2"></div></div>
+        </div>
+        <button class="btn-primary" type="submit" id="btnReset">Redefinir senha →</button>
+      </form>
+    </div>
+
+    <!-- ════ VIEW: VERIFICAR EMAIL ════ -->
+    <div id="viewVerifyPending" style="display:none">
+      <div class="form-header">
+        <h1 class="form-title">Verifique seu e-mail.</h1>
+        <p class="form-sub" id="verifyPendingMsg">Enviamos um link de ativação. Verifique sua caixa de entrada e a pasta de spam.</p>
+      </div>
+      <div style="font-size:52px;text-align:center;margin:32px 0">✉️</div>
+      <div class="switch-mode">
+        <a onclick="showView('viewLogin')">← Voltar ao login</a>
+      </div>
+    </div>
+
+  </div><!-- /form-panel -->
+</div><!-- /login-wrap -->
+
+<script>
+const API = 'http://localhost:8000';
+
+function showView(id) {
+  ['viewLogin','viewRegister','viewForgot','viewReset','viewVerifyPending']
+    .forEach(v => document.getElementById(v).style.display = v === id ? '' : 'none');
+  clearAlert();
+}
+
+function showAlert(msg, type = 'error') {
+  const el = document.getElementById('alertBox');
+  el.className = `alert ${type}`;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function clearAlert() {
+  const el = document.getElementById('alertBox');
+  el.style.display = 'none';
+  el.textContent = '';
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) {
+    btn.dataset.label = btn.textContent;
+    btn.textContent = 'Aguarde…';
+  } else {
+    btn.textContent = btn.dataset.label || btn.textContent;
+  }
+}
+
+function avaliarSenha(val) {
+  const bars = document.querySelectorAll('.pw-strength-bar');
+  let score = 0;
+  if (val.length >= 8)        score++;
+  if (/[A-Z]/.test(val))      score++;
+  if (/[0-9]/.test(val))      score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+  const colors = ['#E53E3E','#D97706','#16A34A','#0A0A0B'];
+  const widths  = ['25%','50%','75%','100%'];
+  bars.forEach(b => {
+    b.style.width      = score ? widths[score-1] : '0%';
+    b.style.background = score ? colors[score-1] : 'transparent';
+  });
+}
+
+(function checkUrlParams() {
+  const p = new URLSearchParams(location.search);
+
+  if (p.get('token')) {
+    sessionStorage.setItem('rccs_token', p.get('token'));
+    history.replaceState({}, '', location.pathname);
+    location.href = 'dashboard.html';
+    return;
+  }
+
+  if (p.get('verify')) {
+    fetch(`${API}/auth/verify?token=${p.get('verify')}`, { redirect: 'manual' });
+    history.replaceState({}, '', location.pathname);
+  }
+
+  if (p.get('reset')) {
+    sessionStorage.setItem('reset_token', p.get('reset'));
+    history.replaceState({}, '', location.pathname);
+    showView('viewReset');
+    return;
+  }
+
+  const msg = p.get('msg');
+  if (msg === 'verified')         showAlert('E-mail verificado! Faça login.', 'success');
+  if (msg === 'already_verified') showAlert('E-mail já verificado. Faça login.', 'info');
+  if (msg === 'session_expired')  showAlert('Sessão expirada. Faça login novamente.', 'info');
+  if (p.get('upgrade') === 'ok')  showAlert('Plano ativado com sucesso!', 'success');
+})();
+
+if (sessionStorage.getItem('rccs_token')) {
+  location.href = 'dashboard.html';
+}
+
+async function submitLogin(e) {
+  e.preventDefault();
+  clearAlert();
+  setLoading('btnLogin', true);
+  const email = document.getElementById('loginEmail').value.trim();
+  const senha = document.getElementById('loginSenha').value;
+  try {
+    const res  = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, senha }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showAlert(data.detail || 'Erro ao entrar. Tente novamente.'); return; }
+    sessionStorage.setItem('rccs_token', data.access_token);
+    sessionStorage.setItem('rccs_user',  JSON.stringify(data.usuario));
+    location.href = 'dashboard.html';
+  } catch (_) {
+    showAlert('Sem conexão com o servidor. Verifique se o backend está rodando.');
+  } finally {
+    setLoading('btnLogin', false);
+  }
+}
+
+async function submitRegister(e) {
+  e.preventDefault();
+  clearAlert();
+  if (!document.getElementById('lgpdCheck').checked) {
+    showAlert('Você precisa aceitar os termos de uso para criar uma conta.');
+    return;
+  }
+  const nome  = document.getElementById('regNome').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const senha = document.getElementById('regSenha').value;
+  const crm   = document.getElementById('regCrm').value.trim();
+  if (senha.length < 8) { showAlert('A senha deve ter pelo menos 8 caracteres.'); return; }
+  setLoading('btnRegister', true);
+  try {
+    const res  = await fetch(`${API}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome, email, senha, lgpd_aceito: true, crm_cro: crm || null }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showAlert(data.detail || 'Erro ao criar conta.'); return; }
+    document.getElementById('verifyPendingMsg').textContent =
+      `Enviamos um link de ativação para ${email}. Verifique sua caixa de entrada e a pasta de spam.`;
+    showView('viewVerifyPending');
+  } catch (_) {
+    showAlert('Sem conexão com o servidor.');
+  } finally {
+    setLoading('btnRegister', false);
+  }
+}
+
+async function submitForgot(e) {
+  e.preventDefault();
+  clearAlert();
+  setLoading('btnForgot', true);
+  const email = document.getElementById('forgotEmail').value.trim();
+  try {
+    const res  = await fetch(`${API}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    showAlert(data.mensagem || 'Link enviado! Verifique sua caixa de entrada.', 'success');
+  } catch (_) {
+    showAlert('Sem conexão com o servidor.');
+  } finally {
+    setLoading('btnForgot', false);
+  }
+}
+
+async function submitReset(e) {
+  e.preventDefault();
+  clearAlert();
+  const token      = sessionStorage.getItem('reset_token') || '';
+  const nova_senha = document.getElementById('resetSenha').value;
+  if (!token) { showAlert('Link inválido ou expirado. Solicite um novo.'); return; }
+  if (nova_senha.length < 8) { showAlert('A senha deve ter pelo menos 8 caracteres.'); return; }
+  setLoading('btnReset', true);
+  try {
+    const res  = await fetch(`${API}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, nova_senha }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showAlert(data.detail || 'Erro ao redefinir senha.'); return; }
+    sessionStorage.removeItem('reset_token');
+    showAlert('Senha redefinida com sucesso! Faça login.', 'success');
+    setTimeout(() => showView('viewLogin'), 2000);
+  } catch (_) {
+    showAlert('Sem conexão com o servidor.');
+  } finally {
+    setLoading('btnReset', false);
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+# ──────────────────────────────────────────
+# neuraxIA CaseOS — .gitignore
+# ──────────────────────────────────────────
+
+# === SEGREDOS / API KEYS ===
+backend/.env
+.env
+*.env
+!backend/.env.example   # o template SEM chaves reais fica no repo
+
+# === BANCO DE DADOS LOCAL ===
+backend/rccs.db
+backend/*.db
+*.db
+*.sqlite
+*.sqlite3
+
+# === VIRTUAL ENV / DEPS INSTALADAS ===
+backend/.venv/
+.venv/
+venv/
+env/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# === ARTEFATOS DE BUILD ===
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# === SAÍDA DE DOCUMENTOS GERADOS ===
+backend/docx_output/
+docx_output/
+*.docx
+*.pdf
+
+# === LOGS ===
+*.log
+uvicorn*.log
+
+# === SISTEMA OPERACIONAL ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === EDITORES / IDEs ===
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# === SCRIPTS TEMPORÁRIOS (preview_start sandbox) ===
+# Estes ficam em /tmp e não estão no repo, mas por segurança:
+/tmp/
+
+# === DOCKER ===
+# docker-compose.yml É incluído (infra de produção)
+# Volumes locais não devem existir no repo
+
+# === NODE (caso adicione frontend build no futuro) ===
+node_modules/
+.npm/
