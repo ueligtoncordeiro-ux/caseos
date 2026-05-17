@@ -14,16 +14,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Railway CLI
-        run: npm install -g @railway/cli
+        run: npm install -g @railway/cli@latest
 
       - name: Deploy backend to Railway
         run: |
           cd backend
-          railway up --service caseos-api
+          railway up --service caseos-api --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      # ── Variáveis de ambiente no Railway (sincronizar) ─────────────────────
-      # As variáveis abaixo são definidas via GitHub Secrets e propagadas
-      # automaticamente pelo Railway via RAILWAY_TOKEN.
-      # Configure-as também em: Railway → Project → Variables
+          # Railway project: ea547634-f587-4572-883f-a3032a419c12 (caseos)
+          # Service:         c164deaa-4573-4e8e-bf4d-ae8c66fa2fdb (caseos-api)
+          # Environment:     fc4955cc-35b5-4829-8017-b46b59dd1aa9 (production)
