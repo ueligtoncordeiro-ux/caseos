@@ -4,24 +4,55 @@ on:
   push:
     branches: [main]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ghcr.io/ueligtoncordeiro-ux/caseos-api
+
 jobs:
-  deploy:
-    name: Deploy to Railway
+  build-and-deploy:
+    name: Build Docker → ghcr.io → Railway
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      packages: write   # necessário para push ao ghcr.io
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli@latest
+      # ── Build & push Docker image para GitHub Container Registry ────────────
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Deploy backend to Railway
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+
+      # ── Atualizar Railway para usar a nova imagem ────────────────────────────
+      - name: Deploy to Railway (update image tag)
         run: |
-          cd backend
-          railway up --service caseos-api --detach
+          curl -s -X POST https://backboard.railway.app/graphql/v2 \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: railway-cli/3.0.0" \
+            -d "{\"query\":\"mutation { serviceInstanceUpdate(serviceId: \\\"c164deaa-4573-4e8e-bf4d-ae8c66fa2fdb\\\", environmentId: \\\"fc4955cc-35b5-4829-8017-b46b59dd1aa9\\\", input: { source: { image: \\\"$IMAGE_TAG\\\" } }) }\"}" \
+            | jq .
+          sleep 3
+          curl -s -X POST https://backboard.railway.app/graphql/v2 \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: railway-cli/3.0.0" \
+            -d '{"query":"mutation { serviceInstanceRedeploy(serviceId: \"c164deaa-4573-4e8e-bf4d-ae8c66fa2fdb\", environmentId: \"fc4955cc-35b5-4829-8017-b46b59dd1aa9\") }"}' \
+            | jq .
         env:
+          IMAGE_TAG: ${{ env.IMAGE }}:${{ github.sha }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          # Railway project: ea547634-f587-4572-883f-a3032a419c12 (caseos)
-          # Service:         c164deaa-4573-4e8e-bf4d-ae8c66fa2fdb (caseos-api)
-          # Environment:     fc4955cc-35b5-4829-8017-b46b59dd1aa9 (production)
