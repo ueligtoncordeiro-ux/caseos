@@ -1,0 +1,29 @@
+name: Deploy — Railway
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy backend to Railway
+        run: |
+          cd backend
+          railway up --service caseos-api
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      # ── Variáveis de ambiente no Railway (sincronizar) ─────────────────────
+      # As variáveis abaixo são definidas via GitHub Secrets e propagadas
+      # automaticamente pelo Railway via RAILWAY_TOKEN.
+      # Configure-as também em: Railway → Project → Variables

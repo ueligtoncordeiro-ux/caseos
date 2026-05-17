@@ -1,0 +1,53 @@
+name: CI — Lint & Test
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-syntax:
+    name: Python Lint & Syntax
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install -q -r backend/requirements.txt
+          pip install -q ruff
+
+      - name: Lint with ruff
+        run: ruff check backend/ --select=E,F,W --ignore=E501
+        continue-on-error: true
+
+      - name: Syntax check (py compile)
+        run: python -m compileall backend/ -q
+
+      - name: Import check (FastAPI app loads)
+        run: |
+          cd backend
+          python -c "import main; print('✅ main.py importado com sucesso')"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DATABASE_URL: sqlite+aiosqlite:///./rccs_ci.db
+          SECRET_KEY: ci-secret-key-placeholder
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PRO_PRICE_ID: ${{ secrets.STRIPE_PRO_PRICE_ID }}
+          STRIPE_INST_PRICE_ID: ${{ secrets.STRIPE_INST_PRICE_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ENVIRONMENT: ci
