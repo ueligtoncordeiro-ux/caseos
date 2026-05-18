@@ -2644,8 +2644,8 @@ async function assinarPlano(plano) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
-    if (data.checkout_url) {
-      location.href = data.checkout_url;
+    if (data.url) {
+      location.href = data.url;
     } else {
       mostrarToast('Link de pagamento não retornado pelo servidor.', 'error', '⚠️');
     }

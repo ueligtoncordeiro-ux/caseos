@@ -338,7 +338,7 @@ async def criar_checkout(
         line_items=[{"price": price_id, "quantity": 1}],
         client_reference_id=user.id,
         customer_email=user.email,
-        success_url=f"{settings.frontend_url}/index.html?upgrade=ok",
+        success_url=f"{settings.frontend_url}/dashboard.html?upgrade=ok",
         cancel_url=f"{settings.frontend_url}/login.html?upgrade=cancel",
     )
     return {"url": session.url}
