@@ -66,3 +66,9 @@ desktop.ini
 # === NODE (caso adicione frontend build no futuro) ===
 node_modules/
 .npm/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
