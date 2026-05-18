@@ -1306,6 +1306,13 @@ const API = window.location.hostname === 'localhost'
   ? 'http://localhost:8000'
   : 'https://caseos-api-production.up.railway.app';
 
+/* ── OAuth token from URL (Google redirect) ── */
+const _urlToken = new URLSearchParams(location.search).get('token');
+if (_urlToken) {
+  sessionStorage.setItem('rccs_token', _urlToken);
+  history.replaceState({}, '', location.pathname); // remove token da URL
+}
+
 /* ── auth ── */
 const token = sessionStorage.getItem('rccs_token');
 if (!token) { location.href = 'login.html'; }
