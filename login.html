@@ -66,7 +66,14 @@ body {
   pointer-events: none;
 }
 .brand-logo { display: flex; align-items: center; gap: 12px; }
-.brand-logo-img { height: 64px; width: auto; object-fit: contain; max-width: 260px; }
+.brand-logo-img { height: 80px; width: auto; object-fit: contain; max-width: 280px; }
+.brand-logo-wrap {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 20px;
+  display: inline-flex;
+  align-items: center;
+}
 .brand-wordmark { display: flex; flex-direction: column; line-height: 1.1; }
 .brand-neura {
   font-family: var(--head);
@@ -312,7 +319,9 @@ body {
   <!-- ═══════════ BRAND PANEL ═══════════ -->
   <div class="brand-panel">
     <div class="brand-logo">
-      <img src="assets/logo-caseos-banner.png" alt="CaseOS" class="brand-logo-img">
+      <div class="brand-logo-wrap">
+        <img src="assets/logo-caseos-light.png" alt="CaseOS" class="brand-logo-img">
+      </div>
     </div>
 
     <div class="brand-content">
