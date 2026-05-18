@@ -1302,7 +1302,9 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 
 <!-- ══ JAVASCRIPT ══ -->
 <script>
-const API = 'http://localhost:8000';
+const API = window.location.hostname === 'localhost'
+  ? 'http://localhost:8000'
+  : 'https://caseos-api-production.up.railway.app';
 
 /* ── auth ── */
 const token = sessionStorage.getItem('rccs_token');
@@ -1650,7 +1652,11 @@ async function iniciarGeracao() {
   document.getElementById('btnModalOk').style.display = 'none';
 
   let wsConnected = false;
-  const wsUrl = 'ws://localhost:8000/ws/' + sessaoId;
+  const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsHost = window.location.hostname === 'localhost'
+    ? 'localhost:8000'
+    : 'caseos-api-production.up.railway.app';
+  const wsUrl = wsProto + '//' + wsHost + '/ws/' + sessaoId;
 
   try {
     const ws = new WebSocket(wsUrl);
