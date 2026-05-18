@@ -65,7 +65,7 @@ body {
   pointer-events: none;
 }
 .brand-logo { display: flex; align-items: center; gap: 12px; }
-.brand-logo svg { width: 36px; height: 36px; flex-shrink: 0; }
+.brand-logo-img { height: 48px; width: auto; object-fit: contain; }
 .brand-wordmark { display: flex; flex-direction: column; line-height: 1.1; }
 .brand-neura {
   font-family: var(--head);
@@ -311,16 +311,7 @@ body {
   <!-- ═══════════ BRAND PANEL ═══════════ -->
   <div class="brand-panel">
     <div class="brand-logo">
-      <svg viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="2" width="44" height="36" rx="7" stroke="#C8FF00" stroke-width="2.6"/>
-        <line x1="10" y1="20" x2="20" y2="20" stroke="#C8FF00" stroke-width="2.6" stroke-linecap="round"/>
-        <path d="M38 14 L28 20 L38 26" stroke="#C8FF00" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 38 L15 54" stroke="#C8FF00" stroke-width="2.6" stroke-linecap="round"/>
-      </svg>
-      <div class="brand-wordmark">
-        <span class="brand-neura">NEURA<span>XIA</span></span>
-        <span class="brand-name">Case<span>OS</span></span>
-      </div>
+      <img src="assets/logo-caseos.png" alt="CaseOS" class="brand-logo-img">
     </div>
 
     <div class="brand-content">

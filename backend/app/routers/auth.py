@@ -115,6 +115,8 @@ async def login(body: LoginRequest, response: Response, db: AsyncSession = Depen
         raise HTTPException(status_code=401, detail="E-mail ou senha incorretos.")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Conta desativada. Entre em contato com o suporte.")
+    if not user.is_verified:
+        raise HTTPException(status_code=403, detail="Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.")
 
     return _token_response(response, user)
 
@@ -293,7 +295,7 @@ async def google_callback(
     refresh = create_refresh_token(user.id)
 
     redirect = RedirectResponse(
-        f"{settings.frontend_url}/index.html?token={access}"
+        f"{settings.frontend_url}/login.html?token={access}"
     )
     _set_refresh_cookie(redirect, refresh)
     redirect.delete_cookie("oauth_state")

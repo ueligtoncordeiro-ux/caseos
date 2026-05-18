@@ -1719,21 +1719,7 @@ tbody td {
   <!-- Logo -->
   <div class="sidebar-logo">
     <a href="landing.html" class="logo-link">
-      <!-- Chat bubble with —< terminal symbol -->
-      <svg class="logo-svg" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="2" width="44" height="36" rx="7" stroke="#C8FF00" stroke-width="2.6"/>
-        <line x1="10" y1="20" x2="20" y2="20" stroke="#C8FF00" stroke-width="2.6" stroke-linecap="round"/>
-        <path d="M38 14 L28 20 L38 26" stroke="#C8FF00" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 38 L15 54" stroke="#C8FF00" stroke-width="2.6" stroke-linecap="round"/>
-      </svg>
-      <div class="logo-wordmark">
-        <div class="logo-top-line">
-          <span class="logo-top-gray">NEURA</span><span class="logo-top-pill">XIA</span>
-        </div>
-        <div class="logo-bottom-line">
-          <span class="logo-bottom-dark">Case</span><span class="logo-bottom-pill">OS</span>
-        </div>
-      </div>
+      <img src="assets/logo-caseos.png" alt="CaseOS" style="height:40px;width:auto;object-fit:contain;">
     </a>
   </div>
 
@@ -1852,7 +1838,7 @@ tbody td {
     <!-- Greeting -->
     <div class="greeting">
       <div class="greeting-title" id="greetingTitle">Olá 👋</div>
-      <div class="greeting-sub" id="greetingSubtitle">Bem-vindo ao neuraxIA CaseOS.</div>
+      <div class="greeting-sub" id="greetingSubtitle">Bem-vindo ao CaseOS.</div>
     </div>
 
     <!-- Stats row -->
@@ -1991,7 +1977,7 @@ tbody td {
     <div class="msg-wrap">
       <div class="msg-avatar ai">🤖</div>
       <div class="bubble ai">
-        Olá! Sou o assistente do neuraxIA CaseOS. Posso ajudá-lo com dúvidas sobre relatos de caso clínico, checklist CARE, publicação científica e uso da plataforma. Como posso ajudar?
+        Olá! Sou o assistente do CaseOS. Posso ajudá-lo com dúvidas sobre relatos de caso clínico, checklist CARE, publicação científica e uso da plataforma. Como posso ajudar?
       </div>
     </div>
   </div>
@@ -2263,7 +2249,7 @@ function _renderUser(user) {
   if (gt) gt.textContent = `Olá, ${primeiroNome} 👋`;
 
   const gs = document.getElementById('greetingSubtitle');
-  if (gs) gs.textContent = 'Bem-vindo ao neuraxIA CaseOS. Aqui está o resumo da sua atividade.';
+  if (gs) gs.textContent = 'Bem-vindo ao CaseOS! Aqui está o resumo da sua atividade.';
 
   // Dropdown header
   const nm = document.getElementById('userNomeDropdown');
@@ -2791,7 +2777,7 @@ async function excluirConta() {
    NOTIFICATIONS
 ═══════════════════════════════════════════════ */
 const notificacoes = [
-  { id: 1, texto: 'Bem-vindo ao RCCS! Explore todas as funcionalidades.', lida: false, tempo: 'agora' },
+  { id: 1, texto: 'Bem-vindo ao CaseOS! Explore todas as funcionalidades.', lida: false, tempo: 'agora' },
   { id: 2, texto: 'Adicione créditos para gerar mais relatos.', lida: false, tempo: '5 min atrás' },
 ];
 
@@ -2984,7 +2970,7 @@ function abrirAjuda() {
   if (!chatAberto) toggleChat();
   const input = document.getElementById('chatInput');
   if (input) {
-    input.value = 'Como posso usar a plataforma RCCS?';
+    input.value = 'Como posso usar a plataforma CaseOS?';
     autoResizeTextarea(input);
     input.focus();
   }
