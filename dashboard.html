@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>neuraxIA CaseOS · Dashboard</title>
+<title>CaseOS · Dashboard</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -2033,7 +2034,7 @@ tbody td {
           <div class="plan-name">🆓 Gratuito</div>
           <div class="plan-price">R$0 <span>/mês</span></div>
           <ul class="plan-features">
-            <li>3 relatos por mês</li>
+            <li>1 relato por mês</li>
             <li>Checklist CARE básico</li>
             <li>Download em DOCX</li>
             <li class="disabled">Score CARE avançado</li>
@@ -2046,9 +2047,9 @@ tbody td {
         <!-- Pro -->
         <div class="plan-card highlighted" id="planCardPro">
           <div class="plan-name">⚡ Pro</div>
-          <div class="plan-price">R$49,90 <span>/mês</span></div>
+          <div class="plan-price">R$97 <span>/mês</span></div>
           <ul class="plan-features">
-            <li>Relatos ilimitados</li>
+            <li>30 relatos por mês</li>
             <li>Checklist CARE completo</li>
             <li>Download em DOCX + PDF</li>
             <li>Score CARE avançado</li>
@@ -2061,7 +2062,7 @@ tbody td {
         <!-- Institucional -->
         <div class="plan-card" id="planCardInst">
           <div class="plan-name">🏥 Institucional</div>
-          <div class="plan-price">R$199,90 <span>/mês</span></div>
+          <div class="plan-price">R$497 <span>/mês</span></div>
           <ul class="plan-features">
             <li>Tudo do Pro</li>
             <li>Até 20 usuários</li>
@@ -2648,6 +2649,8 @@ async function assinarPlano(plano) {
       location.href = data.url;
     } else {
       mostrarToast('Link de pagamento não retornado pelo servidor.', 'error', '⚠️');
+      btn.textContent = originalText;
+      btn.disabled = false;
     }
   } catch (err) {
     console.error('[CaseOS] Erro ao assinar plano:', err);
