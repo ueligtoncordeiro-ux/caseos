@@ -46,31 +46,34 @@ body {
 
 /* ── Brand panel (left) ── */
 .brand-panel {
-  flex: 1;
+  width: 520px;
+  flex-shrink: 0;
   background: var(--obsidian);
-  padding: 60px 52px;
+  padding: 56px 52px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   position: relative;
   overflow: hidden;
-  border-right: 1px solid #1a1a1a;
+  border-right: 1px solid #1e1e1e;
 }
 .brand-panel::before {
   content: '';
   position: absolute;
   bottom: -80px; right: -80px;
   width: 500px; height: 500px;
-  background: radial-gradient(circle, rgba(200,255,0,0.08) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(200,255,0,0.09) 0%, transparent 65%);
   pointer-events: none;
 }
 .brand-logo { display: flex; align-items: flex-start; }
 .brand-logo-img {
   height: auto;
-  width: 280px;
+  width: 260px;
   max-width: 100%;
   object-fit: contain;
   display: block;
+  /* remove black bg: logo-caseos-banner.png tem fundo #000, screen blend funde no escuro */
+  mix-blend-mode: screen;
 }
 .brand-wordmark { display: flex; flex-direction: column; line-height: 1.1; }
 .brand-neura {
@@ -129,13 +132,18 @@ body {
 
 /* ── Form panel (right) ── */
 .form-panel {
-  width: 460px;
-  flex-shrink: 0;
+  flex: 1;
   background: var(--obsidian);
-  padding: 0 52px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
+  padding: 60px 40px;
+}
+/* Inner wrapper limita largura do form */
+.form-panel > * {
+  width: 100%;
+  max-width: 400px;
 }
 
 .form-header { margin-bottom: 32px; }
@@ -307,15 +315,17 @@ body {
 }
 
 /* Responsive */
-@media (max-width: 768px) {
-  .login-wrap { flex-direction: column; min-height: auto; }
+@media (max-width: 860px) {
+  .login-wrap { flex-direction: column; }
   .brand-panel { display: none; }
   .form-panel {
+    flex: none;
     width: 100%;
-    padding: 48px 28px 40px;
     min-height: 100vh;
-    justify-content: flex-start;
+    padding: 56px 28px 48px;
+    align-items: stretch;
   }
+  .form-panel > * { max-width: 100%; }
   .form-header { margin-bottom: 24px; }
 }
 </style>
