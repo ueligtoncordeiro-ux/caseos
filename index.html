@@ -48,16 +48,25 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
   overflow-y: auto;
 }
 .sidebar-head {
-  padding: 20px 20px 12px;
+  padding: 20px 14px 18px;
   border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-.logo-link { text-decoration: none; display: flex; align-items: center; gap: 10px; }
-.logo-icon svg { width: 36px; height: 42px; }
-.logo-text { display: flex; flex-direction: column; line-height: 1.15; }
-.logo-top { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; color: var(--t1); }
-.logo-top .acid { color: var(--acid); background: var(--obsidian); padding: 0 3px; border-radius: 3px; }
-.logo-bottom { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: var(--t2); }
-.logo-bottom .acid { color: var(--acid); background: var(--obsidian); padding: 0 3px; border-radius: 3px; }
+.logo-link {
+  text-decoration: none;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+.logo-link img {
+  width: 100%;
+  max-width: 190px;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
 
 .sidebar-label {
   padding: 16px 20px 6px;
@@ -391,18 +400,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
   <aside class="sidebar">
     <div class="sidebar-head">
       <a href="dashboard.html" class="logo-link">
-        <div class="logo-icon">
-          <svg viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2" y="2" width="44" height="36" rx="7" stroke="#C8FF00" stroke-width="2.6"/>
-            <line x1="10" y1="20" x2="20" y2="20" stroke="#C8FF00" stroke-width="2.6" stroke-linecap="round"/>
-            <path d="M38 14 L28 20 L38 26" stroke="#C8FF00" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M20 38 L15 54" stroke="#C8FF00" stroke-width="2.6" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <div class="logo-text">
-          <span class="logo-top">NEURA<span class="acid">XIA</span></span>
-          <span class="logo-bottom">Case<span class="acid">OS</span></span>
-        </div>
+        <img src="assets/logo-caseos-light.png" alt="CaseOS">
       </a>
     </div>
 
