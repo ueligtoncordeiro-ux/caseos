@@ -73,16 +73,13 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         hashed_pw=hash_password(body.senha),
         crm_cro=body.crm_cro,
         lgpd_aceito_em=datetime.utcnow(),
-        is_verified=False,
+        is_verified=True,  # verificação por e-mail temporariamente desativada
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
 
-    token = create_verification_token(user.email)
-    asyncio.create_task(enviar_verificacao_email(user.email, user.nome, token))
-
-    return {"mensagem": "Conta criada. Verifique seu e-mail para ativar o acesso."}
+    return {"mensagem": "Conta criada com sucesso. Faça login para continuar."}
 
 
 # ── Verificação de e-mail ─────────────────────────────────────────────────────

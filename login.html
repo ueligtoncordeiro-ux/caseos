@@ -642,9 +642,8 @@ async function submitRegister(e) {
     });
     const data = await res.json();
     if (!res.ok) { showAlert(data.detail || 'Erro ao criar conta.'); return; }
-    document.getElementById('verifyPendingMsg').textContent =
-      `Enviamos um link de ativação para ${email}. Verifique sua caixa de entrada e a pasta de spam.`;
-    showView('viewVerifyPending');
+    showAlert('Conta criada com sucesso! Faça login para continuar.', 'success');
+    showView('viewLogin');
   } catch (_) {
     showAlert('Sem conexão com o servidor.');
   } finally {
