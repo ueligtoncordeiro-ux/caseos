@@ -65,14 +65,22 @@ body {
   background: radial-gradient(circle, rgba(200,255,0,0.12) 0%, transparent 70%);
   pointer-events: none;
 }
-.brand-logo { display: flex; align-items: center; gap: 12px; }
-.brand-logo-img { height: 80px; width: auto; object-fit: contain; max-width: 280px; }
+.brand-logo { display: flex; align-items: flex-start; }
 .brand-logo-wrap {
-  background: #fff;
-  border-radius: 12px;
-  padding: 12px 20px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 18px 28px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+}
+.brand-logo-img {
+  height: auto;
+  width: 260px;
+  max-width: 100%;
+  object-fit: contain;
+  display: block;
 }
 .brand-wordmark { display: flex; flex-direction: column; line-height: 1.1; }
 .brand-neura {
@@ -323,6 +331,7 @@ body {
         <img src="assets/logo-caseos-light.png" alt="CaseOS" class="brand-logo-img">
       </div>
     </div>
+
 
     <div class="brand-content">
       <div class="brand-tagline">

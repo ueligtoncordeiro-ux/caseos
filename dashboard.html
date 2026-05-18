@@ -107,15 +107,24 @@ body {
 
 /* Logo area */
 .sidebar-logo {
-  padding: 18px 16px 16px;
+  padding: 20px 20px 18px;
   border-bottom: 1px solid var(--sidebar-bdr);
-}
-.sidebar-logo .logo-bg {
-  background: #fff;
-  border-radius: 10px;
-  padding: 10px 14px;
-  display: inline-flex;
+  display: flex;
+  justify-content: center;
   align-items: center;
+}
+.sidebar-logo .logo-link {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+.sidebar-logo img {
+  width: 100%;
+  max-width: 176px;
+  height: auto;
+  max-height: 72px;
+  object-fit: contain;
+  display: block;
 }
 
 .logo-link {
@@ -1727,9 +1736,7 @@ tbody td {
   <!-- Logo -->
   <div class="sidebar-logo">
     <a href="landing.html" class="logo-link">
-      <div class="logo-bg">
-        <img src="assets/logo-caseos-light.png" alt="CaseOS" style="height:60px;width:auto;object-fit:contain;max-width:210px;">
-      </div>
+      <img src="assets/logo-caseos-light.png" alt="CaseOS">
     </a>
   </div>
 
