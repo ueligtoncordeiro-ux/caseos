@@ -97,10 +97,24 @@ class Sessao(Base):
 
 # ── Engine & session factory ──────────────────────────────────────────────────
 
+def _get_database_url() -> str:
+    """
+    Normaliza a DATABASE_URL para o driver async correto.
+    Railway/Heroku fornecem postgresql:// mas asyncpg precisa de postgresql+asyncpg://
+    """
+    url = settings.database_url
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
+_db_url = _get_database_url()
+
 engine = create_async_engine(
-    settings.database_url,
+    _db_url,
     echo=settings.environment == "development",
-    connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {},
+    connect_args={"check_same_thread": False} if "sqlite" in _db_url else {},
 )
 
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
