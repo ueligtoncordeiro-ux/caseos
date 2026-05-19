@@ -331,24 +331,79 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 .modal-overlay.show { display: flex; }
 .modal-box {
   background: var(--bg); border-radius: 14px; padding: 32px 36px;
-  width: 520px; max-width: 95vw; box-shadow: 0 8px 40px rgba(0,0,0,.18);
+  width: 560px; max-width: 95vw; box-shadow: 0 8px 40px rgba(0,0,0,.18);
 }
-.modal-box h2 { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: var(--t1); margin-bottom: 6px; }
-.modal-box .modal-sub { font-size: 14px; color: var(--t3); margin-bottom: 24px; }
-.pipeline-steps { display: flex; flex-direction: column; gap: 10px; }
+
+/* Pipeline modal: character + steps side by side */
+.pipeline-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+.pipeline-character-col {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+.pipeline-char-img {
+  width: 100px;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  animation: char-bounce 2.2s ease-in-out infinite;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.12));
+}
+@keyframes char-bounce {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+.pipeline-char-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t3);
+  text-align: center;
+}
+.pipeline-steps-col { flex: 1; min-width: 0; }
+
+.modal-box h2 { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: var(--t1); margin-bottom: 4px; }
+.modal-box .modal-sub { font-size: 13px; color: var(--t3); margin-bottom: 20px; }
+.pipeline-steps { display: flex; flex-direction: column; gap: 8px; }
 .p-step {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
   background: var(--light);
+  transition: border-color 0.2s, background 0.2s;
 }
 .p-step.done { border-color: #22c55e; background: #f0fdf4; }
 .p-step.active { border-color: var(--obsidian); background: var(--acid-dim); }
 .p-step.error { border-color: var(--danger); background: #fff5f5; }
-.p-step-icon { font-size: 20px; }
+.p-step-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.p-step-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+  image-rendering: pixelated;
+  color: var(--t2);
+}
+.p-step.done .p-step-icon svg   { color: #22c55e; }
+.p-step.active .p-step-icon svg { color: var(--obsidian); }
+.p-step.error .p-step-icon svg  { color: var(--danger); }
 .p-step-text { flex: 1; }
-.p-step-name { font-size: 14px; font-weight: 600; color: var(--t1); }
-.p-step-detail { font-size: 12px; color: var(--t3); margin-top: 2px; }
-.p-step-status { font-size: 18px; }
+.p-step-name { font-size: 13px; font-weight: 600; color: var(--t1); }
+.p-step-detail { font-size: 11.5px; color: var(--t3); margin-top: 2px; }
+.p-step-status { font-size: 16px; }
 .modal-actions { margin-top: 24px; display: flex; gap: 10px; justify-content: flex-end; }
 .btn-modal-ok {
   padding: 10px 24px; border-radius: 8px; background: var(--obsidian); color: #fff;
@@ -391,9 +446,94 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 .input-unit-row { display: flex; gap: 8px; }
 .input-unit-row input { flex: 1; }
 .input-unit-row select { width: 110px; flex-shrink: 0; }
+/* ── Pixel icon system ── */
+.p-step-icon svg { image-rendering: pixelated; image-rendering: crisp-edges; }
 </style>
 </head>
 <body>
+
+<!-- ── Pixel Icons Sprite (inline) ── -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="px-home" viewBox="0 0 16 16">
+    <rect x="10" y="0" width="2" height="3" fill="currentColor"/>
+    <rect x="7"  y="2" width="2" height="1" fill="currentColor"/>
+    <rect x="6"  y="3" width="4" height="1" fill="currentColor"/>
+    <rect x="5"  y="4" width="6" height="1" fill="currentColor"/>
+    <rect x="4"  y="5" width="8" height="1" fill="currentColor"/>
+    <rect x="3"  y="6" width="10" height="1" fill="currentColor"/>
+    <rect x="2"  y="7" width="2" height="7" fill="currentColor"/>
+    <rect x="12" y="7" width="2" height="7" fill="currentColor"/>
+    <rect x="4"  y="7" width="8" height="1" fill="currentColor"/>
+    <rect x="4"  y="8" width="2" height="6" fill="currentColor"/>
+    <rect x="10" y="8" width="2" height="6" fill="currentColor"/>
+    <rect x="6"  y="10" width="4" height="4" fill="currentColor"/>
+    <rect x="2"  y="14" width="12" height="1" fill="currentColor"/>
+  </symbol>
+  <!-- MAGNIFIER: for Analysis step -->
+  <symbol id="px-magnify" viewBox="0 0 20 20">
+    <rect x="3"  y="1"  width="10" height="2" fill="currentColor"/>
+    <rect x="1"  y="3"  width="2"  height="8" fill="currentColor"/>
+    <rect x="13" y="3"  width="2"  height="8" fill="currentColor"/>
+    <rect x="3"  y="11" width="10" height="2" fill="currentColor"/>
+    <rect x="5"  y="5"  width="6"  height="1" fill="currentColor"/>
+    <rect x="7"  y="3"  width="2"  height="8" fill="currentColor"/>
+    <rect x="13" y="11" width="2"  height="2" fill="currentColor"/>
+    <rect x="14" y="13" width="2"  height="2" fill="currentColor"/>
+    <rect x="15" y="15" width="2"  height="2" fill="currentColor"/>
+    <rect x="16" y="17" width="3"  height="2" fill="currentColor"/>
+  </symbol>
+  <!-- LIGHTNING: for AI generation -->
+  <symbol id="px-lightning" viewBox="0 0 20 20">
+    <rect x="10" y="0"  width="7"  height="2" fill="currentColor"/>
+    <rect x="9"  y="2"  width="6"  height="2" fill="currentColor"/>
+    <rect x="8"  y="4"  width="5"  height="2" fill="currentColor"/>
+    <rect x="3"  y="6"  width="14" height="2" fill="currentColor"/>
+    <rect x="6"  y="8"  width="6"  height="2" fill="currentColor"/>
+    <rect x="5"  y="10" width="5"  height="2" fill="currentColor"/>
+    <rect x="1"  y="10" width="6"  height="2" fill="currentColor"/>
+    <rect x="2"  y="12" width="5"  height="2" fill="currentColor"/>
+    <rect x="1"  y="14" width="5"  height="2" fill="currentColor"/>
+    <rect x="0"  y="16" width="5"  height="2" fill="currentColor"/>
+    <rect x="0"  y="18" width="6"  height="2" fill="currentColor"/>
+  </symbol>
+  <!-- CLIPBOARD: for CARE checklist -->
+  <symbol id="px-clipboard" viewBox="0 0 20 20">
+    <rect x="2"  y="4"  width="16" height="15" fill="currentColor"/>
+    <rect x="6"  y="2"  width="8"  height="4"  fill="currentColor"/>
+    <rect x="8"  y="1"  width="4"  height="2"  fill="currentColor"/>
+    <rect x="4"  y="8"  width="4"  height="2"  fill="currentColor"/>
+    <rect x="9"  y="8"  width="7"  height="2"  fill="currentColor"/>
+    <rect x="4"  y="12" width="4"  height="2"  fill="currentColor"/>
+    <rect x="9"  y="12" width="7"  height="2"  fill="currentColor"/>
+    <rect x="4"  y="16" width="4"  height="2"  fill="currentColor"/>
+    <rect x="9"  y="16" width="5"  height="2"  fill="currentColor"/>
+  </symbol>
+  <!-- BOOKS: for references -->
+  <symbol id="px-books" viewBox="0 0 20 20">
+    <rect x="1"  y="2"  width="4" height="16" fill="currentColor"/>
+    <rect x="2"  y="3"  width="1" height="14" fill="currentColor"/>
+    <rect x="7"  y="5"  width="4" height="13" fill="currentColor"/>
+    <rect x="8"  y="6"  width="1" height="11" fill="currentColor"/>
+    <rect x="13" y="3"  width="4" height="15" fill="currentColor"/>
+    <rect x="14" y="4"  width="1" height="13" fill="currentColor"/>
+    <rect x="0"  y="18" width="20" height="2" fill="currentColor"/>
+  </symbol>
+  <!-- DOCSTAR: for final formatting -->
+  <symbol id="px-docstar" viewBox="0 0 20 20">
+    <rect x="2"  y="1"  width="12" height="16" fill="currentColor"/>
+    <rect x="14" y="1"  width="4"  height="4"  fill="currentColor"/>
+    <rect x="14" y="5"  width="4"  height="12" fill="currentColor"/>
+    <rect x="13" y="1"  width="1"  height="5"  fill="currentColor"/>
+    <rect x="13" y="5"  width="5"  height="1"  fill="currentColor"/>
+    <rect x="4"  y="5"  width="8"  height="1"  fill="currentColor"/>
+    <rect x="4"  y="8"  width="8"  height="1"  fill="currentColor"/>
+    <rect x="4"  y="11" width="6"  height="1"  fill="currentColor"/>
+    <rect x="13" y="14" width="6"  height="2"  fill="currentColor"/>
+    <rect x="15" y="12" width="2"  height="6"  fill="currentColor"/>
+    <rect x="14" y="13" width="4"  height="4"  fill="currentColor"/>
+  </symbol>
+</svg>
+
 <div class="app-shell">
 
   <!-- ══ SIDEBAR ══ -->
@@ -1261,35 +1401,73 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 <!-- ── Pipeline modal ── -->
 <div class="modal-overlay" id="pipelineModal">
   <div class="modal-box">
-    <h2>🚀 Gerando seu artigo</h2>
+    <h2>Gerando seu relato</h2>
     <p class="modal-sub" id="pipelineStatusMsg">Pipeline iniciado — aguarde...</p>
-    <div class="pipeline-steps" id="pipelineSteps">
-      <div class="p-step" id="ps-1">
-        <span class="p-step-icon">🔍</span>
-        <div class="p-step-text"><div class="p-step-name">Análise do caso</div><div class="p-step-detail">Revisando dados clínicos</div></div>
-        <span class="p-step-status">⏳</span>
+
+    <div class="pipeline-layout">
+      <!-- Character column -->
+      <div class="pipeline-character-col">
+        <img class="pipeline-char-img" id="pipelineChar" src="assets/pixel-char-glow.png" alt="" aria-hidden="true">
+        <div class="pipeline-char-label" id="pipelineCharLabel">Analisando</div>
       </div>
-      <div class="p-step" id="ps-2">
-        <span class="p-step-icon">🧠</span>
-        <div class="p-step-text"><div class="p-step-name">Geração da narrativa</div><div class="p-step-detail">Redigindo o relato de caso</div></div>
-        <span class="p-step-status">⏳</span>
-      </div>
-      <div class="p-step" id="ps-3">
-        <span class="p-step-icon">📋</span>
-        <div class="p-step-text"><div class="p-step-name">Checklist CARE</div><div class="p-step-detail">Verificando conformidade CARE 2013</div></div>
-        <span class="p-step-status">⏳</span>
-      </div>
-      <div class="p-step" id="ps-4">
-        <span class="p-step-icon">📚</span>
-        <div class="p-step-text"><div class="p-step-name">Referências</div><div class="p-step-detail">Buscando literatura relevante</div></div>
-        <span class="p-step-status">⏳</span>
-      </div>
-      <div class="p-step" id="ps-5">
-        <span class="p-step-icon">📄</span>
-        <div class="p-step-text"><div class="p-step-name">Formatação final</div><div class="p-step-detail">Gerando documento</div></div>
-        <span class="p-step-status">⏳</span>
+
+      <!-- Steps column -->
+      <div class="pipeline-steps-col">
+        <div class="pipeline-steps" id="pipelineSteps">
+          <div class="p-step" id="ps-1">
+            <span class="p-step-icon">
+              <svg><use href="#px-magnify"/></svg>
+            </span>
+            <div class="p-step-text">
+              <div class="p-step-name">Análise do caso</div>
+              <div class="p-step-detail">Revisando dados clínicos</div>
+            </div>
+            <span class="p-step-status">⏳</span>
+          </div>
+          <div class="p-step" id="ps-2">
+            <span class="p-step-icon">
+              <svg><use href="#px-lightning"/></svg>
+            </span>
+            <div class="p-step-text">
+              <div class="p-step-name">Geração da narrativa</div>
+              <div class="p-step-detail">Redigindo o relato de caso</div>
+            </div>
+            <span class="p-step-status">⏳</span>
+          </div>
+          <div class="p-step" id="ps-3">
+            <span class="p-step-icon">
+              <svg><use href="#px-clipboard"/></svg>
+            </span>
+            <div class="p-step-text">
+              <div class="p-step-name">Checklist CARE</div>
+              <div class="p-step-detail">Verificando conformidade CARE 2013</div>
+            </div>
+            <span class="p-step-status">⏳</span>
+          </div>
+          <div class="p-step" id="ps-4">
+            <span class="p-step-icon">
+              <svg><use href="#px-books"/></svg>
+            </span>
+            <div class="p-step-text">
+              <div class="p-step-name">Referências</div>
+              <div class="p-step-detail">Buscando literatura relevante</div>
+            </div>
+            <span class="p-step-status">⏳</span>
+          </div>
+          <div class="p-step" id="ps-5">
+            <span class="p-step-icon">
+              <svg><use href="#px-docstar"/></svg>
+            </span>
+            <div class="p-step-text">
+              <div class="p-step-name">Formatação final</div>
+              <div class="p-step-detail">Gerando documento</div>
+            </div>
+            <span class="p-step-status">⏳</span>
+          </div>
+        </div>
       </div>
     </div>
+
     <div class="modal-actions">
       <button class="btn-modal-ok" id="btnModalOk" onclick="location.href='dashboard.html'" style="display:none">Ver no Dashboard →</button>
     </div>
@@ -1649,6 +1827,8 @@ async function iniciarGeracao() {
     el.querySelector('.p-step-status').textContent = '⏳';
   }
   document.getElementById('btnModalOk').style.display = 'none';
+  // reset character
+  setPipelineChar(1, false);
 
   let wsConnected = false;
   const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -1687,21 +1867,49 @@ async function iniciarGeracao() {
   }
 }
 
+/* ── Pipeline character switcher ── */
+const PIPELINE_CHARS = {
+  1: { src: 'assets/pixel-char-glow.png',     label: 'Analisando…'  },
+  2: { src: 'assets/pixel-char-lupa.png',     label: 'Redigindo…'   },
+  3: { src: 'assets/pixel-char-flask.png',    label: 'Verificando…' },
+  4: { src: 'assets/pixel-char-database.png', label: 'Pesquisando…' },
+  5: { src: 'assets/pixel-char-hologram.png', label: 'Finalizando…' },
+};
+function setPipelineChar(step, done) {
+  const img   = document.getElementById('pipelineChar');
+  const label = document.getElementById('pipelineCharLabel');
+  if (!img) return;
+  if (done) {
+    img.src       = 'assets/pixel-char-tablet.png';
+    label.textContent = '✓ Concluído!';
+    label.style.color = '#22c55e';
+  } else {
+    const c = PIPELINE_CHARS[step] || PIPELINE_CHARS[1];
+    img.src       = c.src;
+    label.textContent = c.label;
+    label.style.color = '';
+  }
+}
+
 function handlePipelineMessage(msg) {
   const el = document.getElementById('ps-' + msg.etapa);
   if (!el) return;
   el.querySelector('.p-step-status').textContent = msg.status === 'done' ? '✅' : msg.status === 'error' ? '❌' : '⚙️';
   if (msg.detalhe) el.querySelector('.p-step-detail').textContent = msg.detalhe;
   el.className = 'p-step ' + (msg.status === 'done' ? 'done' : msg.status === 'error' ? 'error' : 'active');
+  // update character
+  if (msg.status === 'active') setPipelineChar(msg.etapa, false);
   if (msg.etapa === 5 && msg.status === 'done') {
-    document.getElementById('pipelineStatusMsg').textContent = '✅ Artigo gerado com sucesso!';
+    setPipelineChar(5, true);
+    document.getElementById('pipelineStatusMsg').textContent = 'Relato gerado com sucesso!';
     document.getElementById('btnModalOk').style.display = 'inline-flex';
   }
 }
 
 async function httpFallback() {
-  document.getElementById('pipelineStatusMsg').textContent = 'Processando...';
+  document.getElementById('pipelineStatusMsg').textContent = 'Processando…';
   for (let i = 1; i <= 5; i++) {
+    setPipelineChar(i, false);
     const el = document.getElementById('ps-' + i);
     el.className = 'p-step active';
     el.querySelector('.p-step-status').textContent = '⚙️';
@@ -1709,7 +1917,8 @@ async function httpFallback() {
     el.className = 'p-step done';
     el.querySelector('.p-step-status').textContent = '✅';
   }
-  document.getElementById('pipelineStatusMsg').textContent = '✅ Artigo gerado com sucesso!';
+  setPipelineChar(5, true);
+  document.getElementById('pipelineStatusMsg').textContent = 'Relato gerado com sucesso!';
   document.getElementById('btnModalOk').style.display = 'inline-flex';
 }
 

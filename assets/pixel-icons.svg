@@ -1,0 +1,253 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+
+  <!-- ══════════════════════════════════════════
+       NAV ICONS — 16×16 pixel grid
+  ══════════════════════════════════════════ -->
+
+  <!-- HOME / Dashboard -->
+  <symbol id="px-home" viewBox="0 0 16 16">
+    <!-- chimney -->
+    <rect x="10" y="0" width="2" height="3" fill="currentColor"/>
+    <!-- roof rows (centered pyramid) -->
+    <rect x="7"  y="2" width="2" height="1" fill="currentColor"/>
+    <rect x="6"  y="3" width="4" height="1" fill="currentColor"/>
+    <rect x="5"  y="4" width="6" height="1" fill="currentColor"/>
+    <rect x="4"  y="5" width="8" height="1" fill="currentColor"/>
+    <rect x="3"  y="6" width="10" height="1" fill="currentColor"/>
+    <!-- left wall -->
+    <rect x="2"  y="7" width="2" height="8" fill="currentColor"/>
+    <!-- right wall -->
+    <rect x="12" y="7" width="2" height="8" fill="currentColor"/>
+    <!-- top lintel -->
+    <rect x="4"  y="7" width="8" height="1" fill="currentColor"/>
+    <!-- left door frame -->
+    <rect x="4"  y="8" width="2" height="7" fill="currentColor"/>
+    <!-- right door frame -->
+    <rect x="10" y="8" width="2" height="7" fill="currentColor"/>
+    <!-- door header (filled solid door) -->
+    <rect x="6"  y="10" width="4" height="5" fill="currentColor"/>
+    <!-- base -->
+    <rect x="2"  y="14" width="12" height="1" fill="currentColor"/>
+  </symbol>
+
+  <!-- PENCIL / Novo Relato -->
+  <symbol id="px-pencil" viewBox="0 0 16 16">
+    <!-- eraser block (top-right) -->
+    <rect x="11" y="0" width="4" height="3" fill="currentColor"/>
+    <!-- ferrule band -->
+    <rect x="10" y="3" width="3" height="1" fill="currentColor"/>
+    <!-- body diagonal (2×2 blocks along 45°) -->
+    <rect x="9"  y="4" width="2" height="2" fill="currentColor"/>
+    <rect x="7"  y="6" width="2" height="2" fill="currentColor"/>
+    <rect x="5"  y="8" width="2" height="2" fill="currentColor"/>
+    <rect x="3"  y="10" width="2" height="2" fill="currentColor"/>
+    <!-- tip -->
+    <rect x="2"  y="12" width="2" height="2" fill="currentColor"/>
+    <rect x="1"  y="13" width="2" height="1" fill="currentColor"/>
+    <!-- sparkle dot beside pencil -->
+    <rect x="13" y="6" width="1" height="1" fill="currentColor"/>
+    <rect x="15" y="9" width="1" height="1" fill="currentColor"/>
+  </symbol>
+
+  <!-- LIST / Meus Relatos -->
+  <symbol id="px-list" viewBox="0 0 16 16">
+    <!-- row 1: bullet + line -->
+    <rect x="1" y="2"  width="3" height="3" fill="currentColor"/>
+    <rect x="6" y="3"  width="9" height="2" fill="currentColor"/>
+    <!-- row 2: bullet + line -->
+    <rect x="1" y="7"  width="3" height="3" fill="currentColor"/>
+    <rect x="6" y="8"  width="9" height="2" fill="currentColor"/>
+    <!-- row 3: bullet + line (shorter) -->
+    <rect x="1" y="12" width="3" height="3" fill="currentColor"/>
+    <rect x="6" y="13" width="6" height="2" fill="currentColor"/>
+  </symbol>
+
+  <!-- CROWN / Planos -->
+  <symbol id="px-crown" viewBox="0 0 16 16">
+    <!-- left spike -->
+    <rect x="0" y="2"  width="3" height="1" fill="currentColor"/>
+    <rect x="0" y="3"  width="2" height="5" fill="currentColor"/>
+    <!-- center spike (tallest) -->
+    <rect x="5" y="0"  width="6" height="1" fill="currentColor"/>
+    <rect x="6" y="1"  width="4" height="6" fill="currentColor"/>
+    <!-- right spike -->
+    <rect x="13" y="2" width="3" height="1" fill="currentColor"/>
+    <rect x="14" y="3" width="2" height="5" fill="currentColor"/>
+    <!-- valley connectors -->
+    <rect x="2"  y="7" width="5" height="1" fill="currentColor"/>
+    <rect x="9"  y="7" width="5" height="1" fill="currentColor"/>
+    <!-- crown body -->
+    <rect x="0"  y="8" width="16" height="5" fill="currentColor"/>
+    <!-- base band -->
+    <rect x="0"  y="13" width="16" height="2" fill="currentColor"/>
+    <!-- jewels cut into body (single-pixel highlights rendered at native res) -->
+    <rect x="2"  y="10" width="2" height="1" fill="currentColor"/>
+    <rect x="7"  y="10" width="2" height="1" fill="currentColor"/>
+    <rect x="12" y="10" width="2" height="1" fill="currentColor"/>
+  </symbol>
+
+  <!-- GEAR / Configurações -->
+  <symbol id="px-gear" viewBox="0 0 16 16">
+    <!-- top/bottom teeth -->
+    <rect x="6" y="0"  width="4" height="3" fill="currentColor"/>
+    <rect x="6" y="13" width="4" height="3" fill="currentColor"/>
+    <!-- left/right teeth -->
+    <rect x="0" y="6"  width="3" height="4" fill="currentColor"/>
+    <rect x="13" y="6" width="3" height="4" fill="currentColor"/>
+    <!-- diagonal corner teeth -->
+    <rect x="2"  y="2"  width="3" height="3" fill="currentColor"/>
+    <rect x="11" y="2"  width="3" height="3" fill="currentColor"/>
+    <rect x="2"  y="11" width="3" height="3" fill="currentColor"/>
+    <rect x="11" y="11" width="3" height="3" fill="currentColor"/>
+    <!-- outer ring -->
+    <rect x="4"  y="3"  width="8" height="10" fill="currentColor"/>
+    <rect x="3"  y="4"  width="10" height="8" fill="currentColor"/>
+    <!-- inner hole ring (pixel doughnut) -->
+    <rect x="6"  y="6"  width="4" height="4" fill="transparent"/>
+  </symbol>
+
+  <!-- HELP / Ajuda — bold pixel "?" -->
+  <symbol id="px-help" viewBox="0 0 16 16">
+    <!-- top arc of ? -->
+    <rect x="4" y="1"  width="8" height="2" fill="currentColor"/>
+    <rect x="2" y="3"  width="2" height="2" fill="currentColor"/>
+    <rect x="12" y="3" width="2" height="2" fill="currentColor"/>
+    <!-- right descending -->
+    <rect x="12" y="5" width="2" height="3" fill="currentColor"/>
+    <!-- middle hook -->
+    <rect x="6"  y="8"  width="6" height="2" fill="currentColor"/>
+    <rect x="6"  y="10" width="2" height="2" fill="currentColor"/>
+    <!-- stem gap (y=12-13 empty) -->
+    <!-- dot -->
+    <rect x="6"  y="14" width="4" height="2" fill="currentColor"/>
+  </symbol>
+
+  <!-- LOGOUT -->
+  <symbol id="px-logout" viewBox="0 0 16 16">
+    <!-- door frame -->
+    <rect x="1"  y="1"  width="2" height="14" fill="currentColor"/>
+    <rect x="1"  y="1"  width="9" height="2"  fill="currentColor"/>
+    <rect x="1"  y="13" width="9" height="2"  fill="currentColor"/>
+    <rect x="8"  y="1"  width="2" height="5"  fill="currentColor"/>
+    <rect x="8"  y="10" width="2" height="5"  fill="currentColor"/>
+    <!-- arrow shaft -->
+    <rect x="8"  y="7"  width="6" height="2"  fill="currentColor"/>
+    <!-- arrow head -->
+    <rect x="11" y="5"  width="2" height="2"  fill="currentColor"/>
+    <rect x="11" y="9"  width="2" height="2"  fill="currentColor"/>
+    <rect x="13" y="6"  width="2" height="1"  fill="currentColor"/>
+    <rect x="13" y="9"  width="2" height="1"  fill="currentColor"/>
+    <rect x="14" y="7"  width="2" height="2"  fill="currentColor"/>
+  </symbol>
+
+  <!-- BELL / Notificações -->
+  <symbol id="px-bell" viewBox="0 0 16 16">
+    <!-- clapper -->
+    <rect x="6"  y="14" width="4" height="2" fill="currentColor"/>
+    <!-- bell body -->
+    <rect x="4"  y="11" width="8" height="3" fill="currentColor"/>
+    <rect x="2"  y="6"  width="12" height="5" fill="currentColor"/>
+    <rect x="4"  y="4"  width="8" height="2"  fill="currentColor"/>
+    <rect x="5"  y="3"  width="6" height="1"  fill="currentColor"/>
+    <!-- stem -->
+    <rect x="7"  y="1"  width="2" height="2"  fill="currentColor"/>
+  </symbol>
+
+  <!-- PLUS / New button -->
+  <symbol id="px-plus" viewBox="0 0 16 16">
+    <rect x="7"  y="1"  width="2" height="14" fill="currentColor"/>
+    <rect x="1"  y="7"  width="14" height="2" fill="currentColor"/>
+  </symbol>
+
+  <!-- ══════════════════════════════════════════
+       PIPELINE STEP ICONS — 20×20 pixel grid
+  ══════════════════════════════════════════ -->
+
+  <!-- MAGNIFIER / Análise do caso -->
+  <symbol id="px-magnify" viewBox="0 0 20 20">
+    <!-- lens border (square pixel ring) -->
+    <rect x="3"  y="1"  width="10" height="2" fill="currentColor"/>
+    <rect x="1"  y="3"  width="2"  height="8" fill="currentColor"/>
+    <rect x="13" y="3"  width="2"  height="8" fill="currentColor"/>
+    <rect x="3"  y="11" width="10" height="2" fill="currentColor"/>
+    <!-- inner cross (for lens look) -->
+    <rect x="5"  y="5"  width="6"  height="1" fill="currentColor"/>
+    <rect x="7"  y="3"  width="2"  height="8" fill="currentColor"/>
+    <!-- handle (diagonal) -->
+    <rect x="13" y="11" width="2"  height="2" fill="currentColor"/>
+    <rect x="14" y="13" width="2"  height="2" fill="currentColor"/>
+    <rect x="15" y="15" width="2"  height="2" fill="currentColor"/>
+    <rect x="16" y="17" width="3"  height="2" fill="currentColor"/>
+  </symbol>
+
+  <!-- LIGHTNING / Geração IA -->
+  <symbol id="px-lightning" viewBox="0 0 20 20">
+    <!-- top-right to mid-left zigzag -->
+    <rect x="10" y="0"  width="7"  height="2" fill="currentColor"/>
+    <rect x="9"  y="2"  width="6"  height="2" fill="currentColor"/>
+    <rect x="8"  y="4"  width="5"  height="2" fill="currentColor"/>
+    <rect x="7"  y="6"  width="10" height="2" fill="currentColor"/>
+    <rect x="8"  y="8"  width="6"  height="2" fill="currentColor"/>
+    <rect x="7"  y="10" width="5"  height="2" fill="currentColor"/>
+    <rect x="3"  y="10" width="6"  height="2" fill="currentColor"/>
+    <rect x="3"  y="12" width="5"  height="2" fill="currentColor"/>
+    <rect x="2"  y="14" width="5"  height="2" fill="currentColor"/>
+    <rect x="1"  y="16" width="5"  height="2" fill="currentColor"/>
+    <rect x="0"  y="18" width="6"  height="2" fill="currentColor"/>
+  </symbol>
+
+  <!-- CLIPBOARD / Checklist CARE -->
+  <symbol id="px-clipboard" viewBox="0 0 20 20">
+    <!-- board body outline -->
+    <rect x="2"  y="4"  width="16" height="15" fill="currentColor"/>
+    <!-- clip tab -->
+    <rect x="6"  y="2"  width="8"  height="4"  fill="currentColor"/>
+    <rect x="8"  y="1"  width="4"  height="2"  fill="currentColor"/>
+    <!-- inner content lines (drawn lighter by JS, here just structural) -->
+    <!-- checkmark line 1: left tick + right line -->
+    <rect x="4"  y="8"  width="4"  height="2"  fill="currentColor"/>
+    <rect x="9"  y="8"  width="7"  height="2"  fill="currentColor"/>
+    <!-- checkmark line 2 -->
+    <rect x="4"  y="12" width="4"  height="2"  fill="currentColor"/>
+    <rect x="9"  y="12" width="7"  height="2"  fill="currentColor"/>
+    <!-- checkmark line 3 (short) -->
+    <rect x="4"  y="16" width="4"  height="2"  fill="currentColor"/>
+    <rect x="9"  y="16" width="5"  height="2"  fill="currentColor"/>
+  </symbol>
+
+  <!-- BOOKS / Referências -->
+  <symbol id="px-books" viewBox="0 0 20 20">
+    <!-- Book 1 (left, tallest) -->
+    <rect x="1"  y="2"  width="4" height="16" fill="currentColor"/>
+    <rect x="2"  y="3"  width="1" height="14" fill="currentColor"/>
+    <!-- Book 2 (center) -->
+    <rect x="7"  y="5"  width="4" height="13" fill="currentColor"/>
+    <rect x="8"  y="6"  width="1" height="11" fill="currentColor"/>
+    <!-- Book 3 (right, medium) -->
+    <rect x="13" y="3"  width="4" height="15" fill="currentColor"/>
+    <rect x="14" y="4"  width="1" height="13" fill="currentColor"/>
+    <!-- shelf base -->
+    <rect x="0"  y="18" width="20" height="2" fill="currentColor"/>
+  </symbol>
+
+  <!-- DOCUMENT + STAR / Formatação Final -->
+  <symbol id="px-docstar" viewBox="0 0 20 20">
+    <!-- document body -->
+    <rect x="2"  y="1"  width="12" height="16" fill="currentColor"/>
+    <!-- fold corner (dog-ear) -->
+    <rect x="14" y="1"  width="4"  height="4"  fill="currentColor"/>
+    <rect x="14" y="5"  width="4"  height="12" fill="currentColor"/>
+    <!-- fold crease -->
+    <rect x="13" y="1"  width="1"  height="5"  fill="currentColor"/>
+    <rect x="13" y="5"  width="5"  height="1"  fill="currentColor"/>
+    <!-- content lines (thin rects overlapping) -->
+    <rect x="4"  y="5"  width="8"  height="1"  fill="currentColor"/>
+    <rect x="4"  y="8"  width="8"  height="1"  fill="currentColor"/>
+    <rect x="4"  y="11" width="6"  height="1"  fill="currentColor"/>
+    <!-- star badge (bottom-right) -->
+    <rect x="13" y="14" width="6"  height="2"  fill="currentColor"/>
+    <rect x="15" y="12" width="2"  height="6"  fill="currentColor"/>
+    <rect x="14" y="13" width="4"  height="4"  fill="currentColor"/>
+  </symbol>
+
+</svg>
