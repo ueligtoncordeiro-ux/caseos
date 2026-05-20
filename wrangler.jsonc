@@ -10,5 +10,9 @@
   },
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "caseos.voandonaia.com", "custom_domain": true }
   ]
 }

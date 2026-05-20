@@ -220,8 +220,16 @@ async def google_login(response: Response):
             f"&access_type=offline"
         )
     )
-    response.set_cookie("oauth_state", state, httponly=True, max_age=300,
-                        secure=settings.environment == "production")
+    # SameSite=None; Secure obrigatório para redirect chain cross-site
+    # (iOS Safari / ITP bloqueia cookies com SameSite=Lax em fluxos OAuth)
+    is_https = settings.environment == "production"
+    response.set_cookie(
+        "oauth_state", state,
+        httponly=True,
+        max_age=300,
+        secure=is_https,
+        samesite="none" if is_https else "lax",
+    )
     return response
 
 

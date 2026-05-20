@@ -1,0 +1,22 @@
+# Secrets e dados sensíveis — nunca expor publicamente
+backend/.env
+backend/.env.*
+backend/rccs.db
+backend/*.db
+
+# Diretório Git
+.git/
+
+# Wrangler internos
+.wrangler/
+
+# Dependências e caches
+node_modules/
+__pycache__/
+*.pyc
+
+# Arquivos de CI/CD
+.github/
+
+# Backend completo (só o frontend vai para o Cloudflare)
+backend/

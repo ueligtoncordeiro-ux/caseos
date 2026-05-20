@@ -1481,7 +1481,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 <script>
 const API = window.location.hostname === 'localhost'
   ? 'http://localhost:8000'
-  : 'https://caseos-api-production.up.railway.app';
+  : 'https://caseos-api-bhdx.onrender.com';
 
 /* ── auth ── */
 const token = sessionStorage.getItem('rccs_token');
@@ -1834,7 +1834,7 @@ async function iniciarGeracao() {
   const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsHost = window.location.hostname === 'localhost'
     ? 'localhost:8000'
-    : 'caseos-api-production.up.railway.app';
+    : 'caseos-api-bhdx.onrender.com';
   const wsUrl = wsProto + '//' + wsHost + '/ws/' + sessaoId;
 
   try {
