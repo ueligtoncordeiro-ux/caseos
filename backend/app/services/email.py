@@ -108,6 +108,97 @@ async def enviar_reset_senha(destinatario: str, nome: str, token: str) -> bool:
     })
 
 
+async def enviar_boas_vindas(destinatario: str, nome: str, via_google: bool = False) -> bool:
+    """E-mail de boas-vindas para novo usuário (plano free)."""
+    if not settings.resend_api_key:
+        return False
+
+    metodo = "Google" if via_google else "e-mail e senha"
+    obs_google = """
+        <div style="background:#1a2235;border-left:3px solid #C8FF00;padding:12px 16px;border-radius:0 4px 4px 0;margin-bottom:20px">
+          <p style="font-size:12px;color:#8B96A8;margin:0">
+            Sua conta foi criada via <strong style="color:#E8EDF5">Login com Google</strong>.
+            Não é necessário senha — basta clicar em "Entrar com Google" sempre que acessar.
+          </p>
+        </div>""" if via_google else ""
+
+    html = f"""<!DOCTYPE html><html lang="pt-BR">
+    <body style="font-family:'IBM Plex Sans',Arial,sans-serif;background:#080D18;margin:0;padding:32px">
+      <div style="max-width:520px;margin:0 auto;background:#111827;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:36px">
+        <p style="font-family:Georgia,serif;font-style:italic;font-size:22px;color:#C8FF00;margin:0 0 6px">
+          Bem-vindo ao CaseOS, {nome.split()[0]}.
+        </p>
+        <p style="font-size:13px;color:#8B96A8;margin:0 0 24px">
+          Sua conta foi criada com sucesso via {metodo}.
+        </p>
+        {obs_google}
+        <div style="background:#0D1425;border-radius:6px;padding:16px 20px;margin-bottom:24px">
+          <p style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#4A5568;margin:0 0 12px">O que você pode fazer agora</p>
+          <p style="font-size:13px;color:#8B96A8;margin:0 0 8px">✦ &nbsp;Gerar relatos de caso clínico estruturados</p>
+          <p style="font-size:13px;color:#8B96A8;margin:0 0 8px">✦ &nbsp;Revisão automática com checklist CARE</p>
+          <p style="font-size:13px;color:#8B96A8;margin:0">✦ &nbsp;Exportar em DOCX pronto para submissão</p>
+        </div>
+        <a href="{settings.frontend_url}/dashboard"
+           style="display:block;background:#C8FF00;color:#0A0A0B;font-family:monospace;
+                  font-size:12px;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;
+                  text-align:center;padding:16px;border-radius:4px;font-weight:700;">
+          Acessar o CaseOS →
+        </a>
+        <p style="font-size:11px;color:#4A5568;text-align:center;margin-top:20px">
+          Plano gratuito inclui 1 relato/mês.<br>
+          Dúvidas? Responda este e-mail.
+        </p>
+      </div></body></html>"""
+
+    return await _send({
+        "from": settings.resend_from_email,
+        "to": [destinatario],
+        "subject": f"Bem-vindo ao CaseOS, {nome.split()[0]}!",
+        "html": html,
+    })
+
+
+async def enviar_aviso_login_google(destinatario: str, nome: str) -> bool:
+    """Avisa usuário Google-only que tentou 'esqueci senha' que seu login é via Google."""
+    if not settings.resend_api_key:
+        return False
+
+    html = f"""<!DOCTYPE html><html lang="pt-BR">
+    <body style="font-family:'IBM Plex Sans',Arial,sans-serif;background:#080D18;margin:0;padding:32px">
+      <div style="max-width:520px;margin:0 auto;background:#111827;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:36px">
+        <p style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#E8EDF5;margin:0 0 6px">
+          Sua conta usa Login com Google.
+        </p>
+        <p style="font-size:13px;color:#8B96A8;margin:0 0 20px">
+          Olá, {nome.split()[0]}. Recebemos uma solicitação de redefinição de senha para seu e-mail,
+          mas sua conta no CaseOS foi criada via <strong style="color:#E8EDF5">Google</strong> —
+          por isso não há senha para redefinir.
+        </p>
+        <div style="background:#1a2235;border-left:3px solid #C8FF00;padding:14px 16px;border-radius:0 4px 4px 0;margin-bottom:24px">
+          <p style="font-size:12px;color:#8B96A8;margin:0">
+            Para entrar no CaseOS, clique em <strong style="color:#E8EDF5">"Entrar com Google"</strong>
+            na tela de login. Não é necessário senha.
+          </p>
+        </div>
+        <a href="{settings.frontend_url}/login"
+           style="display:block;background:#C8FF00;color:#0A0A0B;font-family:monospace;
+                  font-size:12px;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;
+                  text-align:center;padding:16px;border-radius:4px;font-weight:700;">
+          Ir para o login →
+        </a>
+        <p style="font-size:10px;color:#4A5568;text-align:center;margin-top:20px">
+          Se não foi você quem solicitou, ignore este e-mail. CaseOS.
+        </p>
+      </div></body></html>"""
+
+    return await _send({
+        "from": settings.resend_from_email,
+        "to": [destinatario],
+        "subject": "[CaseOS] Sua conta usa Login com Google",
+        "html": html,
+    })
+
+
 async def enviar_boas_vindas_pro(destinatario: str, nome: str) -> bool:
     if not settings.resend_api_key:
         return False

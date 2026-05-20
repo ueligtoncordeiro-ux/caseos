@@ -30,7 +30,8 @@ from app.services.auth import (
     get_user_from_refresh,
 )
 from app.services.email import (
-    enviar_verificacao_email, enviar_reset_senha, enviar_boas_vindas_pro,
+    enviar_verificacao_email, enviar_reset_senha,
+    enviar_boas_vindas, enviar_boas_vindas_pro, enviar_aviso_login_google,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -78,6 +79,9 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     db.add(user)
     await db.commit()
     await db.refresh(user)
+
+    # Boas-vindas por e-mail (fire-and-forget)
+    asyncio.create_task(enviar_boas_vindas(user.email, user.nome, via_google=False))
 
     return {"mensagem": "Conta criada com sucesso. Faça login para continuar."}
 
@@ -140,12 +144,14 @@ async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depend
     result = await db.execute(select(Usuario).where(Usuario.email == body.email.lower()))
     user   = result.scalar_one_or_none()
     # Resposta genérica — não revelar se e-mail existe (segurança)
-    # Envia reset se tiver senha cadastrada; conta Google-only não tem senha para redefinir
     if user and user.is_active:
         if user.hashed_pw:
+            # Conta com senha → envia link de redefinição
             token = create_reset_token(user.email)
             asyncio.create_task(enviar_reset_senha(user.email, user.nome, token))
-        # else: conta Google-only — não envia reset de senha (não tem senha)
+        elif user.google_sub:
+            # Conta Google-only → avisa que o login é via Google
+            asyncio.create_task(enviar_aviso_login_google(user.email, user.nome))
     return {"mensagem": "Se o e-mail estiver cadastrado, você receberá um link em instantes."}
 
 
@@ -282,6 +288,8 @@ async def google_callback(
     )
     user = result.scalar_one_or_none()
 
+    is_new_user = user is None
+
     if user:
         user.google_sub     = sub
         user.google_picture = guser.get("picture")
@@ -298,6 +306,10 @@ async def google_callback(
 
     await db.commit()
     await db.refresh(user)
+
+    # Boas-vindas apenas para novos usuários Google
+    if is_new_user:
+        asyncio.create_task(enviar_boas_vindas(user.email, user.nome, via_google=True))
 
     access  = create_access_token(user.id, user.email, user.plano)
     refresh = create_refresh_token(user.id)
