@@ -402,7 +402,19 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 .p-step.error .p-step-icon svg  { color: var(--danger); }
 .p-step-text { flex: 1; }
 .p-step-name { font-size: 13px; font-weight: 600; color: var(--t1); }
-.p-step-detail { font-size: 11.5px; color: var(--t3); margin-top: 2px; }
+.p-step-agent {
+  font-size: 10px;
+  font-weight: 600;
+  color: #5A6600;
+  background: var(--acid-dim);
+  border: 1px solid rgba(200,255,0,0.3);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-top: 3px;
+  display: inline-block;
+  letter-spacing: 0.02em;
+}
+.p-step-detail { font-size: 11.5px; color: var(--t3); margin-top: 3px; }
 .p-step-status { font-size: 16px; }
 .modal-actions { margin-top: 24px; display: flex; gap: 10px; justify-content: flex-end; }
 .btn-modal-ok {
@@ -1419,48 +1431,64 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
               <svg><use href="#px-magnify"/></svg>
             </span>
             <div class="p-step-text">
-              <div class="p-step-name">Análise do caso</div>
-              <div class="p-step-detail">Revisando dados clínicos</div>
+              <div class="p-step-name">Validação</div>
+              <div class="p-step-agent" id="pa-1">Verificador de dados clínicos</div>
+              <div class="p-step-detail">Aguardando...</div>
             </div>
             <span class="p-step-status">⏳</span>
           </div>
           <div class="p-step" id="ps-2">
             <span class="p-step-icon">
-              <svg><use href="#px-lightning"/></svg>
+              <svg><use href="#px-magnify"/></svg>
             </span>
             <div class="p-step-text">
-              <div class="p-step-name">Geração da narrativa</div>
-              <div class="p-step-detail">Redigindo o relato de caso</div>
+              <div class="p-step-name">Anti-duplicação</div>
+              <div class="p-step-agent" id="pa-2">Agente de originalidade</div>
+              <div class="p-step-detail">Aguardando...</div>
             </div>
             <span class="p-step-status">⏳</span>
           </div>
           <div class="p-step" id="ps-3">
             <span class="p-step-icon">
-              <svg><use href="#px-clipboard"/></svg>
+              <svg><use href="#px-books"/></svg>
             </span>
             <div class="p-step-text">
-              <div class="p-step-name">Checklist CARE</div>
-              <div class="p-step-detail">Verificando conformidade CARE 2013</div>
+              <div class="p-step-name">Pesquisa bibliográfica</div>
+              <div class="p-step-agent" id="pa-3">PubMed · OpenAlex · Crossref</div>
+              <div class="p-step-detail">Aguardando...</div>
             </div>
             <span class="p-step-status">⏳</span>
           </div>
           <div class="p-step" id="ps-4">
             <span class="p-step-icon">
-              <svg><use href="#px-books"/></svg>
+              <svg><use href="#px-lightning"/></svg>
             </span>
             <div class="p-step-text">
-              <div class="p-step-name">Referências</div>
-              <div class="p-step-detail">Buscando literatura relevante</div>
+              <div class="p-step-name">Redação</div>
+              <div class="p-step-agent" id="pa-4">Claude Sonnet 4.6 · GPT-4o</div>
+              <div class="p-step-detail">Aguardando...</div>
             </div>
             <span class="p-step-status">⏳</span>
           </div>
           <div class="p-step" id="ps-5">
             <span class="p-step-icon">
+              <svg><use href="#px-clipboard"/></svg>
+            </span>
+            <div class="p-step-text">
+              <div class="p-step-name">Revisão CARE</div>
+              <div class="p-step-agent" id="pa-5">GPT-4o · CARE 2013</div>
+              <div class="p-step-detail">Aguardando...</div>
+            </div>
+            <span class="p-step-status">⏳</span>
+          </div>
+          <div class="p-step" id="ps-6">
+            <span class="p-step-icon">
               <svg><use href="#px-docstar"/></svg>
             </span>
             <div class="p-step-text">
-              <div class="p-step-name">Formatação final</div>
-              <div class="p-step-detail">Gerando documento</div>
+              <div class="p-step-name">Finalização DOCX</div>
+              <div class="p-step-agent" id="pa-6">DOCX Generator · ABNT</div>
+              <div class="p-step-detail">Aguardando...</div>
             </div>
             <span class="p-step-status">⏳</span>
           </div>
@@ -1894,10 +1922,12 @@ async function iniciarGeracao() {
   modal.classList.add('show');
 
   // reset pipeline UI
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 6; i++) {
     const el = document.getElementById('ps-' + i);
+    if (!el) continue;
     el.className = 'p-step';
     el.querySelector('.p-step-status').textContent = '⏳';
+    el.querySelector('.p-step-detail').textContent = 'Aguardando...';
   }
   document.getElementById('btnModalOk').style.display = 'none';
   // reset character
@@ -1942,56 +1972,107 @@ async function iniciarGeracao() {
 
 /* ── Pipeline character switcher ── */
 const PIPELINE_CHARS = {
-  1: { src: 'assets/pixel-char-glow.png',     label: 'Analisando…'  },
-  2: { src: 'assets/pixel-char-lupa.png',     label: 'Redigindo…'   },
-  3: { src: 'assets/pixel-char-flask.png',    label: 'Verificando…' },
-  4: { src: 'assets/pixel-char-database.png', label: 'Pesquisando…' },
-  5: { src: 'assets/pixel-char-hologram.png', label: 'Finalizando…' },
+  1: { src: 'assets/pixel-char-glow.png',     label: 'Validando…'   },
+  2: { src: 'assets/pixel-char-lupa.png',     label: 'Verificando…' },
+  3: { src: 'assets/pixel-char-database.png', label: 'Pesquisando…' },
+  4: { src: 'assets/pixel-char-flask.png',    label: 'Redigindo…'   },
+  5: { src: 'assets/pixel-char-lupa.png',     label: 'Revisando…'   },
+  6: { src: 'assets/pixel-char-hologram.png', label: 'Finalizando…' },
 };
 function setPipelineChar(step, done) {
   const img   = document.getElementById('pipelineChar');
   const label = document.getElementById('pipelineCharLabel');
   if (!img) return;
   if (done) {
-    img.src       = 'assets/pixel-char-tablet.png';
+    img.src           = 'assets/pixel-char-tablet.png';
     label.textContent = '✓ Concluído!';
     label.style.color = '#22c55e';
   } else {
     const c = PIPELINE_CHARS[step] || PIPELINE_CHARS[1];
-    img.src       = c.src;
+    img.src           = c.src;
     label.textContent = c.label;
     label.style.color = '';
   }
 }
 
 function handlePipelineMessage(msg) {
-  const el = document.getElementById('ps-' + msg.etapa);
-  if (!el) return;
-  el.querySelector('.p-step-status').textContent = msg.status === 'done' ? '✅' : msg.status === 'error' ? '❌' : '⚙️';
-  if (msg.detalhe) el.querySelector('.p-step-detail').textContent = msg.detalhe;
-  el.className = 'p-step ' + (msg.status === 'done' ? 'done' : msg.status === 'error' ? 'error' : 'active');
-  // update character
-  if (msg.status === 'active') setPipelineChar(msg.etapa, false);
-  if (msg.etapa === 5 && msg.status === 'done') {
-    setPipelineChar(5, true);
-    document.getElementById('pipelineStatusMsg').textContent = 'Relato gerado com sucesso!';
+  const tipo = msg.tipo || '';
+
+  if (tipo === 'concluido' || msg.status === 'done' && msg.etapa === 6) {
+    // Mark step 6 done
+    const el6 = document.getElementById('ps-6');
+    if (el6) {
+      el6.className = 'p-step done';
+      el6.querySelector('.p-step-status').textContent = '✅';
+      el6.querySelector('.p-step-detail').textContent = 'Documento gerado!';
+    }
+    setPipelineChar(6, true);
+    document.getElementById('pipelineStatusMsg').textContent = '✅ Relato gerado com sucesso!';
     document.getElementById('btnModalOk').style.display = 'inline-flex';
+    // Show CARE score if available
+    if (msg.resultado && msg.resultado.care_score) {
+      document.getElementById('pipelineStatusMsg').textContent =
+        `✅ Relato pronto! CARE Score: ${msg.resultado.care_score}/100 · ${msg.resultado.referencias || 0} referências`;
+    }
+    return;
   }
+
+  if (tipo === 'erro' || msg.tipo === 'erro') {
+    document.getElementById('pipelineStatusMsg').textContent = '❌ ' + (msg.mensagem || 'Erro no pipeline');
+    return;
+  }
+
+  // etapa or progresso message
+  const etapa = msg.etapa;
+  if (!etapa) return;
+
+  const el = document.getElementById('ps-' + etapa);
+  if (!el) return;
+
+  if (tipo === 'progresso') {
+    // Update detail only, don't change class
+    if (msg.detalhe) el.querySelector('.p-step-detail').textContent = msg.detalhe;
+    return;
+  }
+
+  // tipo === 'etapa' — mark as active
+  // Mark previous steps done
+  for (let i = 1; i < etapa; i++) {
+    const prev = document.getElementById('ps-' + i);
+    if (prev && !prev.classList.contains('done')) {
+      prev.className = 'p-step done';
+      prev.querySelector('.p-step-status').textContent = '✅';
+    }
+  }
+
+  el.className = 'p-step active';
+  el.querySelector('.p-step-status').textContent = '⚙️';
+  if (msg.detalhe) el.querySelector('.p-step-detail').textContent = msg.detalhe;
+  if (msg.agente) {
+    const agentEl = el.querySelector('.p-step-agent');
+    if (agentEl) agentEl.textContent = msg.agente;
+  }
+
+  setPipelineChar(etapa, false);
+  document.getElementById('pipelineStatusMsg').textContent = `Agente: ${msg.nome || 'Processando'} — aguarde...`;
 }
 
 async function httpFallback() {
+  const nomes = ['Validação', 'Anti-duplicação', 'Pesquisa bibliográfica', 'Redação', 'Revisão CARE', 'Finalização'];
   document.getElementById('pipelineStatusMsg').textContent = 'Processando…';
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 6; i++) {
     setPipelineChar(i, false);
     const el = document.getElementById('ps-' + i);
+    if (!el) continue;
     el.className = 'p-step active';
     el.querySelector('.p-step-status').textContent = '⚙️';
+    document.getElementById('pipelineStatusMsg').textContent = `Agente: ${nomes[i-1]} — aguarde...`;
     await new Promise(function(r) { setTimeout(r, 1400); });
     el.className = 'p-step done';
     el.querySelector('.p-step-status').textContent = '✅';
   }
-  setPipelineChar(5, true);
-  document.getElementById('pipelineStatusMsg').textContent = 'Relato gerado com sucesso!';
+  setPipelineChar(6, true);
+  document.getElementById('pipelineStatusMsg').textContent = '✅ Relato gerado com sucesso!';
   document.getElementById('btnModalOk').style.display = 'inline-flex';
 }
 

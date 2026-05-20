@@ -34,16 +34,16 @@ async def executar_pipeline(sessao_id: str, cko: CKO):
 
     try:
         # ── Etapa 1: Validação ──────────────────────────────────────────────
-        await manager.send(sessao_id, {"tipo": "etapa", "etapa": 1, "nome": "Validação"})
+        await manager.send(sessao_id, {"tipo": "etapa", "etapa": 1, "nome": "Validação", "agente": "Verificador de dados clínicos", "detalhe": "Validando estrutura do formulário..."})
         await _atualizar_sessao(sessao_id, status="validando")
         await asyncio.sleep(0.8)
 
         # ── Etapa 2: Anti-duplicação ────────────────────────────────────────
-        await manager.send(sessao_id, {"tipo": "etapa", "etapa": 2, "nome": "Anti-duplicação"})
+        await manager.send(sessao_id, {"tipo": "etapa", "etapa": 2, "nome": "Anti-duplicação", "agente": "Agente de originalidade", "detalhe": "Verificando originalidade do caso..."})
         await asyncio.sleep(1.0)
 
         # ── Etapa 3: Pesquisa bibliográfica (5 fontes) ──────────────────────
-        await manager.send(sessao_id, {"tipo": "etapa", "etapa": 3, "nome": "Pesquisa bibliográfica"})
+        await manager.send(sessao_id, {"tipo": "etapa", "etapa": 3, "nome": "Pesquisa bibliográfica", "agente": "PubMed · OpenAlex · Crossref", "detalhe": "Buscando literatura relevante..."})
         await _atualizar_sessao(sessao_id, status="buscando_referencias")
 
         artigos = await bibliografico.executar(cko)
@@ -55,13 +55,13 @@ async def executar_pipeline(sessao_id: str, cko: CKO):
         })
 
         # ── Etapa 4: Redação ────────────────────────────────────────────────
-        await manager.send(sessao_id, {"tipo": "etapa", "etapa": 4, "nome": "Redação"})
+        await manager.send(sessao_id, {"tipo": "etapa", "etapa": 4, "nome": "Redação", "agente": "Claude Sonnet 4.6 · GPT-4o", "detalhe": "Redigindo o relato de caso..."})
         await _atualizar_sessao(sessao_id, status="redigindo")
 
         artigo = await redator.executar(cko, artigos)
 
         # ── Etapa 5: Revisão + validação MeSH ──────────────────────────────
-        await manager.send(sessao_id, {"tipo": "etapa", "etapa": 5, "nome": "Revisão"})
+        await manager.send(sessao_id, {"tipo": "etapa", "etapa": 5, "nome": "Revisão CARE", "agente": "GPT-4o · CARE 2013", "detalhe": "Verificando conformidade CARE 2013..."})
         await _atualizar_sessao(sessao_id, status="revisando")
 
         # Revisão linguística e CARE Score
@@ -85,7 +85,7 @@ async def executar_pipeline(sessao_id: str, cko: CKO):
             logger.warning(f"Validação MeSH falhou (não crítico): {e}")
 
         # ── Etapa 6: Finalização DOCX ───────────────────────────────────────
-        await manager.send(sessao_id, {"tipo": "etapa", "etapa": 6, "nome": "Finalização"})
+        await manager.send(sessao_id, {"tipo": "etapa", "etapa": 6, "nome": "Finalização", "agente": "DOCX Generator · ABNT", "detalhe": "Gerando documento final..."})
         await _atualizar_sessao(sessao_id, status="finalizando")
 
         docx_path = await gerar_docx(
