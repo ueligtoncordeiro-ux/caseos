@@ -2,7 +2,7 @@
 Chat com IA — assistente da plataforma RCCS.
 Responde dúvidas sobre uso, pesquisa clínica, relatos de caso, CARE checklist etc.
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -84,12 +84,18 @@ async def chat(
 
     # BAIXA = Gemini primeiro para o chatbox ficar acessivel agora.
     # O router ainda pula automaticamente para outras hierarquias quando usadas.
-    resposta = await chamar(
-        system=_SYSTEM,
-        user=user_prompt,
-        complexidade=Complexidade.BAIXA,
-        max_tokens=900,
-    )
+    try:
+        resposta = await chamar(
+            system=_SYSTEM,
+            user=user_prompt,
+            complexidade=Complexidade.BAIXA,
+            max_tokens=900,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Assistente indisponível no momento: {exc}",
+        ) from exc
 
     return ChatResponse(resposta=resposta)
 
@@ -124,11 +130,17 @@ Texto original:
 
 Retorne apenas o texto transformado, sem explicações ou comentários."""
 
-    resposta = await chamar(
-        system="Você é um especialista em redação científica médica em português brasileiro.",
-        user=prompt,
-        complexidade=Complexidade.BAIXA,
-        max_tokens=800,
-    )
+    try:
+        resposta = await chamar(
+            system="Você é um especialista em redação científica médica em português brasileiro.",
+            user=prompt,
+            complexidade=Complexidade.BAIXA,
+            max_tokens=800,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Assistente de texto indisponível no momento: {exc}",
+        ) from exc
 
     return ChatResponse(resposta=resposta)

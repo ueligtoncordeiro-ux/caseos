@@ -3512,13 +3512,28 @@ async function enviarMensagemChat() {
   if (typing) typing.classList.add('show');
 
   try {
-    const res = await fetch(`${API}/chat`, {
+    let res = await fetch(`${API}/chat`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ mensagem, historico: chatHistorico }),
     });
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (res.status === 401 && await refreshToken()) {
+      res = await fetch(`${API}/chat`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ mensagem, historico: chatHistorico }),
+      });
+    }
+
+    if (!res.ok) {
+      let detalhe = `HTTP ${res.status}`;
+      try {
+        const errData = await res.json();
+        detalhe = errData.detail || errData.message || detalhe;
+      } catch {}
+      throw new Error(detalhe);
+    }
     const data = await res.json();
 
     const resposta = data.resposta || data.mensagem || data.content || 'Sem resposta.';
@@ -3528,7 +3543,7 @@ async function enviarMensagemChat() {
   } catch (err) {
     console.error('[CaseOS] Erro no chat:', err);
     _appendMensagem('assistant',
-      'Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente em instantes.');
+      `Desculpe, ocorreu um erro ao processar sua mensagem: ${err.message || 'tente novamente em instantes.'}`);
   } finally {
     if (typing) typing.classList.remove('show');
   }

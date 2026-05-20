@@ -19,6 +19,7 @@ Custo estimado por artigo (quando todos disponíveis):
 """
 import json
 import logging
+import asyncio
 from enum import Enum
 from typing import Any
 
@@ -126,11 +127,14 @@ async def _chamar_openai(
 
 
 async def _chamar_gemini(
-    system: str, user: str, model: str = "gemini-2.0-flash"
+    system: str, user: str, max_tokens: int, model: str = "gemini-2.0-flash"
 ) -> str:
     m = _gemini_model(model)
     prompt = f"{system}\n\n{user}"
-    resp = await m.generate_content_async(prompt)
+    resp = await m.generate_content_async(
+        prompt,
+        generation_config={"max_output_tokens": max_tokens},
+    )
     return resp.text.strip()
 
 
@@ -156,21 +160,21 @@ async def chamar(
             ("GPT-4o",            "openai",
              lambda: _chamar_openai(system, user, max_tokens, json_mode, "gpt-4o")),
             ("Gemini 2.0 Flash",  "gemini",
-             lambda: _chamar_gemini(system, user)),
+             lambda: _chamar_gemini(system, user, max_tokens)),
         ]
     elif complexidade == Complexidade.MEDIA:
         candidatos = [
             ("GPT-4o mini",       "openai",
              lambda: _chamar_openai(system, user, max_tokens, json_mode, "gpt-4o-mini")),
             ("Gemini 2.0 Flash",  "gemini",
-             lambda: _chamar_gemini(system, user)),
+             lambda: _chamar_gemini(system, user, max_tokens)),
             ("Claude Haiku 4.5",  "claude",
              lambda: _chamar_claude(system, user, min(max_tokens, 4096))),
         ]
     else:  # BAIXA — Gemini primeiro (padrão quando apenas Gemini está disponível)
         candidatos = [
             ("Gemini 2.0 Flash",  "gemini",
-             lambda: _chamar_gemini(system, user)),
+             lambda: _chamar_gemini(system, user, max_tokens)),
             ("GPT-4o mini",       "openai",
              lambda: _chamar_openai(system, user, max_tokens, json_mode, "gpt-4o-mini")),
             ("Claude Haiku 4.5",  "claude",
@@ -191,7 +195,7 @@ async def chamar(
     for nome, fn in cadeia:
         try:
             logger.info(f"LLM → {nome} (complexidade={complexidade})")
-            return await fn()
+            return await asyncio.wait_for(fn(), timeout=45)
         except Exception as e:
             logger.warning(f"  ✗ {nome} falhou: {e}")
             ultimo_erro = e
