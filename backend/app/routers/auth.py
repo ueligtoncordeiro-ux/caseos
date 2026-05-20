@@ -140,9 +140,12 @@ async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depend
     result = await db.execute(select(Usuario).where(Usuario.email == body.email.lower()))
     user   = result.scalar_one_or_none()
     # Resposta genérica — não revelar se e-mail existe (segurança)
-    if user and user.hashed_pw:
-        token = create_reset_token(user.email)
-        asyncio.create_task(enviar_reset_senha(user.email, user.nome, token))
+    # Envia reset se tiver senha cadastrada; conta Google-only não tem senha para redefinir
+    if user and user.is_active:
+        if user.hashed_pw:
+            token = create_reset_token(user.email)
+            asyncio.create_task(enviar_reset_senha(user.email, user.nome, token))
+        # else: conta Google-only — não envia reset de senha (não tem senha)
     return {"mensagem": "Se o e-mail estiver cadastrado, você receberá um link em instantes."}
 
 

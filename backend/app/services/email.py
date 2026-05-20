@@ -25,12 +25,18 @@ def _backend_url() -> str:
 
 
 async def _send(payload: dict) -> bool:
+    if not settings.resend_api_key:
+        log.warning("RESEND_API_KEY não configurado — e-mail não enviado para %s", payload.get("to"))
+        return False
     async with httpx.AsyncClient() as c:
         try:
+            log.info("Enviando e-mail via Resend: from=%s to=%s subject=%s",
+                     payload.get("from"), payload.get("to"), payload.get("subject"))
             r = await c.post(f"{_BASE}/emails", json=payload, headers=_headers(), timeout=15)
             if r.status_code not in (200, 201):
                 log.error("Resend error %s: %s", r.status_code, r.text)
                 return False
+            log.info("E-mail enviado com sucesso: %s", r.json())
             return True
         except Exception as exc:
             log.error("Resend exception: %s", exc)
