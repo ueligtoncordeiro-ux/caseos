@@ -60,8 +60,8 @@ def _base(*, char_url: str, headline: str, body_html: str, cta_url: str,
   <!-- LOGO -->
   <tr>
     <td style="padding:0 0 28px 4px">
-      <img src="{_LOGO}" alt="caseOS" height="28"
-           style="height:28px;display:block">
+      <img src="{_LOGO}" alt="CaseOS" width="93" height="28"
+           style="width:93px;height:28px;display:block;border:0;outline:none">
     </td>
   </tr>
 
@@ -121,7 +121,7 @@ def _base(*, char_url: str, headline: str, body_html: str, cta_url: str,
   <tr>
     <td style="padding:16px 4px 8px 4px;text-align:center">
       <p style="font-size:10px;color:{_DIM};margin:0 0 4px 0;font-family:monospace;letter-spacing:.08em">
-        CaseOS · IA para relatos clínicos científicos
+        CaseOS · IA para profissionais de saúde
       </p>
       <p style="font-size:10px;color:{_DIM};margin:0">
         <a href="{settings.frontend_url}" style="color:{_DIM};text-decoration:none">
