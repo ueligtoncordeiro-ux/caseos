@@ -241,3 +241,45 @@ async def confirmar_flags(
     if sessao.user_id and sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
     return {"sessao_id": sessao_id, "confirmado": True}
+
+
+@router.get("/pubmed/buscar")
+async def buscar_pubmed(
+    q: str = Query(..., min_length=3, max_length=200),
+    max: int = Query(default=10, ge=1, le=20),
+    user: Usuario = Depends(get_verified_user),
+):
+    """Busca artigos no PubMed e retorna lista com links diretos."""
+    from app.utils.pubmed import pesquisar_pubmed
+
+    try:
+        artigos = await pesquisar_pubmed([q], max_por_query=max, max_total=max)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Erro na busca PubMed: {str(exc)[:200]}")
+
+    def _pubmed_url(art: dict) -> str:
+        if art.get("pmid"):
+            return f"https://pubmed.ncbi.nlm.nih.gov/{art['pmid']}"
+        if art.get("doi"):
+            return f"https://doi.org/{art['doi']}"
+        return ""
+
+    return {
+        "query": q,
+        "total": len(artigos),
+        "artigos": [
+            {
+                "pmid":       art.get("pmid", ""),
+                "titulo":     art.get("titulo", "Sem título"),
+                "autores":    art.get("autores", ""),
+                "periodico":  art.get("periodico", ""),
+                "ano":        art.get("ano", ""),
+                "abstract":   (art.get("abstract") or "")[:500],
+                "doi":        art.get("doi", ""),
+                "url_pubmed": _pubmed_url(art),
+                "citacoes":   art.get("citation_count") or art.get("citacoes", 0),
+            }
+            for art in artigos
+        ],
+    }
+

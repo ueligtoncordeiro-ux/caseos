@@ -326,6 +326,35 @@ body {
   font-family: var(--head);
 }
 
+/* PubMed article result card */
+.pubmed-card {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--card-bdr);
+}
+.pubmed-card:last-child { border-bottom: none; }
+.pubmed-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--blue);
+  text-decoration: none;
+  line-height: 1.4;
+  display: block;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: opacity 0.13s;
+}
+.pubmed-card-title:hover { opacity: 0.75; }
+.pubmed-card-meta { font-size: 12px; color: var(--t3); margin-bottom: 6px; display: flex; flex-wrap: wrap; gap: 8px; }
+.pubmed-card-abstract { font-size: 12.5px; color: var(--t2); line-height: 1.6; }
+.pubmed-card-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.pubmed-badge {
+  font-size: 10.5px; font-weight: 600;
+  padding: 2px 8px; border-radius: 4px;
+  background: var(--blue-dim); color: var(--blue);
+}
+.pubmed-badge.doi { background: #F0FDF4; color: #16A34A; }
+.pubmed-badge.citations { background: var(--amber-dim); color: var(--amber); }
+
 /* Usage bar */
 .usage-bar-wrap {
   margin-bottom: 10px;
@@ -2148,6 +2177,14 @@ tbody td {
       <span class="nav-icon"><svg><use href="#px-help"/></svg></span>
       <span class="nav-text">Ajuda</span>
     </button>
+
+    <div class="nav-divider"></div>
+    <div class="nav-label">Pesquisa</div>
+
+    <button class="nav-item" onclick="mostrarSecaoPubMed()">
+      <span class="nav-icon">🔬</span>
+      <span class="nav-text">Buscar PubMed</span>
+    </button>
   </nav>
 
   <!-- Footer -->
@@ -2362,6 +2399,44 @@ tbody td {
         <div class="pagination" id="paginationBar" style="display:none">
           <span class="pagination-info" id="paginacaoInfo"></span>
           <div class="pagination-btns" id="paginacaoBtns"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PubMed Search Section (hidden by default) -->
+    <div id="pubmedSection" style="display:none;">
+      <div class="section-header" style="margin-top:32px;">
+        <span class="section-title">🔬 Buscar PubMed</span>
+      </div>
+      <div class="table-card" style="margin-bottom:20px;">
+        <div class="table-toolbar" style="flex-direction:column;align-items:stretch;gap:10px;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <div class="table-search" style="max-width:100%;flex:1;">
+              <span style="color:var(--t3);font-size:14px;flex-shrink:0">🔍</span>
+              <input type="text" id="pubmedInput" placeholder="Ex: Síndrome de Brugada case report, fisioterapia neurológica..."
+                style="font-size:14px;" onkeydown="if(event.key==='Enter')buscarPubMed()">
+            </div>
+            <button class="btn btn-primary" onclick="buscarPubMed()" id="pubmedBtn">
+              Buscar
+            </button>
+          </div>
+          <div style="font-size:12px;color:var(--t3);">
+            Busca em tempo real no PubMed (35M+ artigos). Os resultados incluem links diretos para o artigo completo.
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div id="pubmedResults" style="padding:0 18px 18px;">
+          <div id="pubmedEmpty" style="text-align:center;padding:32px 16px;color:var(--t3);font-size:13px;">
+            <div style="font-size:36px;margin-bottom:12px;">🔬</div>
+            Digite um diagnóstico, condição clínica ou termo e pressione Buscar.
+          </div>
+          <div id="pubmedLoading" style="display:none;text-align:center;padding:32px;color:var(--t3);font-size:13px;">
+            <div class="skeleton" style="width:100%;height:80px;border-radius:8px;margin-bottom:10px;"></div>
+            <div class="skeleton" style="width:100%;height:80px;border-radius:8px;margin-bottom:10px;"></div>
+            <div class="skeleton" style="width:100%;height:80px;border-radius:8px;"></div>
+          </div>
+          <div id="pubmedList"></div>
         </div>
       </div>
     </div>
@@ -3457,6 +3532,101 @@ async function enviarMensagemChat() {
   } finally {
     if (typing) typing.classList.remove('show');
   }
+}
+
+/* ═══════════════════════════════════════════════
+   PUBMED SEARCH
+═══════════════════════════════════════════════ */
+function mostrarSecaoPubMed() {
+  const sec = document.getElementById('pubmedSection');
+  if (!sec) return;
+  const isVisible = sec.style.display !== 'none';
+  sec.style.display = isVisible ? 'none' : 'block';
+  if (!isVisible) {
+    sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => document.getElementById('pubmedInput')?.focus(), 400);
+  }
+  if (window.innerWidth <= 768) toggleSidebar();
+}
+
+async function buscarPubMed() {
+  const input   = document.getElementById('pubmedInput');
+  const list    = document.getElementById('pubmedList');
+  const empty   = document.getElementById('pubmedEmpty');
+  const loading = document.getElementById('pubmedLoading');
+  const btn     = document.getElementById('pubmedBtn');
+
+  const q = input?.value?.trim();
+  if (!q || q.length < 3) {
+    mostrarToast('Digite pelo menos 3 caracteres para buscar.', 'info', '🔍');
+    return;
+  }
+
+  if (!getToken()) { mostrarToast('Faça login para usar a busca PubMed.', 'info', '🔒'); return; }
+
+  // Show loading
+  if (empty) empty.style.display = 'none';
+  if (list) list.innerHTML = '';
+  if (loading) loading.style.display = 'block';
+  if (btn) { btn.textContent = 'Buscando...'; btn.disabled = true; }
+
+  try {
+    const res = await fetch(`${API}/artigo/pubmed/buscar?q=${encodeURIComponent(q)}&max=12`, {
+      headers: authHeaders(),
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    if (loading) loading.style.display = 'none';
+
+    if (!data.artigos || data.artigos.length === 0) {
+      if (list) list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px;">Nenhum resultado encontrado para "' + _esc(q) + '"</div>';
+      return;
+    }
+
+    if (list) {
+      list.innerHTML = `
+        <div style="font-size:12px;color:var(--t3);margin:12px 0 4px;">
+          <strong>${data.total}</strong> resultado${data.total !== 1 ? 's' : ''} para "${_esc(q)}"
+        </div>
+      ` + data.artigos.map(art => `
+        <div class="pubmed-card">
+          <a class="pubmed-card-title" href="${_esc(art.url_pubmed || '#')}" target="_blank" rel="noopener noreferrer">
+            ${_esc(art.titulo)}
+          </a>
+          <div class="pubmed-card-meta">
+            <span>${_esc(art.autores)}</span>
+            ${art.periodico ? `<span>· ${_esc(art.periodico)}</span>` : ''}
+            ${art.ano ? `<span>· ${_esc(art.ano)}</span>` : ''}
+          </div>
+          ${art.abstract ? `<div class="pubmed-card-abstract">${_esc(art.abstract)}${art.abstract.length >= 500 ? '…' : ''}</div>` : ''}
+          <div class="pubmed-card-badges">
+            ${art.pmid ? `<a class="pubmed-badge" href="https://pubmed.ncbi.nlm.nih.gov/${_esc(art.pmid)}" target="_blank" rel="noopener">PMID ${_esc(art.pmid)}</a>` : ''}
+            ${art.doi ? `<a class="pubmed-badge doi" href="https://doi.org/${_esc(art.doi)}" target="_blank" rel="noopener">DOI</a>` : ''}
+            ${art.citacoes ? `<span class="pubmed-badge citations">📊 ${art.citacoes} citações</span>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+  } catch (err) {
+    console.error('[CaseOS] Erro busca PubMed:', err);
+    if (loading) loading.style.display = 'none';
+    if (list) list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--red);font-size:13px;">Erro ao buscar. Tente novamente.</div>';
+    mostrarToast('Erro na busca PubMed. Tente novamente.', 'error', '⚠️');
+  } finally {
+    if (btn) { btn.textContent = 'Buscar'; btn.disabled = false; }
+  }
+}
+
+function _esc(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 /* ═══════════════════════════════════════════════
