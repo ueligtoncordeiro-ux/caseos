@@ -66,4 +66,26 @@ async def websocket_endpoint(
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "version": "1.0.0"}
+    """Endpoint de health check para monitoramento externo (UptimeRobot, BetterStack etc)."""
+    from datetime import datetime, timezone
+    from sqlalchemy import text
+    from app.models.database import get_db
+    db_ok = False
+    try:
+        from app.models.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+            db_ok = True
+    except Exception:
+        db_ok = False
+
+    status = "ok" if db_ok else "degraded"
+    return {
+        "status": status,
+        "version": "1.0.0",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "services": {
+            "api": "ok",
+            "database": "ok" if db_ok else "error",
+        }
+    }
