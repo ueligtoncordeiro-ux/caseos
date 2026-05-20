@@ -1,16 +1,21 @@
 """
 LLM Router — roteamento por complexidade com fallback em cascata.
 
-Hierarquia de providers:
+Hierarquia definida (aplicada apenas se a chave estiver configurada):
   ALTA complexidade  → Claude Sonnet 4.6  → GPT-4o         → Gemini 2.0 Flash
   MÉDIA complexidade → GPT-4o mini        → Gemini 2.0 Flash → Claude Haiku
   BAIXA complexidade → Gemini 2.0 Flash   → GPT-4o mini    → Claude Haiku
 
-Custo estimado por artigo:
+Regra de disponibilidade:
+  • Providers sem chave configurada são automaticamente ignorados.
+  • Gemini é o fallback universal — se for o único com chave, é sempre usado.
+  • Quando Claude/OpenAI forem contratados, basta adicionar as chaves ao .env
+    e a hierarquia entra em vigor automaticamente, sem alterar código.
+
+Custo estimado por artigo (quando todos disponíveis):
   Claude Sonnet 4.6  ~$0.35
   GPT-4o mini        ~$0.02
-  Gemini 2.0 Flash   ~$0.001 (fallback — quase gratuito)
-  Total              ~$0.37  ≈ R$ 2,00
+  Gemini 2.0 Flash   ~$0.001
 """
 import json
 import logging
@@ -32,22 +37,57 @@ class Complexidade(str, Enum):
     BAIXA = "baixa"
 
 
+# ── Disponibilidade de chaves ─────────────────────────────────────────────────
+
+def _tem_chave(provider: str) -> bool:
+    """Retorna True se a chave do provider parecer real e utilizavel."""
+    mapa = {
+        "claude": settings.anthropic_api_key,
+        "openai": settings.openai_api_key,
+        "gemini": settings.gemini_api_key,
+    }
+    valor = (mapa.get(provider) or "").strip()
+    if not valor:
+        return False
+
+    # Evita tentar providers preenchidos com placeholders do .env.example.
+    placeholders = {
+        "sk-",
+        "sk-...",
+        "sk-ant-...",
+        "AIza...",
+        "xxxx",
+        "sua-chave",
+        "sua_chave",
+        "your-key",
+        "your_key",
+    }
+    normalizado = valor.lower()
+    return (
+        valor not in placeholders
+        and "..." not in valor
+        and "troque" not in normalizado
+        and "example" not in normalizado
+        and "exemplo" not in normalizado
+    )
+
+
 # ── Clientes ──────────────────────────────────────────────────────────────────
 
 def _claude() -> anthropic.AsyncAnthropic:
-    if not settings.anthropic_api_key:
+    if not _tem_chave("claude"):
         raise RuntimeError("ANTHROPIC_API_KEY não configurada.")
     return anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
 
 def _openai_async() -> openai.AsyncOpenAI:
-    if not settings.openai_api_key:
+    if not _tem_chave("openai"):
         raise RuntimeError("OPENAI_API_KEY não configurada.")
     return openai.AsyncOpenAI(api_key=settings.openai_api_key)
 
 
-def _gemini_model(model: str = "gemini-2.0-flash"):
-    if not settings.gemini_api_key:
+def _gemini_model(model: str = "gemini-2.0-flash") -> genai.GenerativeModel:
+    if not _tem_chave("gemini"):
         raise RuntimeError("GEMINI_API_KEY não configurada.")
     genai.configure(api_key=settings.gemini_api_key)
     return genai.GenerativeModel(model)
@@ -103,24 +143,49 @@ async def chamar(
     max_tokens: int = 8192,
     json_mode: bool = False,
 ) -> str:
+    """
+    Executa a chamada LLM seguindo a hierarquia de complexidade.
+    Providers sem chave configurada são ignorados automaticamente.
+    Gemini é o fallback universal — sempre incluído se tiver chave.
+    """
+    # Cada item: (nome_display, provider_key, callable)
     if complexidade == Complexidade.ALTA:
-        cadeia = [
-            ("Claude Sonnet 4.6",  lambda: _chamar_claude(system, user, max_tokens)),
-            ("GPT-4o",             lambda: _chamar_openai(system, user, max_tokens, json_mode, "gpt-4o")),
-            ("Gemini 1.5 Pro",     lambda: _chamar_gemini(system, user, "gemini-2.0-flash")),
+        candidatos = [
+            ("Claude Sonnet 4.6", "claude",
+             lambda: _chamar_claude(system, user, max_tokens)),
+            ("GPT-4o",            "openai",
+             lambda: _chamar_openai(system, user, max_tokens, json_mode, "gpt-4o")),
+            ("Gemini 2.0 Flash",  "gemini",
+             lambda: _chamar_gemini(system, user)),
         ]
     elif complexidade == Complexidade.MEDIA:
-        cadeia = [
-            ("GPT-4o mini",        lambda: _chamar_openai(system, user, max_tokens, json_mode, "gpt-4o-mini")),
-            ("Gemini 1.5 Flash",   lambda: _chamar_gemini(system, user, "gemini-2.0-flash")),
-            ("Claude Haiku 4.5",   lambda: _chamar_claude(system, user, min(max_tokens, 4096))),
+        candidatos = [
+            ("GPT-4o mini",       "openai",
+             lambda: _chamar_openai(system, user, max_tokens, json_mode, "gpt-4o-mini")),
+            ("Gemini 2.0 Flash",  "gemini",
+             lambda: _chamar_gemini(system, user)),
+            ("Claude Haiku 4.5",  "claude",
+             lambda: _chamar_claude(system, user, min(max_tokens, 4096))),
         ]
-    else:
-        cadeia = [
-            ("Gemini 1.5 Flash",   lambda: _chamar_gemini(system, user, "gemini-2.0-flash")),
-            ("GPT-4o mini",        lambda: _chamar_openai(system, user, max_tokens, json_mode, "gpt-4o-mini")),
-            ("Claude Haiku 4.5",   lambda: _chamar_claude(system, user, min(max_tokens, 2048))),
+    else:  # BAIXA — Gemini primeiro (padrão quando apenas Gemini está disponível)
+        candidatos = [
+            ("Gemini 2.0 Flash",  "gemini",
+             lambda: _chamar_gemini(system, user)),
+            ("GPT-4o mini",       "openai",
+             lambda: _chamar_openai(system, user, max_tokens, json_mode, "gpt-4o-mini")),
+            ("Claude Haiku 4.5",  "claude",
+             lambda: _chamar_claude(system, user, min(max_tokens, 2048))),
         ]
+
+    # Filtra apenas providers com chave disponível
+    cadeia = [(nome, fn) for nome, prov, fn in candidatos if _tem_chave(prov)]
+
+    # Garantia final: se nada disponível, avisa claramente
+    if not cadeia:
+        raise RuntimeError(
+            "Nenhum provider LLM disponível. "
+            "Configure pelo menos GEMINI_API_KEY no .env."
+        )
 
     ultimo_erro = None
     for nome, fn in cadeia:
