@@ -343,7 +343,7 @@ async def criar_checkout(
             cancel_url=f"{settings.frontend_url}/login.html?upgrade=cancel",
         )
         return {"url": session.url}
-    except stripe.error.StripeError as e:
-        raise HTTPException(status_code=402, detail=f"Stripe: {e.user_message or str(e)}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro checkout: {str(e)}")
+        err = getattr(e, "user_message", None) or getattr(e, "error", {})
+        detail = err.get("message", str(e)) if isinstance(err, dict) else str(e)
+        raise HTTPException(status_code=402, detail=f"Stripe: {detail}")
