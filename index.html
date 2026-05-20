@@ -1502,14 +1502,78 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
   </div>
 </div>
 
+<!-- ── Demo Result Modal ── -->
+<div class="modal-overlay" id="demoResultModal" style="overflow-y:auto;align-items:flex-start;padding:24px 16px;">
+  <div class="modal-box" style="max-width:720px;width:100%;padding:40px;margin:auto;position:relative;">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(200,255,0,0.12);border:1px solid rgba(200,255,0,0.3);border-radius:99px;padding:5px 14px;font-size:12px;font-weight:600;color:#9acd00;margin-bottom:16px;">
+        ⚡ Prévia gerada por IA
+      </div>
+      <h2 id="demoTitulo" style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;line-height:1.4;color:var(--t1);margin-bottom:8px;">Relato de Caso Clínico</h2>
+      <p style="font-size:13px;color:var(--t3);">Introdução e Apresentação do Caso geradas a partir dos seus dados</p>
+    </div>
+
+    <!-- Sections unlocked -->
+    <div id="demoConteudo" style="margin-bottom:0;">
+      <!-- Introdução -->
+      <div style="margin-bottom:28px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-bottom:12px;">Introdução</div>
+        <div id="demoIntroducao" style="font-size:14.5px;line-height:1.75;color:var(--t1);display:flex;flex-direction:column;gap:14px;"></div>
+      </div>
+      <!-- Caso Clínico -->
+      <div style="margin-bottom:0;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-bottom:12px;">Apresentação do Caso</div>
+        <div id="demoCasoClinco" style="font-size:14.5px;line-height:1.75;color:var(--t1);display:flex;flex-direction:column;gap:14px;"></div>
+      </div>
+    </div>
+
+    <!-- Locked sections gradient -->
+    <div style="position:relative;margin-top:28px;">
+      <!-- gradient fade -->
+      <div style="position:absolute;top:-60px;left:0;right:0;height:80px;background:linear-gradient(to bottom,transparent,rgba(255,255,255,0.97));z-index:1;pointer-events:none;"></div>
+      <!-- lock card -->
+      <div style="background:var(--light);border:1.5px solid var(--border);border-radius:14px;padding:36px 28px;text-align:center;">
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:24px;opacity:.45;pointer-events:none;user-select:none;">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:500;color:var(--t2);">
+            🔒 <span>Discussão (10 parágrafos com referências ABNT)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:500;color:var(--t2);">
+            🔒 <span>Conclusão · Resumo CARE · Palavras-chave MeSH</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:500;color:var(--t2);">
+            🔒 <span>Referências bibliográficas · Score CARE 2013</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:500;color:var(--t2);">
+            🔒 <span>Download DOCX formatado (ABNT/Vancouver)</span>
+          </div>
+        </div>
+        <p style="font-size:15px;font-weight:600;color:var(--t1);margin-bottom:6px;">Gostou da prévia?</p>
+        <p style="font-size:13px;color:var(--t3);line-height:1.6;margin-bottom:24px;">
+          Crie sua conta gratuita para gerar o relato <strong>completo</strong> com Discussão,<br>
+          Referências, Score CARE e download em DOCX — em menos de 3 minutos.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:10px;align-items:center;">
+          <button onclick="irParaLogin('register')" style="display:inline-flex;align-items:center;gap:8px;padding:14px 32px;background:var(--acid);border:none;border-radius:10px;font-size:15px;font-weight:700;color:var(--obsidian);cursor:pointer;letter-spacing:-.01em;">
+            🔓 Criar conta grátis e gerar relato completo
+          </button>
+          <button onclick="irParaLogin('login')" style="background:none;border:none;font-size:13px;color:var(--t3);cursor:pointer;text-decoration:underline;">
+            Já tenho conta — entrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Login Gate Modal ── -->
 <div class="modal-overlay" id="loginGateModal" onclick="fecharLoginGate()" style="background:rgba(10,10,11,0.65);backdrop-filter:blur(4px);">
   <div class="modal-box" onclick="event.stopPropagation()" style="max-width:420px;text-align:center;padding:48px 40px 40px;">
     <img src="assets/pixel-researcher.png" alt="" style="width:80px;height:auto;image-rendering:pixelated;margin:0 auto 20px;display:block;">
-    <h2 style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--t1);margin-bottom:10px;">Login necessário</h2>
+    <h2 style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--t1);margin-bottom:10px;">Prévia gratuita</h2>
     <p style="font-size:14px;color:var(--t3);line-height:1.6;margin-bottom:28px;">
-      Para gerar seu relato de caso, crie uma conta gratuita.<br>
-      Seus dados do formulário ficam salvos enquanto você não fechar o navegador.
+      Veja a Introdução e o Caso Clínico gerados pela IA — sem criar conta.<br>
+      Crie uma conta gratuita para gerar o relato <strong>completo</strong> com DOCX.
     </p>
 
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
@@ -1525,6 +1589,9 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
       </button>
     </div>
 
+    <button onclick="fecharLoginGate();iniciarDemo();" style="display:flex;align-items:center;justify-content:center;width:100%;padding:12px 20px;background:rgba(200,255,0,0.12);border:1.5px solid rgba(200,255,0,0.35);border-radius:9px;font-size:14px;font-weight:600;color:#7aa300;cursor:pointer;margin-bottom:10px;margin-top:6px;">
+      ⚡ Ver prévia gratuita (sem login)
+    </button>
     <button onclick="fecharLoginGate()" style="background:none;border:none;font-size:12px;color:var(--t3);cursor:pointer;text-decoration:underline;">
       Continuar preenchendo
     </button>
@@ -1903,42 +1970,48 @@ function coletarDados() {
 }
 
 /* ══ INICIAR GERAÇÃO ══ */
-async function iniciarGeracao() {
-  // Auth gate — must be logged in to generate
-  const autenticado = await checkAuthForGeneration();
-  if (!autenticado) return;
+let _isDemoMode = false;
 
+function _validarFormulario() {
   if (!getC('consentimentoInformado')) {
     showToast('⚠️ Confirme o consentimento para publicação antes de continuar.', 'error');
-    return;
+    return false;
   }
   if (!getV('diagnosticoDefinitivo') && !getV('queixaPrincipal')) {
     showToast('⚠️ Preencha pelo menos a queixa principal e o diagnóstico.', 'error');
-    return;
+    return false;
   }
+  return true;
+}
 
-  const dados = coletarDados();
-  const modal = document.getElementById('pipelineModal');
-  modal.classList.add('show');
-
-  // reset pipeline UI
+function _resetPipelineUI(demoMode) {
+  _isDemoMode = demoMode;
   for (let i = 1; i <= 6; i++) {
     const el = document.getElementById('ps-' + i);
     if (!el) continue;
     el.className = 'p-step';
-    el.querySelector('.p-step-status').textContent = '⏳';
-    el.querySelector('.p-step-detail').textContent = 'Aguardando...';
+    if (demoMode && i >= 5) {
+      el.querySelector('.p-step-status').textContent = '🔒';
+      el.querySelector('.p-step-detail').textContent = 'Disponível após login';
+      el.style.opacity = '0.4';
+    } else {
+      el.querySelector('.p-step-status').textContent = '⏳';
+      el.querySelector('.p-step-detail').textContent = 'Aguardando...';
+      el.style.opacity = '';
+    }
   }
   document.getElementById('btnModalOk').style.display = 'none';
-  // reset character
   setPipelineChar(1, false);
+}
 
-  let wsConnected = false;
+function _abrirPipelineWS(endpoint, dados, autenticado) {
   const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsHost = window.location.hostname === 'localhost'
     ? 'localhost:8000'
     : 'caseos-api-bhdx.onrender.com';
   const wsUrl = wsProto + '//' + wsHost + '/ws/' + sessaoId;
+
+  let wsConnected = false;
 
   try {
     const ws = new WebSocket(wsUrl);
@@ -1955,19 +2028,47 @@ async function iniciarGeracao() {
     };
 
     ws.onerror = function() {
-      if (!wsConnected) httpFallback();
+      if (!wsConnected) {
+        if (_isDemoMode) httpFallbackDemo();
+        else httpFallback();
+      }
     };
 
-    // send data via HTTP
-    await fetch(API + '/artigo/iniciar', {
+    const headers = { 'Content-Type': 'application/json' };
+    if (autenticado && getToken()) headers['Authorization'] = 'Bearer ' + getToken();
+
+    fetch(API + endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+      headers,
       body: JSON.stringify(dados)
     }).catch(function() {});
 
   } catch(e) {
-    httpFallback();
+    if (_isDemoMode) httpFallbackDemo();
+    else httpFallback();
   }
+}
+
+async function iniciarGeracao() {
+  const autenticado = await checkAuthForGeneration();
+  if (!autenticado) return; // login gate shown — user can choose "Ver prévia gratuita"
+
+  if (!_validarFormulario()) return;
+
+  const dados = coletarDados();
+  document.getElementById('pipelineModal').classList.add('show');
+  _resetPipelineUI(false);
+  _abrirPipelineWS('/artigo/iniciar', dados, true);
+}
+
+async function iniciarDemo() {
+  if (!_validarFormulario()) return;
+
+  const dados = coletarDados();
+  document.getElementById('pipelineModal').classList.add('show');
+  _resetPipelineUI(true);
+  document.getElementById('pipelineStatusMsg').textContent = 'Gerando prévia gratuita — aguarde...';
+  _abrirPipelineWS('/artigo/demo', dados, false);
 }
 
 /* ── Pipeline character switcher ── */
@@ -1998,8 +2099,30 @@ function setPipelineChar(step, done) {
 function handlePipelineMessage(msg) {
   const tipo = msg.tipo || '';
 
-  if (tipo === 'concluido' || msg.status === 'done' && msg.etapa === 6) {
-    // Mark step 6 done
+  // ── Demo completed ──────────────────────────────────────────────────────
+  if (tipo === 'concluido_demo') {
+    // Mark steps 1-4 done
+    for (let i = 1; i <= 4; i++) {
+      const el = document.getElementById('ps-' + i);
+      if (el) {
+        el.className = 'p-step done';
+        el.querySelector('.p-step-status').textContent = '✅';
+        el.style.opacity = '';
+      }
+    }
+    setPipelineChar(4, true);
+    document.getElementById('pipelineStatusMsg').textContent = '⚡ Prévia gerada! Veja abaixo...';
+
+    // Small delay then show demo result
+    setTimeout(function() {
+      document.getElementById('pipelineModal').classList.remove('show');
+      mostrarResultadoDemo(msg.resultado || {});
+    }, 900);
+    return;
+  }
+
+  // ── Full pipeline completed ─────────────────────────────────────────────
+  if (tipo === 'concluido' || (msg.status === 'done' && msg.etapa === 6)) {
     const el6 = document.getElementById('ps-6');
     if (el6) {
       el6.className = 'p-step done';
@@ -2009,7 +2132,6 @@ function handlePipelineMessage(msg) {
     setPipelineChar(6, true);
     document.getElementById('pipelineStatusMsg').textContent = '✅ Relato gerado com sucesso!';
     document.getElementById('btnModalOk').style.display = 'inline-flex';
-    // Show CARE score if available
     if (msg.resultado && msg.resultado.care_score) {
       document.getElementById('pipelineStatusMsg').textContent =
         `✅ Relato pronto! CARE Score: ${msg.resultado.care_score}/100 · ${msg.resultado.referencias || 0} referências`;
@@ -2017,35 +2139,39 @@ function handlePipelineMessage(msg) {
     return;
   }
 
-  if (tipo === 'erro' || msg.tipo === 'erro') {
+  if (tipo === 'erro') {
     document.getElementById('pipelineStatusMsg').textContent = '❌ ' + (msg.mensagem || 'Erro no pipeline');
     return;
   }
 
-  // etapa or progresso message
+  // ── etapa / progresso ───────────────────────────────────────────────────
   const etapa = msg.etapa;
   if (!etapa) return;
+
+  // In demo mode, don't touch steps 5-6
+  if (_isDemoMode && etapa >= 5) return;
 
   const el = document.getElementById('ps-' + etapa);
   if (!el) return;
 
   if (tipo === 'progresso') {
-    // Update detail only, don't change class
     if (msg.detalhe) el.querySelector('.p-step-detail').textContent = msg.detalhe;
     return;
   }
 
-  // tipo === 'etapa' — mark as active
-  // Mark previous steps done
+  // tipo === 'etapa' — mark previous done, current active
   for (let i = 1; i < etapa; i++) {
+    if (_isDemoMode && i >= 5) continue;
     const prev = document.getElementById('ps-' + i);
     if (prev && !prev.classList.contains('done')) {
       prev.className = 'p-step done';
       prev.querySelector('.p-step-status').textContent = '✅';
+      prev.style.opacity = '';
     }
   }
 
   el.className = 'p-step active';
+  el.style.opacity = '';
   el.querySelector('.p-step-status').textContent = '⚙️';
   if (msg.detalhe) el.querySelector('.p-step-detail').textContent = msg.detalhe;
   if (msg.agente) {
@@ -2055,6 +2181,56 @@ function handlePipelineMessage(msg) {
 
   setPipelineChar(etapa, false);
   document.getElementById('pipelineStatusMsg').textContent = `Agente: ${msg.nome || 'Processando'} — aguarde...`;
+}
+
+/* ── Demo result ───────────────────────────────────────────────────────── */
+function mostrarResultadoDemo(resultado) {
+  function _esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Title
+  const titulo = resultado.titulo || 'Relato de Caso Clínico';
+  document.getElementById('demoTitulo').textContent = titulo;
+
+  // Introduction
+  const introEl = document.getElementById('demoIntroducao');
+  const intro = Array.isArray(resultado.introducao) ? resultado.introducao : [];
+  introEl.innerHTML = intro.length
+    ? intro.map(function(p) { return '<p>' + _esc(p) + '</p>'; }).join('')
+    : '<p style="color:var(--t3);font-style:italic;">Introdução não disponível.</p>';
+
+  // Case presentation
+  const casoEl = document.getElementById('demoCasoClinco');
+  const caso = Array.isArray(resultado.caso_clinico) ? resultado.caso_clinico : [];
+  casoEl.innerHTML = caso.length
+    ? caso.map(function(p) { return '<p>' + _esc(p) + '</p>'; }).join('')
+    : '<p style="color:var(--t3);font-style:italic;">Caso clínico não disponível.</p>';
+
+  document.getElementById('demoResultModal').classList.add('show');
+}
+
+async function httpFallbackDemo() {
+  const nomes = ['Validação', 'Anti-duplicação', 'Pesquisa bibliográfica', 'Redação'];
+  document.getElementById('pipelineStatusMsg').textContent = 'Gerando prévia…';
+  for (let i = 1; i <= 4; i++) {
+    setPipelineChar(i, false);
+    const el = document.getElementById('ps-' + i);
+    if (!el) continue;
+    el.className = 'p-step active';
+    el.style.opacity = '';
+    el.querySelector('.p-step-status').textContent = '⚙️';
+    document.getElementById('pipelineStatusMsg').textContent = `Agente: ${nomes[i-1]} — aguarde...`;
+    await new Promise(function(r) { setTimeout(r, 1200); });
+    el.className = 'p-step done';
+    el.querySelector('.p-step-status').textContent = '✅';
+  }
+  setPipelineChar(4, true);
+  document.getElementById('pipelineStatusMsg').textContent = '⚡ Prévia gerada!';
+  setTimeout(function() {
+    document.getElementById('pipelineModal').classList.remove('show');
+    mostrarResultadoDemo({});
+  }, 800);
 }
 
 async function httpFallback() {

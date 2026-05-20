@@ -155,3 +155,69 @@ async def executar(cko: CKO, artigos: list[dict]) -> ArtigoGerado:
         conclusao=data.get("conclusao", []),
         referencias=referencias,
     )
+
+
+# ── Demo mode ────────────────────────────────────────────────────────────────
+
+_SYSTEM_DEMO = """Você é um redator científico especialista em relatos de caso clínico.
+Escreva APENAS em português brasileiro formal e técnico.
+Responda APENAS com JSON válido, sem markdown ou texto extra."""
+
+_TEMPLATE_DEMO = """Redija a Introdução e a Apresentação do Caso clínico para um relato científico.
+
+══ DADOS DO CASO ══
+PACIENTE: {idade} {idade_unidade} | {sexo}
+QUEIXA: {queixa} (duração: {duracao})
+HDA: {hda}
+ANTECEDENTES: {antecedentes}
+DIAGNÓSTICO: {diagnostico}
+INTERVENÇÃO: {desc_intervencao}
+DESFECHO: {desfecho}
+
+══ REFERÊNCIAS DISPONÍVEIS (use até 4) ══
+{referencias}
+
+══ INSTRUÇÕES ══
+INTRODUÇÃO: 2 parágrafos ~200 palavras — contexto clínico e relevância do caso (cite referências com [N])
+CASO CLÍNICO: narrativa cronológica ~350 palavras — apresentação do paciente, exames, diagnóstico e evolução
+
+JSON de resposta:
+{{
+  "titulo": "Relato de Caso: <diagnóstico principal>",
+  "introducao": ["P1", "P2"],
+  "caso_clinico": ["P1", "P2", "P3"]
+}}"""
+
+
+async def executar_demo(cko: CKO, artigos: list[dict]) -> dict:
+    """Pipeline de demonstração — gera apenas Introdução + Caso Clínico (~2 500 tokens)."""
+    i = cko.identificacao
+    h = cko.historia
+    d = cko.diagnostico
+    iv = cko.intervencao
+    de = cko.desfechos
+    pr = cko.intervencoes_anteriores
+
+    # Limita referências a 4 para economizar tokens
+    artigos_demo = artigos[:4]
+
+    prompt = _TEMPLATE_DEMO.format(
+        idade=i.idade or "não informada", idade_unidade=i.idade_unidade,
+        sexo=i.sexo or "não informado",
+        queixa=h.queixa_principal, duracao=h.duracao_sintomas or "não informada",
+        hda=h.hda,
+        antecedentes=h.historico_previo or "Sem antecedentes relevantes.",
+        diagnostico=d.diagnostico_definitivo,
+        desc_intervencao=iv.descricao,
+        desfecho=de.desfecho_clinico,
+        referencias=_refs_txt(artigos_demo) if artigos_demo else "Nenhuma disponível.",
+    )
+
+    resp = await chamar(_SYSTEM_DEMO, prompt, complexidade=Complexidade.ALTA, max_tokens=2500)
+    data = extrair_json(resp)
+
+    return {
+        "titulo": data.get("titulo", f"Relato de Caso: {d.diagnostico_definitivo}"),
+        "introducao": data.get("introducao", []),
+        "caso_clinico": data.get("caso_clinico", []),
+    }

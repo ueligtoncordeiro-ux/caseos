@@ -139,3 +139,61 @@ async def executar_pipeline(sessao_id: str, cko: CKO):
         raise
     finally:
         manager.clear_queue(sessao_id)
+
+
+async def executar_pipeline_demo(sessao_id: str, cko: CKO):
+    """Pipeline de demonstração — sem autenticação, gera apenas Introdução + Caso Clínico."""
+    try:
+        # ── Etapa 1: Validação ──────────────────────────────────────────────
+        await manager.send(sessao_id, {
+            "tipo": "etapa", "etapa": 1, "nome": "Validação",
+            "agente": "Verificador de dados clínicos",
+            "detalhe": "Validando estrutura do formulário...",
+        })
+        await asyncio.sleep(0.8)
+
+        # ── Etapa 2: Anti-duplicação ────────────────────────────────────────
+        await manager.send(sessao_id, {
+            "tipo": "etapa", "etapa": 2, "nome": "Anti-duplicação",
+            "agente": "Agente de originalidade",
+            "detalhe": "Verificando originalidade do caso...",
+        })
+        await asyncio.sleep(0.8)
+
+        # ── Etapa 3: Pesquisa bibliográfica ─────────────────────────────────
+        await manager.send(sessao_id, {
+            "tipo": "etapa", "etapa": 3, "nome": "Pesquisa bibliográfica",
+            "agente": "PubMed · OpenAlex · Crossref",
+            "detalhe": "Buscando literatura relevante...",
+        })
+
+        artigos = await bibliografico.executar(cko)
+
+        await manager.send(sessao_id, {
+            "tipo": "progresso", "etapa": 3,
+            "detalhe": f"{len(artigos)} referências encontradas",
+        })
+
+        # ── Etapa 4: Redação parcial (demo) ─────────────────────────────────
+        await manager.send(sessao_id, {
+            "tipo": "etapa", "etapa": 4, "nome": "Redação",
+            "agente": "Claude Sonnet 4.6",
+            "detalhe": "Redigindo introdução e apresentação do caso...",
+        })
+
+        demo_resultado = await redator.executar_demo(cko, artigos)
+
+        # ── Concluído (demo) ─────────────────────────────────────────────────
+        await manager.send(sessao_id, {
+            "tipo": "concluido_demo",
+            "resultado": demo_resultado,
+        })
+
+    except Exception as exc:
+        await manager.send(sessao_id, {
+            "tipo": "erro",
+            "mensagem": f"Erro no pipeline de demonstração: {str(exc)[:300]}",
+        })
+        logger.exception("Erro no pipeline demo sessao=%s", sessao_id)
+    finally:
+        manager.clear_queue(sessao_id)

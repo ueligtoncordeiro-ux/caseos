@@ -8,10 +8,25 @@ from sqlalchemy import select, func, desc
 
 from app.models.schemas import CKO, IniciarResponse, StatusResponse
 from app.models.database import Sessao, get_db, Usuario
-from app.agents.orchestrator import executar_pipeline
+from app.agents.orchestrator import executar_pipeline, executar_pipeline_demo
 from app.services.auth import get_verified_user, check_quota
 
 router = APIRouter(prefix="/artigo", tags=["artigo"])
+
+
+@router.post("/demo", response_model=IniciarResponse)
+async def iniciar_demo(
+    cko: CKO,
+    background_tasks: BackgroundTasks,
+):
+    """Pipeline de demonstração — sem autenticação. Gera apenas Introdução + Caso Clínico."""
+    background_tasks.add_task(executar_pipeline_demo, cko.sessao_id, cko)
+
+    return IniciarResponse(
+        sessao_id=cko.sessao_id,
+        status="iniciado",
+        mensagem="Pipeline de demonstração iniciado. Acompanhe via WebSocket.",
+    )
 
 
 @router.post("/iniciar", response_model=IniciarResponse)
