@@ -102,8 +102,44 @@ body {
   position: fixed;
   top: 0; left: 0; bottom: 0;
   z-index: 200;
-  transition: transform 0.3s ease;
+  transition: width 0.22s ease, transform 0.3s ease;
+  overflow: hidden;
 }
+
+/* Collapsed state — icon only */
+.sidebar.collapsed {
+  width: 52px;
+  min-width: 52px;
+}
+
+.sidebar.collapsed .sidebar-logo img { display: none; }
+.sidebar.collapsed .sidebar-logo { padding: 18px 10px; }
+.sidebar.collapsed .nav-label { opacity: 0; height: 0; padding: 0; overflow: hidden; }
+.sidebar.collapsed .nav-divider { margin: 4px 6px; }
+.sidebar.collapsed .nav-item span.nav-text { opacity: 0; width: 0; overflow: hidden; white-space: nowrap; }
+.sidebar.collapsed .nav-item { justify-content: center; padding: 8px 14px; }
+.sidebar.collapsed .sidebar-footer { padding: 8px 6px; }
+.sidebar.collapsed .usage-bar-wrap { display: none; }
+.sidebar.collapsed .plan-badge { display: none; }
+.sidebar.collapsed .btn-upgrade span { display: none; }
+.sidebar.collapsed .btn-upgrade { padding: 9px; justify-content: center; }
+
+/* Hover to expand when collapsed */
+.sidebar.collapsed:hover {
+  width: var(--sidebar-w);
+}
+.sidebar.collapsed:hover .sidebar-logo img { display: block; }
+.sidebar.collapsed:hover .nav-label { opacity: 1; height: auto; padding: 12px 10px 5px; }
+.sidebar.collapsed:hover .nav-item span.nav-text { opacity: 1; width: auto; }
+.sidebar.collapsed:hover .nav-item { justify-content: flex-start; padding: 8px 10px; }
+.sidebar.collapsed:hover .sidebar-footer { padding: 12px 10px; }
+.sidebar.collapsed:hover .usage-bar-wrap { display: block; }
+.sidebar.collapsed:hover .plan-badge { display: block; }
+.sidebar.collapsed:hover .btn-upgrade span { display: inline; }
+.sidebar.collapsed:hover .btn-upgrade { padding: 9px; justify-content: center; }
+
+/* Main wrapper adjusts for collapsed sidebar */
+.main-wrapper.sidebar-collapsed { margin-left: 52px; }
 
 /* Logo area */
 .sidebar-logo {
@@ -289,6 +325,52 @@ body {
   color: var(--obsidian);
   font-family: var(--head);
 }
+
+/* Usage bar */
+.usage-bar-wrap {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-bdr);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-xs);
+}
+
+.usage-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.usage-bar-label {
+  font-size: 10px;
+  color: var(--t3);
+  font-weight: 500;
+}
+
+.usage-bar-count {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--t2);
+}
+
+.usage-bar-track {
+  height: 5px;
+  background: var(--card-bdr);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.usage-bar-fill {
+  height: 100%;
+  background: var(--acid);
+  border-radius: 99px;
+  transition: width 0.6s ease, background 0.3s;
+}
+
+.usage-bar-fill.warning { background: #f59e0b; }
+.usage-bar-fill.danger  { background: var(--red); }
 
 .btn-upgrade {
   display: flex;
@@ -1140,6 +1222,23 @@ tbody td {
 
 .chat-close:hover { color: var(--t1); background: var(--row-hover); }
 
+/* Mobile back button — shown only on mobile */
+.chat-back-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-family: var(--sans);
+  line-height: 1;
+  transition: background 0.13s;
+}
+.chat-back-btn:hover { background: var(--row-hover); }
+
 /* Chips */
 .chat-chips {
   padding: 12px 14px;
@@ -1709,6 +1808,16 @@ tbody td {
   .chat-panel { width: 100%; }
   .chat-toggle-btn { bottom: 16px; right: 16px; }
   .btn-topbar-novo span { display: none; }
+  /* Fix notification dropdown on mobile */
+  .notif-dropdown {
+    right: 0;
+    left: auto;
+    width: min(300px, calc(100vw - 16px));
+  }
+  .notif-text { white-space: normal; word-break: break-word; overflow-wrap: break-word; }
+  /* Chat panel mobile: show back button, hide X */
+  .chat-back-btn { display: inline-flex; align-items: center; }
+  .chat-close { display: none; }
 }
 
 @media (max-width: 480px) {
@@ -1997,11 +2106,14 @@ tbody td {
 ══════════════════════════════════════════════════════════ -->
 <aside class="sidebar" id="sidebar">
 
-  <!-- Logo -->
-  <div class="sidebar-logo">
+  <!-- Logo + collapse toggle -->
+  <div class="sidebar-logo" style="position:relative;">
     <a href="landing.html" class="logo-link">
       <img src="assets/logo-caseos-light.png" alt="CaseOS">
     </a>
+    <button onclick="toggleSidebarCollapse()" title="Recolher sidebar"
+      style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:1px solid var(--sidebar-bdr);border-radius:5px;padding:3px 6px;cursor:pointer;font-size:10px;color:var(--t3);transition:all .15s;line-height:1;"
+      id="sidebarCollapseBtn">‹</button>
   </div>
 
   <!-- Nav -->
@@ -2010,15 +2122,15 @@ tbody td {
 
     <a class="nav-item active" href="dashboard.html">
       <span class="nav-icon"><svg><use href="#px-home"/></svg></span>
-      Dashboard
+      <span class="nav-text">Dashboard</span>
     </a>
     <a class="nav-item" href="index.html">
       <span class="nav-icon"><svg><use href="#px-pencil"/></svg></span>
-      Novo Relato
+      <span class="nav-text">Novo Relato</span>
     </a>
     <button class="nav-item" onclick="scrollToTable()">
       <span class="nav-icon"><svg><use href="#px-list"/></svg></span>
-      Meus Relatos
+      <span class="nav-text">Meus Relatos</span>
     </button>
 
     <div class="nav-divider"></div>
@@ -2026,26 +2138,36 @@ tbody td {
 
     <button class="nav-item" onclick="abrirModalPlanos()">
       <span class="nav-icon"><svg><use href="#px-crown"/></svg></span>
-      Planos
+      <span class="nav-text">Planos</span>
     </button>
     <button class="nav-item" onclick="abrirModalConfig()">
       <span class="nav-icon"><svg><use href="#px-gear"/></svg></span>
-      Configurações
+      <span class="nav-text">Configurações</span>
     </button>
     <button class="nav-item" onclick="abrirAjuda()">
       <span class="nav-icon"><svg><use href="#px-help"/></svg></span>
-      Ajuda
+      <span class="nav-text">Ajuda</span>
     </button>
   </nav>
 
   <!-- Footer -->
   <div class="sidebar-footer">
+    <!-- Usage bar -->
+    <div class="usage-bar-wrap" id="sidebarUsageWrap">
+      <div class="usage-bar-header">
+        <span class="usage-bar-label">Créditos usados</span>
+        <span class="usage-bar-count" id="sidebarUsageText">—</span>
+      </div>
+      <div class="usage-bar-track">
+        <div class="usage-bar-fill" id="sidebarUsageFill" style="width:0%"></div>
+      </div>
+    </div>
     <div class="plan-badge">
       <div class="plan-badge-label">Plano atual</div>
       <div class="plan-badge-name" id="sidebarPlanName">GRATUITO</div>
     </div>
     <button class="btn-upgrade" id="sidebarUpgradeBtn" onclick="abrirModalPlanos()">
-      <svg class="btn-icon-lg"><use href="#px-crown"/></svg> Fazer Upgrade
+      <svg class="btn-icon-lg"><use href="#px-crown"/></svg><span> Fazer Upgrade</span>
     </button>
   </div>
 </aside>
@@ -2252,20 +2374,27 @@ tbody td {
 ══════════════════════════════════════════════════════════ -->
 <aside class="chat-panel" id="chatPanel">
   <div class="chat-header">
-    <div class="chat-header-title">
-      <img src="assets/pixel-char-lupa.png" alt="" style="width:28px;height:auto;image-rendering:pixelated;vertical-align:middle;margin-right:6px;">
-      IA Assistente
-      <span class="chat-ai-badge">● CaseOS AI</span>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <!-- Back arrow on mobile -->
+      <button class="chat-back-btn" onclick="toggleChat()" title="Voltar" aria-label="Fechar chat">
+        ← <span style="font-size:12px;font-weight:500;">Voltar</span>
+      </button>
+      <div class="chat-header-title">
+        <img src="assets/pixel-char-lupa.png" alt="" style="width:24px;height:auto;image-rendering:pixelated;">
+        IA Assistente
+        <span class="chat-ai-badge">● CaseOS AI</span>
+      </div>
     </div>
-    <button class="chat-close" onclick="toggleChat()">✕</button>
+    <button class="chat-close" onclick="toggleChat()" title="Fechar">✕</button>
   </div>
 
   <!-- Suggested question chips -->
   <div class="chat-chips" id="chatChips">
     <button class="chip" onclick="usarChip(this)">Como preencher o formulário?</button>
-    <button class="chip" onclick="usarChip(this)">O que é checklist CARE?</button>
-    <button class="chip" onclick="usarChip(this)">Como publicar meu relato?</button>
-    <button class="chip" onclick="usarChip(this)">Qual periódico escolher?</button>
+    <button class="chip" onclick="usarChip(this)">O que é o checklist CARE?</button>
+    <button class="chip" onclick="usarChip(this)">Meus créditos acabaram, e agora?</button>
+    <button class="chip" onclick="usarChip(this)">Qual periódico devo escolher?</button>
+    <button class="chip" onclick="usarChip(this)">Sou enfermeiro, posso usar?</button>
   </div>
 
   <!-- Messages -->
@@ -2276,7 +2405,7 @@ tbody td {
         <img src="assets/pixel-char-lupa.png" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">
       </div>
       <div class="bubble ai">
-        Olá! Sou o assistente do CaseOS. Posso ajudá-lo com dúvidas sobre relatos de caso clínico, checklist CARE, publicação científica e uso da plataforma. Como posso ajudar?
+        Olá! Sou o assistente do CaseOS. Posso ajudá-lo com dúvidas sobre a plataforma, o checklist CARE 2013, publicação científica e muito mais — para médicos, enfermeiros, fisioterapeutas e qualquer profissional de saúde. Como posso ajudar?
       </div>
     </div>
   </div>
@@ -2396,8 +2525,8 @@ tbody td {
             <input type="text" id="configNome" class="form-input" placeholder="Dr. João Silva">
           </div>
           <div class="form-group">
-            <label class="form-label" for="configCRM">CRM / CRO</label>
-            <input type="text" id="configCRM" class="form-input" placeholder="CRM/SP 123456">
+            <label class="form-label" for="configCRM">Registro profissional</label>
+            <input type="text" id="configCRM" class="form-input" placeholder="CRM/SP 123456, COREN, CREFITO...">
           </div>
         </div>
         <div class="form-group">
@@ -2567,6 +2696,9 @@ function _renderUser(user) {
   const ub = document.getElementById('sidebarUpgradeBtn');
   if (ub) ub.style.display = plano === 'free' ? 'flex' : 'none';
 
+  // Usage bar
+  _renderUsageBar(user);
+
   // Stat card plano
   const sv = document.getElementById('statPlano');
   if (sv) sv.textContent = planoLabel;
@@ -2589,6 +2721,39 @@ function _renderUser(user) {
 
   // Highlight current plan in modal
   _destacarPlanoAtual(plano);
+}
+
+function _renderUsageBar(user) {
+  const wrap = document.getElementById('sidebarUsageWrap');
+  const fill = document.getElementById('sidebarUsageFill');
+  const text = document.getElementById('sidebarUsageText');
+  if (!wrap || !fill || !text) return;
+
+  // creditos = remaining; limite depends on plan
+  const plano = (user.plano || 'free').toLowerCase();
+  const creditosRestantes = user.creditos ?? null;
+
+  // Quota per plan
+  const quotaMap = { free: 1, pro: 30, institucional: 999 };
+  const quota = quotaMap[plano] || 1;
+
+  if (creditosRestantes === null) {
+    text.textContent = '—';
+    fill.style.width = '0%';
+    return;
+  }
+
+  const usados = Math.max(0, quota - creditosRestantes);
+  const pct = Math.min(100, Math.round((usados / quota) * 100));
+
+  text.textContent = `${usados}/${quota}`;
+  fill.style.width = pct + '%';
+  fill.className = 'usage-bar-fill' + (pct >= 90 ? ' danger' : pct >= 70 ? ' warning' : '');
+
+  // Show upgrade prompt if exhausted
+  if (creditosRestantes <= 0 && plano === 'free') {
+    mostrarToast('Você usou todos os seus créditos gratuitos. Faça upgrade para continuar publicando!', 'info', '⚡', 6000);
+  }
 }
 
 function _destacarPlanoAtual(plano) {
@@ -3138,12 +3303,43 @@ document.addEventListener('click', (e) => {
 });
 
 /* ═══════════════════════════════════════════════
-   SIDEBAR (mobile)
+   SIDEBAR
 ═══════════════════════════════════════════════ */
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('sidebarOverlay').classList.toggle('open');
 }
+
+let _sidebarCollapsed = false;
+function toggleSidebarCollapse() {
+  _sidebarCollapsed = !_sidebarCollapsed;
+  const sidebar  = document.getElementById('sidebar');
+  const wrapper  = document.getElementById('mainWrapper');
+  const btn      = document.getElementById('sidebarCollapseBtn');
+
+  sidebar.classList.toggle('collapsed', _sidebarCollapsed);
+  wrapper.classList.toggle('sidebar-collapsed', _sidebarCollapsed);
+  if (btn) btn.textContent = _sidebarCollapsed ? '›' : '‹';
+
+  // Persist preference
+  try { localStorage.setItem('caseos_sidebar_collapsed', _sidebarCollapsed ? '1' : '0'); } catch {}
+}
+
+// Restore collapsed state on load
+(function() {
+  try {
+    const saved = localStorage.getItem('caseos_sidebar_collapsed');
+    if (saved === '1') {
+      _sidebarCollapsed = true;
+      const sidebar = document.getElementById('sidebar');
+      const wrapper = document.getElementById('mainWrapper');
+      const btn     = document.getElementById('sidebarCollapseBtn');
+      if (sidebar) sidebar.classList.add('collapsed');
+      if (wrapper) wrapper.classList.add('sidebar-collapsed');
+      if (btn) btn.textContent = '›';
+    }
+  } catch {}
+})();
 
 function scrollToTable() {
   document.getElementById('tabelaSection')?.scrollIntoView({ behavior: 'smooth' });
