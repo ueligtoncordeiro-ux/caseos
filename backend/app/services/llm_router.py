@@ -4,7 +4,7 @@ LLM Router — roteamento por complexidade com fallback em cascata.
 Hierarquia definida (aplicada apenas se a chave estiver configurada):
   ALTA complexidade  → Claude Sonnet 4.6  → GPT-4o         → Gemini 2.0 Flash
   MÉDIA complexidade → GPT-4o mini        → Gemini 2.0 Flash → Claude Haiku
-  BAIXA complexidade → Gemini 2.0 Flash   → GPT-4o mini    → Claude Haiku
+  BAIXA complexidade → Gemini apenas (chatbox e assistente acessíveis agora)
 
 Regra de disponibilidade:
   • Providers sem chave configurada são automaticamente ignorados.
@@ -21,7 +21,7 @@ import json
 import logging
 import asyncio
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 import anthropic
 import openai
@@ -127,15 +127,22 @@ async def _chamar_openai(
 
 
 async def _chamar_gemini(
-    system: str, user: str, max_tokens: int, model: str = "gemini-2.0-flash"
+    system: str, user: str, max_tokens: int, model: Optional[str] = None
 ) -> str:
-    m = _gemini_model(model)
     prompt = f"{system}\n\n{user}"
-    resp = await m.generate_content_async(
-        prompt,
-        generation_config={"max_output_tokens": max_tokens},
-    )
-    return resp.text.strip()
+    modelos = [model] if model else ["gemini-2.0-flash", "gemini-1.5-flash"]
+    erros = []
+    for nome_modelo in modelos:
+        try:
+            m = _gemini_model(nome_modelo)
+            resp = await m.generate_content_async(
+                prompt,
+                generation_config={"max_output_tokens": max_tokens},
+            )
+            return resp.text.strip()
+        except Exception as exc:
+            erros.append(f"{nome_modelo}: {exc}")
+    raise RuntimeError("Gemini falhou em todos os modelos: " + " | ".join(erros))
 
 
 # ── Roteador principal com fallback em cascata ────────────────────────────────
@@ -171,14 +178,10 @@ async def chamar(
             ("Claude Haiku 4.5",  "claude",
              lambda: _chamar_claude(system, user, min(max_tokens, 4096))),
         ]
-    else:  # BAIXA — Gemini primeiro (padrão quando apenas Gemini está disponível)
+    else:  # BAIXA — Gemini somente para evitar Anthropic/OpenAI sem saldo.
         candidatos = [
             ("Gemini 2.0 Flash",  "gemini",
              lambda: _chamar_gemini(system, user, max_tokens)),
-            ("GPT-4o mini",       "openai",
-             lambda: _chamar_openai(system, user, max_tokens, json_mode, "gpt-4o-mini")),
-            ("Claude Haiku 4.5",  "claude",
-             lambda: _chamar_claude(system, user, min(max_tokens, 2048))),
         ]
 
     # Filtra apenas providers com chave disponível
@@ -191,16 +194,16 @@ async def chamar(
             "Configure pelo menos GEMINI_API_KEY no .env."
         )
 
-    ultimo_erro = None
+    erros = []
     for nome, fn in cadeia:
         try:
             logger.info(f"LLM → {nome} (complexidade={complexidade})")
             return await asyncio.wait_for(fn(), timeout=45)
         except Exception as e:
             logger.warning(f"  ✗ {nome} falhou: {e}")
-            ultimo_erro = e
+            erros.append(f"{nome}: {e}")
 
-    raise RuntimeError(f"Todos os providers falharam. Último erro: {ultimo_erro}")
+    raise RuntimeError("Todos os providers falharam. " + " | ".join(erros))
 
 
 # ── Helper ────────────────────────────────────────────────────────────────────
