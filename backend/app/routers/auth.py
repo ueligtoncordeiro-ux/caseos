@@ -333,12 +333,17 @@ async def criar_checkout(
     if not price_id:
         raise HTTPException(status_code=400, detail="Plano inválido.")
 
-    session = stripe.checkout.Session.create(
-        mode="subscription",
-        line_items=[{"price": price_id, "quantity": 1}],
-        client_reference_id=user.id,
-        customer_email=user.email,
-        success_url=f"{settings.frontend_url}/dashboard.html?upgrade=ok",
-        cancel_url=f"{settings.frontend_url}/login.html?upgrade=cancel",
-    )
-    return {"url": session.url}
+    try:
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            line_items=[{"price": price_id, "quantity": 1}],
+            client_reference_id=str(user.id),
+            customer_email=user.email,
+            success_url=f"{settings.frontend_url}/dashboard.html?upgrade=ok",
+            cancel_url=f"{settings.frontend_url}/login.html?upgrade=cancel",
+        )
+        return {"url": session.url}
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=402, detail=f"Stripe: {e.user_message or str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro checkout: {str(e)}")
