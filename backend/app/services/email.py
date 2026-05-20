@@ -8,7 +8,7 @@ from app.config import settings
 
 _BASE    = "https://api.resend.com"
 _ASSETS  = "https://caseos.voandonaia.com/assets"
-_LOGO    = f"{_ASSETS}/logo-caseos-light.png"
+_LOGO    = f"{_ASSETS}/logo-caseos-white.png"
 _ACID    = "#C8FF00"
 _BG      = "#080D18"
 _CARD    = "#111827"
@@ -61,7 +61,7 @@ def _base(*, char_url: str, headline: str, body_html: str, cta_url: str,
   <tr>
     <td style="padding:0 0 28px 4px">
       <img src="{_LOGO}" alt="caseOS" height="28"
-           style="height:28px;display:block;filter:brightness(0) invert(1)">
+           style="height:28px;display:block">
     </td>
   </tr>
 
