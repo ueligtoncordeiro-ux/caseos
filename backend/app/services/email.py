@@ -1,12 +1,22 @@
 """
-Serviço de email via Resend.
-Dispara notificações transacionais: artigo pronto, verificação, reset de senha, boas-vindas Pro.
+Serviço de email via Resend — CaseOS.
+Templates dark com identidade visual da plataforma: pixel chars, verde ácido #C8FF00.
 """
 import httpx
 import logging
 from app.config import settings
 
-_BASE = "https://api.resend.com"
+_BASE    = "https://api.resend.com"
+_ASSETS  = "https://caseos.voandonaia.com/assets"
+_LOGO    = f"{_ASSETS}/logo-caseos-light.png"
+_ACID    = "#C8FF00"
+_BG      = "#080D18"
+_CARD    = "#111827"
+_TEXT    = "#E8EDF5"
+_MUTED   = "#8B96A8"
+_DIM     = "#4A5568"
+_BTN_TXT = "#0A0A0B"
+
 log = logging.getLogger(__name__)
 
 
@@ -15,13 +25,6 @@ def _headers() -> dict:
         "Authorization": f"Bearer {settings.resend_api_key}",
         "Content-Type": "application/json",
     }
-
-
-def _backend_url() -> str:
-    """URL base do backend (sem trailing slash)."""
-    # Usa GOOGLE_REDIRECT_URI como referência para extrair a base do backend
-    uri = settings.google_redirect_uri  # ex: https://caseos-api-production.up.railway.app/auth/google/callback
-    return uri.split("/auth/")[0]
 
 
 async def _send(payload: dict) -> bool:
@@ -43,153 +46,247 @@ async def _send(payload: dict) -> bool:
             return False
 
 
+def _base(*, char_url: str, headline: str, body_html: str, cta_url: str,
+          cta_label: str, extra_html: str = "", notice_html: str = "") -> str:
+    """Template base com dark theme, logo, pixel char e botão verde."""
+    return f"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:{_BG};font-family:'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{_BG};padding:32px 16px">
+<tr><td align="center">
+<table width="580" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;width:100%">
+
+  <!-- LOGO -->
+  <tr>
+    <td style="padding:0 0 28px 4px">
+      <img src="{_LOGO}" alt="caseOS" height="28"
+           style="height:28px;display:block;filter:brightness(0) invert(1)">
+    </td>
+  </tr>
+
+  <!-- CARD PRINCIPAL -->
+  <tr>
+    <td style="background:{_CARD};border-radius:12px;border:1px solid rgba(200,255,0,0.12);overflow:hidden;mso-border-radius:12px">
+
+      <!-- BARRA VERDE TOPO -->
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td style="height:3px;background:{_ACID};font-size:0;line-height:0">&nbsp;</td>
+      </tr></table>
+
+      <!-- HERO: texto + pixel char -->
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding:36px 36px 24px 36px;vertical-align:middle;width:55%">
+            <p style="font-family:monospace;font-size:9px;letter-spacing:.22em;text-transform:uppercase;
+                      color:{_ACID};margin:0 0 12px 0">CaseOS</p>
+            <p style="font-size:22px;font-weight:700;color:{_TEXT};margin:0 0 14px 0;line-height:1.3">
+              {headline}
+            </p>
+            {body_html}
+            {notice_html}
+          </td>
+          <td style="padding:0 24px 0 0;vertical-align:bottom;text-align:right;width:45%">
+            <img src="{char_url}" width="170" alt=""
+                 style="max-width:170px;display:block;margin-left:auto">
+          </td>
+        </tr>
+      </table>
+
+      {extra_html}
+
+      <!-- BOTÃO CTA -->
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding:8px 36px 36px 36px">
+            <a href="{cta_url}"
+               style="display:block;background:{_ACID};color:{_BTN_TXT};
+                      font-family:monospace;font-size:11px;letter-spacing:.2em;
+                      text-transform:uppercase;text-decoration:none;text-align:center;
+                      padding:17px 24px;border-radius:5px;font-weight:700;
+                      mso-padding-alt:17px 24px">
+              {cta_label} &rarr;
+            </a>
+          </td>
+        </tr>
+      </table>
+
+    </td>
+  </tr>
+
+  <!-- DIVISOR -->
+  <tr><td style="height:1px;background:rgba(255,255,255,0.05);font-size:0;line-height:0;margin:20px 0">&nbsp;</td></tr>
+
+  <!-- RODAPÉ -->
+  <tr>
+    <td style="padding:16px 4px 8px 4px;text-align:center">
+      <p style="font-size:10px;color:{_DIM};margin:0 0 4px 0;font-family:monospace;letter-spacing:.08em">
+        CaseOS · IA para relatos clínicos científicos
+      </p>
+      <p style="font-size:10px;color:{_DIM};margin:0">
+        <a href="{settings.frontend_url}" style="color:{_DIM};text-decoration:none">
+          caseos.voandonaia.com
+        </a>
+        &nbsp;·&nbsp;
+        <a href="mailto:acessoliberado@voandonaia.com" style="color:{_DIM};text-decoration:none">
+          Suporte
+        </a>
+      </p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+
+# ── Verificação de e-mail ────────────────────────────────────────────────────
+
 async def enviar_verificacao_email(destinatario: str, nome: str, token: str) -> bool:
     if not settings.resend_api_key:
         return False
 
-    # Link vai DIRETO para o backend — que faz redirect para login.html?msg=verified
+    from app.services.email import _backend_url
     url = f"{_backend_url()}/auth/verify?token={token}"
 
-    html = f"""<!DOCTYPE html><html lang="pt-BR">
-    <body style="font-family:'IBM Plex Sans',Arial,sans-serif;background:#080D18;margin:0;padding:32px">
-      <div style="max-width:520px;margin:0 auto;background:#111827;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:36px">
-        <p style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#E8EDF5;margin:0 0 6px">Confirme seu e-mail.</p>
-        <p style="font-size:13px;color:#8B96A8;margin:0 0 28px">
-          Olá, {nome}. Clique abaixo para ativar sua conta no CaseOS.
-          Link válido por <strong style="color:#E8EDF5">24 horas</strong>.
-        </p>
-        <a href="{url}"
-           style="display:block;background:#C8FF00;color:#0A0A0B;font-family:monospace;
-                  font-size:12px;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;
-                  text-align:center;padding:16px;border-radius:4px;font-weight:700;">
-          Verificar e-mail →
-        </a>
-        <p style="font-size:10px;color:#4A5568;text-align:center;margin-top:20px">
-          CaseOS · Se não se cadastrou, ignore este e-mail.
-        </p>
-      </div></body></html>"""
+    html = _base(
+        char_url=f"{_ASSETS}/pixel-char-lupa.png",
+        headline=f"Confirme seu<br>e-mail, {nome.split()[0]}.",
+        body_html=f"""
+          <p style="font-size:13px;color:{_MUTED};margin:0;line-height:1.7">
+            Clique no botão abaixo para ativar sua conta no CaseOS.
+            Link válido por <strong style="color:{_TEXT}">24 horas</strong>.
+          </p>""",
+        cta_url=url,
+        cta_label="Verificar e-mail",
+    )
 
     return await _send({
         "from": settings.resend_from_email,
         "to": [destinatario],
-        "subject": "[CaseOS] Confirme seu e-mail",
+        "subject": "[CaseOS] Confirme seu e-mail para começar",
         "html": html,
     })
 
 
-async def enviar_reset_senha(destinatario: str, nome: str, token: str) -> bool:
-    if not settings.resend_api_key:
-        return False
+def _backend_url() -> str:
+    uri = settings.google_redirect_uri
+    return uri.split("/auth/")[0]
 
-    url = f"{settings.frontend_url}/login.html?reset={token}"
 
-    html = f"""<!DOCTYPE html><html lang="pt-BR">
-    <body style="font-family:'IBM Plex Sans',Arial,sans-serif;background:#080D18;margin:0;padding:32px">
-      <div style="max-width:520px;margin:0 auto;background:#111827;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:36px">
-        <p style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#E8EDF5;margin:0 0 6px">Redefinir senha.</p>
-        <p style="font-size:13px;color:#8B96A8;margin:0 0 28px">
-          Olá, {nome}. Link válido por <strong style="color:#E8EDF5">1 hora</strong>.
-          Se não solicitou, ignore este e-mail.
-        </p>
-        <a href="{url}"
-           style="display:block;background:#C8FF00;color:#0A0A0B;font-family:monospace;
-                  font-size:12px;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;
-                  text-align:center;padding:16px;border-radius:4px;font-weight:700;">
-          Redefinir senha →
-        </a>
-        <p style="font-size:10px;color:#4A5568;text-align:center;margin-top:20px">CaseOS</p>
-      </div></body></html>"""
-
-    return await _send({
-        "from": settings.resend_from_email,
-        "to": [destinatario],
-        "subject": "[CaseOS] Redefinição de senha",
-        "html": html,
-    })
-
+# ── Boas-vindas (novo usuário) ───────────────────────────────────────────────
 
 async def enviar_boas_vindas(destinatario: str, nome: str, via_google: bool = False) -> bool:
-    """E-mail de boas-vindas para novo usuário (plano free)."""
     if not settings.resend_api_key:
         return False
 
-    metodo = "Google" if via_google else "e-mail e senha"
-    obs_google = """
-        <div style="background:#1a2235;border-left:3px solid #C8FF00;padding:12px 16px;border-radius:0 4px 4px 0;margin-bottom:20px">
-          <p style="font-size:12px;color:#8B96A8;margin:0">
-            Sua conta foi criada via <strong style="color:#E8EDF5">Login com Google</strong>.
-            Não é necessário senha — basta clicar em "Entrar com Google" sempre que acessar.
-          </p>
-        </div>""" if via_google else ""
+    primeiro = nome.split()[0]
+    char = f"{_ASSETS}/pixel-astronaut.png" if via_google else f"{_ASSETS}/pixel-researcher.png"
 
-    html = f"""<!DOCTYPE html><html lang="pt-BR">
-    <body style="font-family:'IBM Plex Sans',Arial,sans-serif;background:#080D18;margin:0;padding:32px">
-      <div style="max-width:520px;margin:0 auto;background:#111827;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:36px">
-        <p style="font-family:Georgia,serif;font-style:italic;font-size:22px;color:#C8FF00;margin:0 0 6px">
-          Bem-vindo ao CaseOS, {nome.split()[0]}.
+    metodo_html = f"""
+      <div style="background:#0D1425;border-left:3px solid {_ACID};border-radius:0 4px 4px 0;
+                  padding:12px 16px;margin:16px 0">
+        <p style="font-size:11px;color:{_MUTED};margin:0;font-family:monospace;letter-spacing:.05em">
+          Sua conta usa <strong style="color:{_TEXT}">Login com Google</strong>.
+          Não é preciso senha — clique em "Entrar com Google" sempre que acessar.
         </p>
-        <p style="font-size:13px;color:#8B96A8;margin:0 0 24px">
-          Sua conta foi criada com sucesso via {metodo}.
-        </p>
-        {obs_google}
-        <div style="background:#0D1425;border-radius:6px;padding:16px 20px;margin-bottom:24px">
-          <p style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#4A5568;margin:0 0 12px">O que você pode fazer agora</p>
-          <p style="font-size:13px;color:#8B96A8;margin:0 0 8px">✦ &nbsp;Gerar relatos de caso clínico estruturados</p>
-          <p style="font-size:13px;color:#8B96A8;margin:0 0 8px">✦ &nbsp;Revisão automática com checklist CARE</p>
-          <p style="font-size:13px;color:#8B96A8;margin:0">✦ &nbsp;Exportar em DOCX pronto para submissão</p>
-        </div>
-        <a href="{settings.frontend_url}/dashboard"
-           style="display:block;background:#C8FF00;color:#0A0A0B;font-family:monospace;
-                  font-size:12px;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;
-                  text-align:center;padding:16px;border-radius:4px;font-weight:700;">
-          Acessar o CaseOS →
-        </a>
-        <p style="font-size:11px;color:#4A5568;text-align:center;margin-top:20px">
-          Plano gratuito inclui 1 relato/mês.<br>
-          Dúvidas? Responda este e-mail.
-        </p>
-      </div></body></html>"""
+      </div>""" if via_google else ""
+
+    features = f"""
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 4px 0">
+        <tr>
+          <td style="padding:24px 36px 8px 36px">
+            <p style="font-family:monospace;font-size:9px;letter-spacing:.15em;
+                      text-transform:uppercase;color:{_DIM};margin:0 0 12px 0">
+              O QUE VOCÊ PODE FAZER
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 36px 24px 36px">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td width="33%" style="text-align:center;padding:16px 8px;background:#0D1425;
+                    border-radius:6px;border-top:2px solid rgba(200,255,0,0.3)">
+                  <p style="font-size:18px;margin:0 0 6px 0">🔬</p>
+                  <p style="font-size:11px;color:{_MUTED};margin:0;line-height:1.5">
+                    Relatos CARE<br>estruturados
+                  </p>
+                </td>
+                <td width="4%" style="font-size:0">&nbsp;</td>
+                <td width="33%" style="text-align:center;padding:16px 8px;background:#0D1425;
+                    border-radius:6px;border-top:2px solid rgba(200,255,0,0.3)">
+                  <p style="font-size:18px;margin:0 0 6px 0">📋</p>
+                  <p style="font-size:11px;color:{_MUTED};margin:0;line-height:1.5">
+                    Checklist<br>automático
+                  </p>
+                </td>
+                <td width="4%" style="font-size:0">&nbsp;</td>
+                <td width="33%" style="text-align:center;padding:16px 8px;background:#0D1425;
+                    border-radius:6px;border-top:2px solid rgba(200,255,0,0.3)">
+                  <p style="font-size:18px;margin:0 0 6px 0">📄</p>
+                  <p style="font-size:11px;color:{_MUTED};margin:0;line-height:1.5">
+                    Export DOCX<br>pronto
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>"""
+
+    html = _base(
+        char_url=char,
+        headline=f"Bem-vindo ao<br>CaseOS, {primeiro}.",
+        body_html=f"""
+          <p style="font-size:13px;color:{_MUTED};margin:0;line-height:1.7">
+            Sua conta está pronta. Plano gratuito inclui
+            <strong style="color:{_TEXT}">1 relato por mês</strong>.
+          </p>
+          {metodo_html}""",
+        cta_url=f"{settings.frontend_url}/dashboard",
+        cta_label="Acessar o CaseOS",
+        extra_html=features,
+    )
 
     return await _send({
         "from": settings.resend_from_email,
         "to": [destinatario],
-        "subject": f"Bem-vindo ao CaseOS, {nome.split()[0]}!",
+        "subject": f"Bem-vindo ao CaseOS, {primeiro}! Sua conta está pronta",
         "html": html,
     })
 
 
+# ── Aviso: login é via Google ────────────────────────────────────────────────
+
 async def enviar_aviso_login_google(destinatario: str, nome: str) -> bool:
-    """Avisa usuário Google-only que tentou 'esqueci senha' que seu login é via Google."""
     if not settings.resend_api_key:
         return False
 
-    html = f"""<!DOCTYPE html><html lang="pt-BR">
-    <body style="font-family:'IBM Plex Sans',Arial,sans-serif;background:#080D18;margin:0;padding:32px">
-      <div style="max-width:520px;margin:0 auto;background:#111827;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:36px">
-        <p style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#E8EDF5;margin:0 0 6px">
-          Sua conta usa Login com Google.
-        </p>
-        <p style="font-size:13px;color:#8B96A8;margin:0 0 20px">
-          Olá, {nome.split()[0]}. Recebemos uma solicitação de redefinição de senha para seu e-mail,
-          mas sua conta no CaseOS foi criada via <strong style="color:#E8EDF5">Google</strong> —
-          por isso não há senha para redefinir.
-        </p>
-        <div style="background:#1a2235;border-left:3px solid #C8FF00;padding:14px 16px;border-radius:0 4px 4px 0;margin-bottom:24px">
-          <p style="font-size:12px;color:#8B96A8;margin:0">
-            Para entrar no CaseOS, clique em <strong style="color:#E8EDF5">"Entrar com Google"</strong>
-            na tela de login. Não é necessário senha.
-          </p>
-        </div>
-        <a href="{settings.frontend_url}/login"
-           style="display:block;background:#C8FF00;color:#0A0A0B;font-family:monospace;
-                  font-size:12px;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;
-                  text-align:center;padding:16px;border-radius:4px;font-weight:700;">
-          Ir para o login →
-        </a>
-        <p style="font-size:10px;color:#4A5568;text-align:center;margin-top:20px">
-          Se não foi você quem solicitou, ignore este e-mail. CaseOS.
-        </p>
-      </div></body></html>"""
+    primeiro = nome.split()[0]
+
+    html = _base(
+        char_url=f"{_ASSETS}/pixel-char-lupa.png",
+        headline=f"Sua conta usa<br>Login com Google.",
+        body_html=f"""
+          <p style="font-size:13px;color:{_MUTED};margin:0 0 14px 0;line-height:1.7">
+            Olá, {primeiro}. Recebemos uma solicitação de redefinição de senha,
+            mas sua conta no CaseOS foi criada via Google —
+            <strong style="color:{_TEXT}">não há senha para redefinir</strong>.
+          </p>""",
+        cta_url=f"{settings.frontend_url}/login",
+        cta_label="Entrar com Google",
+        notice_html=f"""
+          <div style="background:#0D1425;border-left:3px solid {_ACID};border-radius:0 4px 4px 0;
+                      padding:12px 16px;margin:16px 0 0 0">
+            <p style="font-size:11px;color:{_MUTED};margin:0;font-family:monospace;letter-spacing:.04em">
+              Na tela de login, clique em
+              <strong style="color:{_TEXT}">"Entrar com Google"</strong>
+              para acessar sua conta normalmente.
+            </p>
+          </div>""",
+    )
 
     return await _send({
         "from": settings.resend_from_email,
@@ -199,124 +296,205 @@ async def enviar_aviso_login_google(destinatario: str, nome: str) -> bool:
     })
 
 
+# ── Redefinição de senha ─────────────────────────────────────────────────────
+
+async def enviar_reset_senha(destinatario: str, nome: str, token: str) -> bool:
+    if not settings.resend_api_key:
+        return False
+
+    url = f"{settings.frontend_url}/login?reset={token}"
+
+    html = _base(
+        char_url=f"{_ASSETS}/pixel-char-lupa.png",
+        headline="Redefinir sua<br>senha.",
+        body_html=f"""
+          <p style="font-size:13px;color:{_MUTED};margin:0;line-height:1.7">
+            Olá, {nome.split()[0]}. Clique no botão abaixo para criar uma nova senha.
+            Link válido por <strong style="color:{_TEXT}">1 hora</strong>.
+          </p>""",
+        cta_url=url,
+        cta_label="Criar nova senha",
+        notice_html=f"""
+          <p style="font-size:11px;color:{_DIM};margin:14px 0 0 0;font-family:monospace">
+            Se não foi você, ignore este e-mail. Sua senha não será alterada.
+          </p>""",
+    )
+
+    return await _send({
+        "from": settings.resend_from_email,
+        "to": [destinatario],
+        "subject": "[CaseOS] Redefinição de senha",
+        "html": html,
+    })
+
+
+# ── Boas-vindas Pro ──────────────────────────────────────────────────────────
+
 async def enviar_boas_vindas_pro(destinatario: str, nome: str) -> bool:
     if not settings.resend_api_key:
         return False
 
-    html = f"""<!DOCTYPE html><html lang="pt-BR">
-    <body style="font-family:'IBM Plex Sans',Arial,sans-serif;background:#080D18;margin:0;padding:32px">
-      <div style="max-width:520px;margin:0 auto;background:#111827;border:1px solid rgba(200,255,0,0.2);border-radius:8px;padding:36px">
-        <p style="font-family:Georgia,serif;font-style:italic;font-size:22px;color:#C8FF00;margin:0 0 6px">
-          Bem-vindo ao CaseOS Pro.
-        </p>
-        <p style="font-size:13px;color:#8B96A8;margin:0 0 20px">
-          Olá, {nome}. Seu plano Pro foi ativado — <strong style="color:#E8EDF5">30 relatos/mês</strong>.
-        </p>
-        <a href="{settings.frontend_url}/dashboard.html"
-           style="display:block;background:#C8FF00;color:#0A0A0B;font-family:monospace;
-                  font-size:12px;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;
-                  text-align:center;padding:16px;border-radius:4px;font-weight:700;">
-          Acessar plataforma →
-        </a>
-        <p style="font-size:10px;color:#4A5568;text-align:center;margin-top:20px">CaseOS</p>
-      </div></body></html>"""
+    primeiro = nome.split()[0]
+
+    extras = f"""
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding:8px 36px 24px 36px">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td width="48%" style="background:#0D1425;border-radius:6px;padding:16px;
+                    border-top:2px solid {_ACID};text-align:center">
+                  <p style="font-family:monospace;font-size:28px;font-weight:700;
+                            color:{_ACID};margin:0">30</p>
+                  <p style="font-size:10px;color:{_MUTED};margin:4px 0 0 0;letter-spacing:.08em;
+                            text-transform:uppercase">Relatos / mês</p>
+                </td>
+                <td width="4%">&nbsp;</td>
+                <td width="48%" style="background:#0D1425;border-radius:6px;padding:16px;
+                    border-top:2px solid {_ACID};text-align:center">
+                  <p style="font-family:monospace;font-size:28px;font-weight:700;
+                            color:{_ACID};margin:0">∞</p>
+                  <p style="font-size:10px;color:{_MUTED};margin:4px 0 0 0;letter-spacing:.08em;
+                            text-transform:uppercase">Referências</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>"""
+
+    html = _base(
+        char_url=f"{_ASSETS}/pixel-char-glow.png",
+        headline=f"Plano Pro ativado,<br>{primeiro}. 🎉",
+        body_html=f"""
+          <p style="font-size:13px;color:{_MUTED};margin:0;line-height:1.7">
+            Você agora tem acesso completo ao CaseOS Pro.
+            Gere até <strong style="color:{_TEXT}">30 relatos por mês</strong>
+            com todas as funcionalidades desbloqueadas.
+          </p>""",
+        cta_url=f"{settings.frontend_url}/dashboard",
+        cta_label="Acessar CaseOS Pro",
+        extra_html=extras,
+    )
 
     return await _send({
         "from": settings.resend_from_email,
         "to": [destinatario],
-        "subject": "[CaseOS] Plano Pro ativado",
+        "subject": f"[CaseOS] Plano Pro ativado — bem-vindo, {primeiro}!",
         "html": html,
     })
 
 
+# ── Artigo pronto ────────────────────────────────────────────────────────────
+
 async def enviar_artigo_pronto(
-    destinatario: str,
-    nome: str,
-    sessao_id: str,
-    care_score: int,
-    total_refs: int,
-    flags: list[str],
+    destinatario: str, nome: str, sessao_id: str,
+    care_score: int, total_refs: int, flags: list[str],
 ) -> bool:
     if not settings.resend_api_key:
         return False
 
+    download_url = f"{settings.frontend_url}/dashboard"
+
     flags_html = ""
     if flags:
-        itens = "".join(f"<li style='margin:4px 0;color:#b45309'>{f}</li>" for f in flags)
+        itens = "".join(
+            f"<p style='font-size:12px;color:#D97706;margin:4px 0'>"
+            f"⚠ {f}</p>" for f in flags
+        )
         flags_html = f"""
-        <div style='background:#fefce8;border:1px solid #fcd34d;border-radius:6px;padding:14px 16px;margin-top:16px'>
-          <p style='font-weight:600;color:#92400e;margin:0 0 8px'>⚠ Pontos para revisão humana:</p>
-          <ul style='margin:0;padding-left:18px'>{itens}</ul>
-        </div>"""
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding:0 36px 16px 36px">
+                <div style="background:#1a1400;border:1px solid rgba(217,119,6,0.3);
+                            border-radius:6px;padding:14px 16px">
+                  <p style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;
+                            color:#D97706;margin:0 0 8px 0;font-family:monospace">
+                    Pontos para revisão
+                  </p>
+                  {itens}
+                </div>
+              </td>
+            </tr>
+          </table>"""
 
-    download_url = f"{settings.frontend_url}/artigo/{sessao_id}/resultado"
+    score_color = _ACID if care_score >= 10 else ("#D97706" if care_score >= 7 else "#E53E3E")
 
-    html = f"""<!DOCTYPE html>
-    <html lang="pt-BR">
-    <body style="font-family:'IBM Plex Sans',Arial,sans-serif;background:#080D18;margin:0;padding:32px">
-      <div style="max-width:560px;margin:0 auto;background:#111827;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:36px">
-        <p style="font-family:Georgia,serif;font-style:italic;font-size:22px;color:#E8EDF5;margin:0 0 6px">
-          Seu relato está pronto.
-        </p>
-        <p style="font-size:13px;color:#8B96A8;margin:0 0 28px">
-          Olá, {nome}. O CaseOS concluiu a geração do seu relato de caso.
-        </p>
+    extras = f"""
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding:8px 36px 20px 36px">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td width="48%" style="background:#0D1425;border-radius:6px;padding:16px;
+                    border-top:2px solid {score_color};text-align:center">
+                  <p style="font-family:monospace;font-size:30px;font-weight:700;
+                            color:{score_color};margin:0">{care_score}</p>
+                  <p style="font-size:10px;color:{_MUTED};margin:4px 0 0 0;letter-spacing:.08em;
+                            text-transform:uppercase">CARE Score / 13</p>
+                </td>
+                <td width="4%">&nbsp;</td>
+                <td width="48%" style="background:#0D1425;border-radius:6px;padding:16px;
+                    border-top:2px solid {_ACID};text-align:center">
+                  <p style="font-family:monospace;font-size:30px;font-weight:700;
+                            color:{_ACID};margin:0">{total_refs}</p>
+                  <p style="font-size:10px;color:{_MUTED};margin:4px 0 0 0;letter-spacing:.08em;
+                            text-transform:uppercase">Referências</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+      {flags_html}"""
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">
-          <div style="background:#0D1425;border-radius:5px;padding:14px;border-top:2px solid rgba(200,255,0,0.3)">
-            <p style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#4A5568;margin:0 0 6px">CARE Score</p>
-            <p style="font-family:Georgia,serif;font-style:italic;font-size:28px;color:#C8FF00;margin:0">{care_score}</p>
-            <p style="font-size:11px;color:#8B96A8;margin:4px 0 0">de 13 itens</p>
-          </div>
-          <div style="background:#0D1425;border-radius:5px;padding:14px;border-top:2px solid rgba(200,255,0,0.3)">
-            <p style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#4A5568;margin:0 0 6px">Referências</p>
-            <p style="font-family:Georgia,serif;font-style:italic;font-size:28px;color:#C8FF00;margin:0">{total_refs}</p>
-            <p style="font-size:11px;color:#8B96A8;margin:4px 0 0">citações</p>
-          </div>
-        </div>
-
-        {flags_html}
-
-        <a href="{download_url}"
-           style="display:block;background:#C8FF00;color:#0A0A0B;font-family:monospace;
-                  font-size:12px;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;
-                  text-align:center;padding:16px;border-radius:4px;margin-top:24px;font-weight:700;">
-          Download DOCX →
-        </a>
-
-        <p style="font-size:10px;color:#4A5568;text-align:center;margin-top:20px">
-          Revise o conteúdo antes de qualquer submissão.<br>
-          CaseOS · Gerado com IA · Responsabilidade editorial do autor.
-        </p>
-      </div>
-    </body>
-    </html>"""
+    html = _base(
+        char_url=f"{_ASSETS}/pixel-char-tablet.png",
+        headline="Seu relato está<br>pronto.",
+        body_html=f"""
+          <p style="font-size:13px;color:{_MUTED};margin:0;line-height:1.7">
+            Olá, {nome.split()[0]}. O CaseOS concluiu a geração do seu relato de caso.
+            Acesse o dashboard para baixar o DOCX.
+          </p>""",
+        cta_url=download_url,
+        cta_label="Baixar relatório",
+        extra_html=extras,
+        notice_html=f"""
+          <p style="font-size:10px;color:{_DIM};margin:14px 0 0 0;font-family:monospace">
+            Revise o conteúdo antes de qualquer submissão. Responsabilidade editorial do autor.
+          </p>""",
+    )
 
     return await _send({
         "from": settings.resend_from_email,
         "to": [destinatario],
-        "subject": f"[CaseOS] Seu relato está pronto — CARE Score {care_score}/13",
+        "subject": f"[CaseOS] Relato pronto — CARE Score {care_score}/13",
         "html": html,
     })
 
+
+# ── Erro no pipeline ─────────────────────────────────────────────────────────
 
 async def enviar_erro_pipeline(destinatario: str, nome: str, sessao_id: str) -> bool:
     if not settings.resend_api_key:
         return False
 
-    html = f"""<!DOCTYPE html>
-    <body style="font-family:Arial,sans-serif;background:#080D18;padding:32px">
-      <div style="max-width:560px;margin:0 auto;background:#111827;border-radius:8px;padding:36px">
-        <p style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#E8EDF5">
-          Ocorreu um erro na geração.
-        </p>
-        <p style="color:#8B96A8;font-size:13px">
-          Olá, {nome}. Houve uma falha no processamento do seu relato (sessão {sessao_id}).
-          Você pode tentar novamente acessando a plataforma.
-        </p>
-        <p style="font-size:10px;color:#4A5568;margin-top:20px">CaseOS</p>
-      </div>
-    </body>"""
+    html = _base(
+        char_url=f"{_ASSETS}/pixel-char-flask.png",
+        headline="Erro na geração<br>do relato.",
+        body_html=f"""
+          <p style="font-size:13px;color:{_MUTED};margin:0;line-height:1.7">
+            Olá, {nome.split()[0]}. Houve uma falha no processamento do seu relato.
+            Nossa equipe foi notificada. Você pode tentar novamente — o crédito não foi consumido.
+          </p>""",
+        cta_url=f"{settings.frontend_url}/dashboard",
+        cta_label="Tentar novamente",
+        notice_html=f"""
+          <p style="font-size:10px;color:{_DIM};margin:14px 0 0 0;font-family:monospace">
+            Sessão: {sessao_id[:8]}...
+            &nbsp;·&nbsp; Se o problema persistir, responda este e-mail.
+          </p>""",
+    )
 
     return await _send({
         "from": settings.resend_from_email,
