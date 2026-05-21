@@ -100,7 +100,7 @@ class Sessao(Base):
 def _get_database_url() -> str:
     """
     Normaliza a DATABASE_URL para o driver async correto.
-    Railway/Heroku fornecem postgresql:// mas asyncpg precisa de postgresql+asyncpg://
+    Render/Heroku fornecem postgresql:// mas asyncpg precisa de postgresql+asyncpg://
     """
     url = settings.database_url
     if url.startswith("postgres://"):

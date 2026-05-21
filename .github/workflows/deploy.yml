@@ -1,58 +1,49 @@
-name: Deploy — Railway
+name: Deploy - Render
 
 on:
-  push:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["CI — Lint & Test"]
     branches: [main]
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE: ghcr.io/ueligtoncordeiro-ux/caseos-api
+    types: [completed]
 
 jobs:
-  build-and-deploy:
-    name: Build Docker → ghcr.io → Railway
+  deploy-render:
+    name: Trigger Render deploy hook
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write   # necessário para push ao ghcr.io
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
 
     steps:
-      - uses: actions/checkout@v4
-
-      # ── Build & push Docker image para GitHub Container Registry ────────────
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          push: true
-          tags: |
-            ${{ env.IMAGE }}:latest
-            ${{ env.IMAGE }}:${{ github.sha }}
-
-      # ── Atualizar Railway para usar a nova imagem ────────────────────────────
-      - name: Deploy to Railway (update image tag)
-        run: |
-          curl -s -X POST https://backboard.railway.app/graphql/v2 \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -H "User-Agent: railway-cli/3.0.0" \
-            -d "{\"query\":\"mutation { serviceInstanceUpdate(serviceId: \\\"c164deaa-4573-4e8e-bf4d-ae8c66fa2fdb\\\", environmentId: \\\"fc4955cc-35b5-4829-8017-b46b59dd1aa9\\\", input: { source: { image: \\\"$IMAGE_TAG\\\" } }) }\"}" \
-            | jq .
-          sleep 3
-          curl -s -X POST https://backboard.railway.app/graphql/v2 \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -H "User-Agent: railway-cli/3.0.0" \
-            -d '{"query":"mutation { serviceInstanceRedeploy(serviceId: \"c164deaa-4573-4e8e-bf4d-ae8c66fa2fdb\", environmentId: \"fc4955cc-35b5-4829-8017-b46b59dd1aa9\") }"}' \
-            | jq .
+      - name: Check Render deploy hook
+        id: render-hook
+        shell: bash
         env:
-          IMAGE_TAG: ${{ env.IMAGE }}:${{ github.sha }}
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            {
+              echo "### Render deploy skipped"
+              echo ""
+              echo "Set the GitHub secret \`RENDER_DEPLOY_HOOK_URL\` with the Deploy Hook URL from the Render service."
+              echo "The old Railway deploy path has been removed from this workflow."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger Render deploy
+        if: steps.render-hook.outputs.configured == 'true'
+        shell: bash
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          curl --fail --show-error --silent --request POST "$RENDER_DEPLOY_HOOK_URL"
+          {
+            echo "### Render deploy requested"
+            echo ""
+            echo "Render accepted the deploy hook request for this repository."
+          } >> "$GITHUB_STEP_SUMMARY"
