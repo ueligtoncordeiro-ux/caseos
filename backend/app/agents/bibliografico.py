@@ -93,8 +93,18 @@ async def executar(cko: CKO) -> list[dict]:
     queries = await _construir_queries(cko)
     query_principal = f"{cko.diagnostico.diagnostico_definitivo} {cko.intervencao.tipo}"
 
-    # ── 1. PubMed ────────────────────────────────────────────────────────────
-    artigos_pubmed = await pesquisar_pubmed(queries, max_por_query=8, max_total=20)
+    # ── 1. PubMed — busca ampliada (12 por query, até 30 no total) ───────────
+    artigos_pubmed = await pesquisar_pubmed(queries, max_por_query=12, max_total=30)
+
+    # Fallback: se PubMed retornou pouco, adiciona query genérica mais ampla
+    if len(artigos_pubmed) < 10:
+        diag = cko.diagnostico.diagnostico_definitivo
+        fallback_queries = [
+            f'("{diag}"[Title/Abstract]) AND (surgery OR treatment OR therapy)',
+            f'("{diag}"[MeSH Terms])',
+        ]
+        artigos_extra = await pesquisar_pubmed(fallback_queries, max_por_query=10, max_total=15)
+        artigos_pubmed = _deduplicar(artigos_pubmed + artigos_extra)
 
     # ── 2. Semantic Scholar ──────────────────────────────────────────────────
     pmids = [a["pmid"] for a in artigos_pubmed if a.get("pmid")]
@@ -127,8 +137,8 @@ async def executar(cko: CKO) -> list[dict]:
     # ── 5. Unpaywall — adicionar PDF open access ──────────────────────────────
     pool = await unpaywall_enriquecer(pool)
 
-    # ── Ordenar e numerar ─────────────────────────────────────────────────────
-    pool = sorted(pool, key=lambda x: x.get("citation_count", 0), reverse=True)[:25]
+    # ── Ordenar e numerar (máx 30 para dar margem ao redator escolher ≥15) ────
+    pool = sorted(pool, key=lambda x: x.get("citation_count", 0), reverse=True)[:30]
 
     for i, art in enumerate(pool, start=1):
         art["numero"] = i

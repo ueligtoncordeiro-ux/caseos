@@ -16,7 +16,11 @@ REGRAS ABSOLUTAS:
 5. NÃO invente dados clínicos — use APENAS o que está no CKO
 6. NÃO cite artigos fora da lista fornecida
 7. Cada parágrafo da Discussão cita pelo menos 1 referência
-8. Responda APENAS com JSON válido"""
+8. Responda APENAS com JSON válido
+9. TÍTULO: capitalize TODAS as palavras (exceto artigos e preposições curtas) — ex.: "Carcinoma Espinocelular de Língua em Estágio III: Relato de Caso de Abordagem Multimodal"
+10. PROIBIDO usar travessão (—) em qualquer parte do texto; substitua por vírgula, ponto e vírgula ou reescreva a frase
+11. REFERÊNCIAS OBRIGATÓRIAS: use no mínimo 15 referências da lista fornecida; distribua as citações por toda a Introdução, Caso Clínico e Discussão; inclua TODOS os números usados em "referencias_usadas"
+12. Cada afirmação epidemiológica, fisiopatológica ou terapêutica DEVE ter citação [N]"""
 
 _TEMPLATE = """Redija um relato de caso clínico científico completo e publicável.
 
@@ -49,16 +53,23 @@ PERIÓDICO: {periodico} | FORMATO: {formato_ref}
 {referencias}
 
 ══ ESTRUTURA OBRIGATÓRIA ══
-TÍTULO: contém "relato de caso" + diagnóstico/procedimento principal
+TÍTULO: capitalize TODAS as palavras significativas; NÃO use travessão; contém "Relato de Caso" + diagnóstico principal
 PALAVRAS-CHAVE: 3–5 descritores MeSH/DeCS em português
 RESUMO: máx 250 palavras — 4 subseções (Introdução | Apresentação do Caso | Discussão | Conclusão)
-INTRODUÇÃO: 3 parágrafos ~300 palavras — P1=contexto(cite 2), P2=fisiopatologia(cite 2), P3=objetivo
-CASO CLÍNICO: narrativa cronológica ~450 palavras
-DISCUSSÃO: 10 parágrafos ~800 palavras — cada um cita ao menos 1 ref
-  P1=diferencial do caso, P2=epidemiologia, P3=fisiopatologia, P4=achados vs literatura,
-  P5=métodos diagnósticos, P6=diagnósticos diferenciais, P7=intervenção,
-  P8=desfechos, P9=perspectiva/limitações, P10=lições clínicas
+INTRODUÇÃO: 3 parágrafos ~300 palavras — P1=contexto(cite 3 refs), P2=fisiopatologia(cite 3 refs), P3=objetivo
+CASO CLÍNICO: narrativa cronológica ~450 palavras — cite referências para dados comparativos (ex.: estadiamento, critérios diagnósticos)
+DISCUSSÃO: 10 parágrafos ~900 palavras — cada parágrafo cita ao menos 2 refs diferentes
+  P1=diferencial do caso (cite 2), P2=epidemiologia (cite 3), P3=fisiopatologia (cite 2),
+  P4=achados vs literatura (cite 2), P5=métodos diagnósticos (cite 2),
+  P6=diagnósticos diferenciais (cite 2), P7=intervenção (cite 2),
+  P8=desfechos (cite 2), P9=perspectiva/limitações (cite 1), P10=lições clínicas (cite 1)
 CONCLUSÃO: 1–2 parágrafos ~120 palavras
+
+ATENÇÃO CRÍTICA — REFERÊNCIAS:
+- Use MÍNIMO 15 referências diferentes da lista fornecida
+- Distribua as citações por toda a Introdução, Caso Clínico e Discussão
+- Nunca repita a mesma citação em dois parágrafos consecutivos sem necessidade
+- Liste em "referencias_usadas" TODOS os números de referência efetivamente citados no texto
 
 JSON de resposta:
 {{
@@ -69,7 +80,7 @@ JSON de resposta:
   "caso_clinico": ["P1","P2","..."],
   "discussao": ["P1","P2","P3","P4","P5","P6","P7","P8","P9","P10"],
   "conclusao": ["P1"],
-  "referencias_usadas": [1,2,3]
+  "referencias_usadas": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 }}"""
 
 
@@ -132,7 +143,18 @@ async def executar(cko: CKO, artigos: list[dict]) -> ArtigoGerado:
     resp = await chamar(_SYSTEM, prompt, complexidade=Complexidade.ALTA, max_tokens=8192)
     data = extrair_json(resp)
 
-    refs_idx = set(data.get("referencias_usadas", range(1, len(artigos) + 1)))
+    # Garantia mínima: se LLM citou menos de 15 refs, completa com as mais relevantes do pool
+    refs_idx = set(data.get("referencias_usadas", []))
+    if not refs_idx:
+        refs_idx = set(range(1, len(artigos) + 1))
+    MIN_REFS = 15
+    if len(refs_idx) < MIN_REFS and len(artigos) >= MIN_REFS:
+        todos_numeros = [a["numero"] for a in artigos]
+        for num in todos_numeros:
+            if len(refs_idx) >= MIN_REFS:
+                break
+            refs_idx.add(num)
+
     referencias = [
         Referencia(
             numero=art["numero"], autores=art.get("autores", ""),
