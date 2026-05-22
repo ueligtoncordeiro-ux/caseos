@@ -138,36 +138,7 @@ body {
 .sidebar.collapsed .plan-summary { display: none; }
 .sidebar.collapsed .btn-upgrade span { display: none; }
 .sidebar.collapsed .btn-upgrade { padding: 10px; justify-content: center; border-radius: 12px; }
-.sidebar.collapsed:hover,
-.sidebar.collapsed:focus-within {
-  width: var(--sidebar-w);
-  min-width: var(--sidebar-w);
-  box-shadow: 18px 0 40px rgba(0,0,0,0.08);
-}
-.sidebar.collapsed:hover .nav-label,
-.sidebar.collapsed:focus-within .nav-label { opacity: 1; height: auto; padding: 14px 16px 6px; }
-.sidebar.collapsed:hover .nav-divider,
-.sidebar.collapsed:focus-within .nav-divider { margin: 12px 16px; }
-.sidebar.collapsed:hover .nav-item,
-.sidebar.collapsed:focus-within .nav-item { justify-content: flex-start; padding: 8px 12px; min-height: 38px; }
-.sidebar.collapsed:hover .nav-item span.nav-text,
-.sidebar.collapsed:focus-within .nav-item span.nav-text { opacity: 1; width: auto; }
-.sidebar.collapsed:hover .nav-icon,
-.sidebar.collapsed:focus-within .nav-icon { width: 22px; height: 22px; font-size: 12px; border-radius: 7px; }
-.sidebar.collapsed:hover .nav-icon svg,
-.sidebar.collapsed:focus-within .nav-icon svg { width: 13px; height: 13px; }
-.sidebar.collapsed:hover .sidebar-footer,
-.sidebar.collapsed:focus-within .sidebar-footer { padding: 12px 10px; }
-.sidebar.collapsed:hover .usage-bar-wrap,
-.sidebar.collapsed:focus-within .usage-bar-wrap,
-.sidebar.collapsed:hover .plan-summary,
-.sidebar.collapsed:focus-within .plan-summary { display: block; }
-.sidebar.collapsed:hover .btn-upgrade span,
-.sidebar.collapsed:focus-within .btn-upgrade span { display: inline; }
-.sidebar.collapsed:hover .btn-upgrade,
-.sidebar.collapsed:focus-within .btn-upgrade { padding: 10px; justify-content: center; }
-
-/* Content stays anchored; the sidebar expands as an overlay, without moving the page. */
+/* Desktop sidebar expands only by click, keeping the workspace aligned. */
 .main-wrapper.sidebar-collapsed { margin-left: var(--sidebar-collapsed-w); }
 
 .sidebar-control {
@@ -369,9 +340,7 @@ body {
   display: none;
 }
 
-.sidebar.collapsed:hover .nav-item.external-link::after {
-  display: inline;
-}
+.sidebar.collapsed:hover .nav-item.external-link::after { display: none; }
 
 /* Sidebar footer */
 .sidebar-footer {
@@ -542,14 +511,14 @@ body {
    MAIN CONTENT AREA
 ═══════════════════════════════════════════════════════════════ */
 .main-wrapper {
-  margin-left: var(--sidebar-collapsed-w);
+  margin-left: var(--sidebar-w);
   flex: 1;
   display: flex;
   flex-direction: column;
   padding-top: var(--topbar-h);
   min-height: 100vh;
   min-width: 0;
-  transition: margin-right 0.3s ease;
+  transition: margin-left 0.22s ease, margin-right 0.3s ease;
   background: var(--bg);
 }
 
@@ -2570,7 +2539,7 @@ tbody td {
 <!-- ══════════════════════════════════════════════════════════
      MAIN CONTENT
 ══════════════════════════════════════════════════════════ -->
-<div class="main-wrapper" id="mainWrapper">
+<div class="main-wrapper sidebar-collapsed" id="mainWrapper">
 
   <!-- Topbar -->
   <header class="topbar">
@@ -3879,8 +3848,10 @@ function toggleSidebarCollapse() {
   _sidebarCollapsed = !_sidebarCollapsed;
   const sidebar  = document.getElementById('sidebar');
   const btn      = document.getElementById('sidebarCollapseBtn');
+  const wrapper  = document.getElementById('mainWrapper');
 
   sidebar.classList.toggle('collapsed', _sidebarCollapsed);
+  if (wrapper) wrapper.classList.toggle('sidebar-collapsed', _sidebarCollapsed);
   if (btn) btn.textContent = _sidebarCollapsed ? '›' : '‹';
   if (btn) {
     btn.title = _sidebarCollapsed ? 'Expandir menu' : 'Recolher menu';
@@ -3897,7 +3868,9 @@ function toggleSidebarCollapse() {
     _sidebarCollapsed = true;
     const sidebar = document.getElementById('sidebar');
     const btn     = document.getElementById('sidebarCollapseBtn');
+    const wrapper = document.getElementById('mainWrapper');
     if (sidebar) sidebar.classList.toggle('collapsed', _sidebarCollapsed);
+    if (wrapper) wrapper.classList.toggle('sidebar-collapsed', _sidebarCollapsed);
     if (btn) {
       btn.textContent = _sidebarCollapsed ? '›' : '‹';
       btn.title = _sidebarCollapsed ? 'Expandir menu' : 'Recolher menu';
