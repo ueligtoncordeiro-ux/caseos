@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.config import settings
-from app.models.database import get_db, Usuario, QUOTA_MENSAL, PLANO_FREE
+from app.models.database import get_db, Usuario, QUOTA_MENSAL, TOKENS_LIMITE, PLANO_FREE
 
 # ── Hashing ───────────────────────────────────────────────────────────────────
 
@@ -113,26 +113,59 @@ async def check_quota(
     user: Usuario = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ) -> Usuario:
-    """Verifica e incrementa a quota mensal do usuário."""
-    limit = QUOTA_MENSAL.get(user.plano)
-    if limit is not None:
-        mes_atual = datetime.utcnow().strftime("%Y-%m")
-        if user.mes_referencia != mes_atual:
-            user.artigos_mes = 0
-            user.mes_referencia = mes_atual
-        if user.artigos_mes >= limit:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=(
-                    f"Limite do plano {user.plano.upper()} atingido "
-                    f"({limit} artigo{'s' if limit > 1 else ''}/mês). "
-                    "Acesse /precos para fazer upgrade."
-                ),
-            )
-    # Incrementar contador (será commitado pelo router)
+    """Verifica quota mensal de artigos e tokens; reseta contadores no virada do mês."""
+    mes_atual = datetime.utcnow().strftime("%Y-%m")
+
+    # Reset mensal
+    if user.mes_referencia != mes_atual:
+        user.artigos_mes = 0
+        user.tokens_mes  = 0
+        user.mes_referencia = mes_atual
+
+    # Verificar limite de artigos por plano
+    limit_artigos = QUOTA_MENSAL.get(user.plano)
+    if limit_artigos is not None and user.artigos_mes >= limit_artigos:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                f"Limite do plano {user.plano.upper()} atingido "
+                f"({limit_artigos} artigo{'s' if limit_artigos > 1 else ''}/mês). "
+                "Acesse /precos para fazer upgrade."
+            ),
+        )
+
+    # Verificar limite de tokens por plano
+    limit_tokens = TOKENS_LIMITE.get(user.plano, 50_000)
+    if user.tokens_mes >= limit_tokens:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                f"Limite de tokens do plano {user.plano.upper()} atingido "
+                f"({limit_tokens:,} tokens/mês). "
+                "Acesse /precos para fazer upgrade."
+            ),
+        )
+
     user.artigos_mes += 1
     await db.commit()
     return user
+
+
+async def debitar_tokens(user_id: str, tokens: int) -> None:
+    """Debita tokens do saldo mensal do usuário. Chamado ao final do pipeline."""
+    if tokens <= 0:
+        return
+    from app.models.database import AsyncSessionLocal
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Usuario).where(Usuario.id == user_id))
+        user = result.scalar_one_or_none()
+        if user:
+            mes_atual = datetime.utcnow().strftime("%Y-%m")
+            if user.mes_referencia != mes_atual:
+                user.tokens_mes = 0
+                user.mes_referencia = mes_atual
+            user.tokens_mes += tokens
+            await db.commit()
 
 
 async def get_user_from_refresh(

@@ -79,7 +79,7 @@ async def iniciar_geracao(
         db.add(sessao)
         await db.commit()
 
-    background_tasks.add_task(executar_pipeline, cko.sessao_id, cko)
+    background_tasks.add_task(executar_pipeline, cko.sessao_id, cko, user.id)
 
     return IniciarResponse(
         sessao_id=cko.sessao_id,

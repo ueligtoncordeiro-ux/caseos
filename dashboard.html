@@ -2378,12 +2378,13 @@ tbody td {
       <div class="plan-badge-name" id="sidebarPlanName">GRATUITO</div>
       <div class="usage-bar-wrap plan-usage" id="sidebarUsageWrap">
         <div class="usage-bar-header">
-          <span class="usage-bar-label">Créditos usados</span>
+          <span class="usage-bar-label">Tokens usados</span>
           <span class="usage-bar-count" id="sidebarUsageText">—</span>
         </div>
         <div class="usage-bar-track">
           <div class="usage-bar-fill" id="sidebarUsageFill" style="width:0%"></div>
         </div>
+        <div style="font-size:11px;color:var(--t3);margin-top:4px;" id="sidebarUsageSub">Carregando...</div>
       </div>
     </div>
     <button class="btn-upgrade" id="sidebarUpgradeBtn" onclick="abrirModalPlanos()">
@@ -3012,8 +3013,8 @@ function _renderUser(user) {
   const ub = document.getElementById('sidebarUpgradeBtn');
   if (ub) ub.style.display = plano === 'free' ? 'flex' : 'none';
 
-  // Usage bar
-  _renderUsageBar(user);
+  // Usage bar (async — busca dados frescos do backend)
+  _renderUsageBar(user).catch(console.warn);
 
   // Stat card plano
   const sv = document.getElementById('statPlano');
@@ -3039,36 +3040,61 @@ function _renderUser(user) {
   _destacarPlanoAtual(plano);
 }
 
-function _renderUsageBar(user) {
+function _fmtTok(n) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'k';
+  return String(n);
+}
+
+async function _renderUsageBar(user) {
   const wrap = document.getElementById('sidebarUsageWrap');
   const fill = document.getElementById('sidebarUsageFill');
   const text = document.getElementById('sidebarUsageText');
+  const sub  = document.getElementById('sidebarUsageSub');
   if (!wrap || !fill || !text) return;
 
-  // creditos = remaining; limite depends on plan
-  const plano = (user.plano || 'free').toLowerCase();
-  const creditosRestantes = user.creditos ?? null;
+  // Tenta buscar dados frescos do endpoint /me/tokens
+  let dados = null;
+  try {
+    const token = localStorage.getItem('rccs_token');
+    if (token) {
+      const r = await fetch(API + '/auth/me/tokens', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      if (r.ok) dados = await r.json();
+    }
+  } catch (_) {}
 
-  // Quota per plan
-  const quotaMap = { free: 1, pro: 30, institucional: 999 };
-  const quota = quotaMap[plano] || 1;
-
-  if (creditosRestantes === null) {
-    text.textContent = '—';
-    fill.style.width = '0%';
-    return;
+  // Fallback: estima a partir do objeto user
+  if (!dados) {
+    const limiteMap = { free: 50000, starter: 150000, pro: 300000, institucional: 1500000 };
+    const limite   = limiteMap[(user.plano || 'free').toLowerCase()] || 50000;
+    const usados   = user.tokens_mes || 0;
+    dados = {
+      tokens_mes: usados,
+      tokens_limite: limite,
+      tokens_restantes: Math.max(0, limite - usados),
+      pct_usado: Math.min(100, Math.round(usados / limite * 100)),
+      artigos_equiv_restantes: Math.floor(Math.max(0, limite - usados) / 25000),
+      reset_em: '01/' + String(new Date().getMonth() + 2).padStart(2, '0'),
+    };
   }
 
-  const usados = Math.max(0, quota - creditosRestantes);
-  const pct = Math.min(100, Math.round((usados / quota) * 100));
+  const pct = dados.pct_usado || 0;
+  text.textContent = `${_fmtTok(dados.tokens_mes)} / ${_fmtTok(dados.tokens_limite)} tokens`;
+  fill.style.width  = pct + '%';
+  fill.className    = 'usage-bar-fill' + (pct >= 90 ? ' danger' : pct >= 70 ? ' warning' : '');
 
-  text.textContent = `${usados}/${quota}`;
-  fill.style.width = pct + '%';
-  fill.className = 'usage-bar-fill' + (pct >= 90 ? ' danger' : pct >= 70 ? ' warning' : '');
+  if (sub) {
+    sub.textContent = dados.artigos_equiv_restantes > 0
+      ? `≈ ${dados.artigos_equiv_restantes} artigo${dados.artigos_equiv_restantes !== 1 ? 's' : ''} restante${dados.artigos_equiv_restantes !== 1 ? 's' : ''} · renova ${dados.reset_em}`
+      : `Limite atingido · renova ${dados.reset_em}`;
+  }
 
-  // Show upgrade prompt if exhausted
-  if (creditosRestantes <= 0 && plano === 'free') {
-    mostrarToast('Você usou todos os seus créditos gratuitos. Faça upgrade para continuar publicando!', 'info', '⚡', 6000);
+  if (pct >= 100) {
+    mostrarToast('Limite de tokens atingido. Faça upgrade para continuar gerando artigos!', 'info', '⚡', 6000);
+  } else if (pct >= 80) {
+    mostrarToast(`Você usou ${pct}% dos seus tokens este mês.`, 'warning', '⚠️', 4000);
   }
 }
 

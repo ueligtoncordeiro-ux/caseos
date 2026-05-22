@@ -177,6 +177,37 @@ async def me(user: Usuario = Depends(get_current_user)):
     return UsuarioPublico.model_validate(user)
 
 
+@router.get("/me/tokens")
+async def me_tokens(user: Usuario = Depends(get_current_user)):
+    """Retorna situação atual de tokens do usuário."""
+    from app.models.database import TOKENS_LIMITE
+    limite = TOKENS_LIMITE.get(user.plano, 50_000)
+    usados = user.tokens_mes or 0
+    restantes = max(0, limite - usados)
+    artigos_equiv_restantes = restantes // 25_000
+    pct = min(100, round(usados / limite * 100)) if limite > 0 else 0
+    return {
+        "plano": user.plano,
+        "tokens_mes": usados,
+        "tokens_limite": limite,
+        "tokens_restantes": restantes,
+        "pct_usado": pct,
+        "artigos_equiv_restantes": artigos_equiv_restantes,
+        "reset_em": _proximo_reset(),
+    }
+
+
+def _proximo_reset() -> str:
+    """Retorna string 'DD/MM' da virada do próximo mês."""
+    from datetime import date
+    hoje = date.today()
+    if hoje.month == 12:
+        proximo = date(hoje.year + 1, 1, 1)
+    else:
+        proximo = date(hoje.year, hoje.month + 1, 1)
+    return proximo.strftime("%d/%m")
+
+
 @router.patch("/me", response_model=UsuarioPublico)
 async def update_me(
     body: UpdateProfileRequest,

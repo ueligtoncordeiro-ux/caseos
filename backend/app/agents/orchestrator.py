@@ -5,12 +5,14 @@ Ao concluir, dispara email via Resend e valida palavras-chave via MeSH.
 """
 import asyncio
 import logging
+from typing import Optional
 from sqlalchemy import select
 
 from app.models.schemas import CKO
 from app.models.database import AsyncSessionLocal, Sessao
 from app.services.websocket_manager import manager
 from app.services.email import enviar_artigo_pronto, enviar_erro_pipeline
+from app.services.llm_router import iniciar_contagem_tokens, obter_tokens_usados
 from app.agents import bibliografico, redator, revisor
 from app.services.docx_generator import gerar_docx
 from app.utils.mesh import validar_e_corrigir_palavras_chave
@@ -28,9 +30,10 @@ async def _atualizar_sessao(external_id: str, **kwargs):
             await db.commit()
 
 
-async def executar_pipeline(sessao_id: str, cko: CKO):
+async def executar_pipeline(sessao_id: str, cko: CKO, user_id: Optional[str] = None):
     """Pipeline principal. Executado como BackgroundTask."""
     email_usuario = cko.editorial.__dict__.get("email_usuario", "")
+    iniciar_contagem_tokens()  # zera contador para este pipeline
 
     try:
         # ── Etapa 1: Validação ──────────────────────────────────────────────
@@ -94,6 +97,9 @@ async def executar_pipeline(sessao_id: str, cko: CKO):
             cko=cko,
         )
 
+        # Apurar tokens consumidos pelo pipeline completo
+        tokens_pipeline = obter_tokens_usados()
+
         # Persistir resultado
         await _atualizar_sessao(
             sessao_id,
@@ -103,7 +109,15 @@ async def executar_pipeline(sessao_id: str, cko: CKO):
             flags=relatorio.flags,
             docx_path=docx_path,
             care_score=relatorio.care_score,
+            tokens_usados=tokens_pipeline,
         )
+
+        # Debitar tokens do saldo mensal do usuário
+        if user_id and tokens_pipeline > 0:
+            from app.services.auth import debitar_tokens
+            asyncio.create_task(debitar_tokens(user_id, tokens_pipeline))
+
+        logger.info("Pipeline concluído sessao=%s tokens=%d", sessao_id, tokens_pipeline)
 
         resultado_ws = {
             "care_score": relatorio.care_score,

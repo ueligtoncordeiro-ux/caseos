@@ -19,6 +19,7 @@ Custo estimado por artigo (com todos os providers ativos):
 import json
 import logging
 import asyncio
+import contextvars
 from enum import Enum
 from typing import Any, Optional
 
@@ -29,6 +30,32 @@ import google.generativeai as genai
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+# ── Contador de tokens por pipeline (ContextVar — thread/task safe) ───────────
+_session_tokens: contextvars.ContextVar[Optional[dict]] = contextvars.ContextVar(
+    "session_tokens", default=None
+)
+
+
+def iniciar_contagem_tokens() -> dict:
+    """Chame no início do pipeline. Retorna o dict mutável do contador."""
+    counter: dict = {"total": 0, "claude": 0, "openai": 0, "gemini": 0}
+    _session_tokens.set(counter)
+    return counter
+
+
+def obter_tokens_usados() -> int:
+    """Retorna o total acumulado desde iniciar_contagem_tokens()."""
+    c = _session_tokens.get(None)
+    return c["total"] if c else 0
+
+
+def _registrar_tokens(n: int, provider: str = "outro") -> None:
+    """Interno: adiciona n tokens ao contador ativo."""
+    c = _session_tokens.get(None)
+    if c is not None and n > 0:
+        c["total"] += n
+        c[provider] = c.get(provider, 0) + n
 
 
 class LLMQuotaError(RuntimeError):
@@ -121,6 +148,12 @@ async def _chamar_claude(system: str, user: str, max_tokens: int) -> str:
         system=system,
         messages=[{"role": "user", "content": user}],
     )
+    # Registra tokens reais retornados pela API
+    if hasattr(msg, "usage") and msg.usage:
+        _registrar_tokens(
+            (msg.usage.input_tokens or 0) + (msg.usage.output_tokens or 0),
+            "claude"
+        )
     return msg.content[0].text.strip()
 
 
@@ -140,6 +173,8 @@ async def _chamar_openai(
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
     resp = await client.chat.completions.create(**kwargs)
+    if hasattr(resp, "usage") and resp.usage:
+        _registrar_tokens(resp.usage.total_tokens or 0, "openai")
     return resp.choices[0].message.content.strip()
 
 
@@ -165,11 +200,15 @@ async def _chamar_gemini(
                 prompt,
                 generation_config={"max_output_tokens": max_tokens},
             )
-            return resp.text.strip()
+            texto = resp.text.strip()
+            # Gemini não retorna usage de forma confiável — estima por caracteres
+            estimado = (len(prompt) + len(texto)) // 4
+            _registrar_tokens(estimado, "gemini")
+            return texto
         except Exception as exc:
             erros.append(f"{nome_modelo}: {exc}")
-            texto = str(exc).lower()
-            if "quota" in texto or "429" in texto or "rate limit" in texto:
+            texto_exc = str(exc).lower()
+            if "quota" in texto_exc or "429" in texto_exc or "rate limit" in texto_exc:
                 logger.warning("Gemini quota/rate-limit em %s: %s", nome_modelo, exc)
                 continue
     raise RuntimeError("Gemini falhou em todos os modelos: " + " | ".join(erros))

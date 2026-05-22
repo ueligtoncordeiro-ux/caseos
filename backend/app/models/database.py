@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List
-from sqlalchemy import String, DateTime, JSON, Text, Boolean, Integer, ForeignKey
+from sqlalchemy import String, DateTime, JSON, Text, Boolean, Integer, ForeignKey, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
@@ -21,6 +21,14 @@ QUOTA_MENSAL = {
     PLANO_FREE:          1,
     PLANO_PRO:           30,
     PLANO_INSTITUCIONAL: None,   # ilimitado
+}
+
+# ── Limites de tokens por plano (mensais) ─────────────────────────────────────
+TOKENS_LIMITE = {
+    "free":          50_000,    # só demos
+    "starter":      150_000,    # ~6 artigos
+    "pro":          300_000,    # ~12 artigos
+    "institucional":1_500_000,  # ~60 artigos
 }
 
 
@@ -48,6 +56,9 @@ class Usuario(Base):
     plano: Mapped[str] = mapped_column(String, default=PLANO_FREE)
     artigos_mes: Mapped[int] = mapped_column(Integer, default=0)
     mes_referencia: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # "2025-05"
+
+    # Tokens LLM consumidos no mês corrente
+    tokens_mes: Mapped[int] = mapped_column(Integer, default=0)
 
     # Stripe
     stripe_customer_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -98,6 +109,7 @@ class Sessao(Base):
     flags: Mapped[list] = mapped_column(JSON, default=list)
     docx_path: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     care_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    tokens_usados: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class PesquisaSalva(Base):
@@ -147,6 +159,25 @@ AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_co
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # ── Migração automática: colunas adicionadas incrementalmente ────────
+        is_sqlite = "sqlite" in str(engine.url)
+        migrations = [
+            # (tabela, coluna, tipo_sqlite, tipo_pg)
+            ("usuarios", "tokens_mes",   "INTEGER DEFAULT 0",  "INTEGER DEFAULT 0"),
+            ("sessoes",  "tokens_usados","INTEGER DEFAULT 0",  "INTEGER DEFAULT 0"),
+        ]
+        for tabela, coluna, tipo_sqlite, tipo_pg in migrations:
+            try:
+                if is_sqlite:
+                    await conn.execute(
+                        text(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo_sqlite}")
+                    )
+                else:
+                    await conn.execute(
+                        text(f"ALTER TABLE {tabela} ADD COLUMN IF NOT EXISTS {coluna} {tipo_pg}")
+                    )
+            except Exception:
+                pass  # coluna já existe — ignorar
 
 
 async def get_db():

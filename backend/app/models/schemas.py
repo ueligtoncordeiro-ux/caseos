@@ -232,9 +232,15 @@ class UsuarioPublico(BaseModel):
     google_picture: Optional[str] = None
     crm_cro: Optional[str] = None
     artigos_mes: int
+    tokens_mes: int = 0
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @property
+    def tokens_limite(self) -> int:
+        from app.models.database import TOKENS_LIMITE
+        return TOKENS_LIMITE.get(self.plano, 50_000)
 
 
 class TokenResponse(BaseModel):
