@@ -57,7 +57,7 @@
   --sidebar-w:   220px;
   --sidebar-collapsed-w: 72px;
   --chat-w:      340px;
-  --topbar-h:    60px;
+  --topbar-h:    76px;
   --radius:      10px;
   --radius-sm:   8px;
   --radius-xs:   6px;
@@ -101,7 +101,7 @@ body {
   display: flex;
   flex-direction: column;
   position: fixed;
-  top: 0; left: 0; bottom: 0;
+  top: var(--topbar-h); left: 0; bottom: 0;
   z-index: 200;
   transition: width 0.22s ease, transform 0.3s ease;
   overflow: hidden;
@@ -113,8 +113,6 @@ body {
   min-width: var(--sidebar-collapsed-w);
 }
 
-.sidebar.collapsed .sidebar-logo img { display: none; }
-.sidebar.collapsed .sidebar-logo { padding: 18px 12px; min-height: 74px; }
 .sidebar.collapsed .nav-label { opacity: 0; height: 0; padding: 0; overflow: hidden; }
 .sidebar.collapsed .nav-divider { margin: 8px 12px; }
 .sidebar.collapsed .nav-item span.nav-text { opacity: 0; width: 0; overflow: hidden; white-space: nowrap; }
@@ -143,8 +141,6 @@ body {
   min-width: var(--sidebar-w);
   box-shadow: 18px 0 40px rgba(0,0,0,0.08);
 }
-.sidebar.collapsed:hover .sidebar-logo img,
-.sidebar.collapsed:focus-within .sidebar-logo img { display: block; }
 .sidebar.collapsed:hover .nav-label,
 .sidebar.collapsed:focus-within .nav-label { opacity: 1; height: auto; padding: 12px 10px 5px; }
 .sidebar.collapsed:hover .nav-divider,
@@ -169,27 +165,11 @@ body {
 /* Main wrapper adjusts for collapsed sidebar */
 .main-wrapper.sidebar-collapsed { margin-left: var(--sidebar-collapsed-w); }
 
-/* Logo area */
-.sidebar-logo {
-  padding: 20px 14px 12px;
+.sidebar-control {
+  padding: 12px 14px 10px;
   border-bottom: 1px solid var(--sidebar-bdr);
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  justify-content: center;
-  align-items: center;
-}
-.sidebar-logo .logo-link {
-  display: flex;
-  width: 100%;
-  justify-content: center;
-}
-.sidebar-logo img {
-  width: 100%;
-  max-width: 190px;
-  height: auto;
-  object-fit: contain;
-  display: block;
+  justify-content: flex-end;
 }
 .sidebar-collapse-btn {
   background: var(--card-bg);
@@ -526,6 +506,7 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
+  padding-top: var(--topbar-h);
   min-height: 100vh;
   min-width: 0;
   transition: margin-left 0.22s ease, margin-right 0.3s ease;
@@ -544,13 +525,30 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
-  position: sticky;
+  padding: 0 28px 0 34px;
+  position: fixed;
+  left: 0;
+  right: 0;
   top: 0;
-  z-index: 100;
+  z-index: 300;
 }
 
 .topbar-left { display: flex; align-items: center; gap: 14px; }
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.topbar-brand img {
+  width: 153px;
+  height: auto;
+  display: block;
+}
+.topbar-page {
+  padding-left: 18px;
+  border-left: 1px solid var(--topbar-bdr);
+}
 
 .topbar-title {
   font-family: var(--head);
@@ -627,13 +625,16 @@ body {
   background: none;
   border: 1px solid var(--card-bdr);
   border-radius: var(--radius-xs);
-  padding: 7px 10px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
   cursor: pointer;
   color: var(--t2);
   font-size: 15px;
   transition: all 0.15s ease;
   display: flex;
   align-items: center;
+  justify-content: center;
   background: var(--card-bg);
 }
 
@@ -662,8 +663,8 @@ body {
 .notif-dropdown {
   display: none;
   position: absolute;
-  top: calc(var(--topbar-h) - 2px);
-  right: 120px;
+  top: calc(100% + 10px);
+  right: 0;
   width: 300px;
   background: var(--card-bg);
   border: 1px solid var(--card-bdr);
@@ -716,7 +717,7 @@ body {
 .user-menu { position: relative; }
 
 .user-avatar {
-  width: 36px; height: 36px;
+  width: 38px; height: 38px;
   border-radius: 50%;
   background: var(--acid);
   display: flex;
@@ -2014,6 +2015,9 @@ tbody td {
   .main-wrapper { margin-left: 0; }
   .main-wrapper.chat-open { margin-right: 0; }
   .topbar { padding: 0 16px 0 56px; }
+  .topbar-brand img { width: 112px; }
+  .topbar-page { padding-left: 12px; }
+  .topbar-subtitle { display: none; }
   .page-content { padding: 20px 16px; }
   .bento-grid { grid-template-columns: repeat(2, 1fr); }
   .chat-panel { width: 100%; }
@@ -2321,11 +2325,7 @@ tbody td {
 ══════════════════════════════════════════════════════════ -->
 <aside class="sidebar" id="sidebar">
 
-  <!-- Logo + collapse toggle -->
-  <div class="sidebar-logo">
-    <a href="dashboard.html" class="logo-link">
-      <img src="assets/logo-caseos-light.png" alt="CaseOS">
-    </a>
+  <div class="sidebar-control">
     <button class="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="Expandir menu" aria-label="Expandir menu" id="sidebarCollapseBtn">›</button>
   </div>
 
@@ -2400,7 +2400,10 @@ tbody td {
   <!-- Topbar -->
   <header class="topbar">
     <div class="topbar-left">
-      <div>
+      <a href="dashboard.html" class="topbar-brand" aria-label="CaseOS Dashboard">
+        <img src="assets/logo-caseos-light.png" alt="CaseOS">
+      </a>
+      <div class="topbar-page">
         <div class="topbar-title">Dashboard</div>
         <div class="topbar-subtitle" id="topbarDate">Carregando...</div>
       </div>

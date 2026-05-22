@@ -46,23 +46,54 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
   overflow: hidden;
 }
 .brand-header {
-  height: 96px;
+  height: 76px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  padding: 0 34px;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 0 28px 0 34px;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
   position: relative;
   z-index: 20;
 }
+.brand-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
 .brand-header .logo-link {
   width: auto;
   justify-content: flex-start;
+  flex-shrink: 0;
 }
 .brand-header .logo-link img {
-  width: 218px;
-  max-width: 218px;
+  width: 153px;
+  max-width: 153px;
+}
+.brand-page {
+  padding-left: 18px;
+  border-left: 1px solid var(--border);
+  min-width: 0;
+}
+.brand-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--t1);
+}
+.brand-subtitle {
+  font-size: 11.5px;
+  color: var(--t3);
+  margin-top: 1px;
+}
+.brand-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 .app-body {
   display: flex;
@@ -241,6 +272,112 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
 }
 .btn-back-dash:hover { border-color: var(--obsidian); color: var(--obsidian); }
 
+.notif-wrap,
+.user-menu { position: relative; }
+.notif-btn {
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  width: 38px;
+  height: 38px;
+  cursor: pointer;
+  color: var(--t2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.notif-btn:hover { background: var(--light); border-color: #D0D0CE; color: var(--t1); }
+.notif-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg);
+}
+.notif-dropdown,
+.user-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 280px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(0,0,0,.12);
+  z-index: 150;
+  overflow: hidden;
+}
+.notif-dropdown.open,
+.user-dropdown.open { display: block; }
+.notif-header,
+.user-dropdown-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  background: #FAFAFA;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--t2);
+}
+.notif-item {
+  padding: 12px 14px;
+  border-bottom: 1px solid #F0F0EE;
+  display: flex;
+  gap: 10px;
+}
+.notif-dot {
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--acid);
+  flex-shrink: 0;
+}
+.notif-text { font-size: 13px; color: var(--t1); line-height: 1.4; }
+.notif-time { font-size: 11px; color: var(--t3); margin-top: 3px; }
+.user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--acid);
+  color: var(--obsidian);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+}
+.user-dropdown { width: 220px; }
+.user-dropdown-name { font-size: 14px; font-weight: 700; color: var(--t1); }
+.user-dropdown-plan { display:inline-block; margin-top:6px; font-size:10px; font-weight:800; color:var(--obsidian); background:var(--acid-dim); padding:3px 8px; border-radius:99px; }
+.dropdown-item {
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 11px 14px;
+  text-align: left;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: var(--t1);
+  cursor: pointer;
+}
+.dropdown-item:hover { background: var(--light); }
+.dropdown-item.danger { color: var(--danger); }
+.dropdown-divider { height: 1px; background: var(--border); }
+
 /* content scroll */
 .content-scroll { flex: 1; overflow-y: auto; padding: 32px 40px; }
 
@@ -260,7 +397,15 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
 .form-grid { display: grid; gap: 18px; }
 .form-grid-2 { grid-template-columns: 1fr 1fr; }
 .form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
-@media (max-width: 700px) { .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; } }
+@media (max-width: 700px) {
+  .brand-header { padding: 0 14px; gap: 10px; }
+  .brand-header .logo-link img { width: 112px; max-width: 112px; }
+  .brand-page { padding-left: 12px; }
+  .brand-subtitle { display: none; }
+  .btn-back-dash { padding: 6px 10px; }
+  .notif-dropdown { width: min(280px, calc(100vw - 16px)); }
+  .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+}
 
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-group label {
@@ -592,6 +737,25 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
     <rect x="6"  y="10" width="4" height="4" fill="currentColor"/>
     <rect x="2"  y="14" width="12" height="1" fill="currentColor"/>
   </symbol>
+  <symbol id="px-bell" viewBox="0 0 16 16">
+    <rect x="6"  y="14" width="4" height="2" fill="currentColor"/>
+    <rect x="4"  y="11" width="8" height="3" fill="currentColor"/>
+    <rect x="2"  y="6"  width="12" height="5" fill="currentColor"/>
+    <rect x="4"  y="4"  width="8" height="2"  fill="currentColor"/>
+    <rect x="5"  y="3"  width="6" height="1"  fill="currentColor"/>
+    <rect x="7"  y="1"  width="2" height="2"  fill="currentColor"/>
+  </symbol>
+  <symbol id="px-logout" viewBox="0 0 16 16">
+    <rect x="1"  y="1"  width="2" height="14" fill="currentColor"/>
+    <rect x="1"  y="1"  width="8" height="2"  fill="currentColor"/>
+    <rect x="1"  y="13" width="8" height="2"  fill="currentColor"/>
+    <rect x="8"  y="1"  width="2" height="5"  fill="currentColor"/>
+    <rect x="8"  y="10" width="2" height="5"  fill="currentColor"/>
+    <rect x="8"  y="7"  width="6" height="2" fill="currentColor"/>
+    <rect x="11" y="5"  width="2" height="2" fill="currentColor"/>
+    <rect x="11" y="9"  width="2" height="2" fill="currentColor"/>
+    <rect x="13" y="6"  width="2" height="4" fill="currentColor"/>
+  </symbol>
   <!-- MAGNIFIER: for Analysis step -->
   <symbol id="px-magnify" viewBox="0 0 20 20">
     <rect x="3"  y="1"  width="10" height="2" fill="currentColor"/>
@@ -659,9 +823,40 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 
 <div class="app-shell">
   <header class="brand-header">
-    <a href="dashboard.html" class="logo-link">
-      <img src="assets/logo-caseos-light.png" alt="CaseOS">
-    </a>
+    <div class="brand-left">
+      <a href="dashboard.html" class="logo-link">
+        <img src="assets/logo-caseos-light.png" alt="CaseOS">
+      </a>
+      <div class="brand-page">
+        <div class="brand-title">Novo Relato</div>
+        <div class="brand-subtitle" id="caseTopbarDate">Carregando...</div>
+      </div>
+    </div>
+    <div class="brand-actions">
+      <button class="btn-back-dash" onclick="location.href='dashboard.html'">← Início</button>
+      <div class="notif-wrap">
+        <button class="notif-btn" id="caseNotifBtn" onclick="toggleCaseNotifDropdown()" aria-label="Notificações" title="Notificações">
+          <svg style="width:16px;height:16px;display:block;image-rendering:pixelated"><use href="#px-bell"/></svg>
+          <span class="notif-badge" id="caseNotifBadge">2</span>
+        </button>
+        <div class="notif-dropdown" id="caseNotifDropdown">
+          <div class="notif-header">Notificações</div>
+          <div id="caseNotifList"></div>
+        </div>
+      </div>
+      <div class="user-menu">
+        <div class="user-avatar" id="caseUserAvatar" onclick="toggleCaseUserDropdown()" title="Menu do usuário">?</div>
+        <div class="user-dropdown" id="caseUserDropdown">
+          <div class="user-dropdown-header">
+            <div class="user-dropdown-name" id="caseUserName">Usuário</div>
+            <div class="user-dropdown-plan" id="caseUserPlan">GRATUITO</div>
+          </div>
+          <button class="dropdown-item" onclick="location.href='dashboard.html'">Dashboard</button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item danger" onclick="logoutCaseUser()">Sair</button>
+        </div>
+      </div>
+    </div>
   </header>
 
   <div class="app-body">
@@ -692,9 +887,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
         <span class="topbar-title" id="topbarTitle">Novo Relato</span>
         <span class="topbar-step-badge" id="topbarBadge">Etapa 1 de 10</span>
       </div>
-      <div class="topbar-right">
-        <button class="btn-back-dash" onclick="location.href='dashboard.html'">← Início</button>
-      </div>
+      <div class="topbar-right"></div>
     </header>
 
     <!-- scrollable content -->
@@ -1739,6 +1932,82 @@ function getUser() {
   try { return JSON.parse(sessionStorage.getItem('rccs_user') || 'null'); } catch { return null; }
 }
 
+function _getInitials(nome) {
+  if (!nome) return '?';
+  const parts = nome.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function renderCaseHeader() {
+  const dateEl = document.getElementById('caseTopbarDate');
+  if (dateEl) {
+    const str = new Date().toLocaleDateString('pt-BR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+    dateEl.textContent = str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  const user = getUser() || {};
+  const nome = user.nome || 'Usuário';
+  const plano = (user.plano || 'free').toLowerCase();
+  const planoLabel = plano === 'free' ? 'GRATUITO' : plano.toUpperCase();
+  const avatar = document.getElementById('caseUserAvatar');
+  const userName = document.getElementById('caseUserName');
+  const userPlan = document.getElementById('caseUserPlan');
+  if (avatar) avatar.textContent = _getInitials(nome);
+  if (userName) userName.textContent = nome;
+  if (userPlan) userPlan.textContent = planoLabel;
+  renderCaseNotificacoes();
+}
+
+const caseNotificacoes = [
+  { texto: 'Seu relato está sendo preparado no CaseOS.', tempo: 'agora' },
+  { texto: 'Lembre-se de não inserir dados identificáveis do paciente.', tempo: '5 min atrás' },
+];
+
+function renderCaseNotificacoes() {
+  const list = document.getElementById('caseNotifList');
+  const badge = document.getElementById('caseNotifBadge');
+  if (badge) badge.textContent = caseNotificacoes.length;
+  if (!list) return;
+  list.innerHTML = caseNotificacoes.map(function(n) {
+    return '<div class="notif-item"><span class="notif-dot"></span><div><div class="notif-text">' + n.texto + '</div><div class="notif-time">' + n.tempo + '</div></div></div>';
+  }).join('');
+}
+
+function closeCaseDropdowns() {
+  document.querySelectorAll('#caseNotifDropdown, #caseUserDropdown').forEach(function(el) { el.classList.remove('open'); });
+}
+
+function toggleCaseNotifDropdown() {
+  const dd = document.getElementById('caseNotifDropdown');
+  const wasOpen = dd && dd.classList.contains('open');
+  closeCaseDropdowns();
+  if (dd && !wasOpen) dd.classList.add('open');
+}
+
+function toggleCaseUserDropdown() {
+  const dd = document.getElementById('caseUserDropdown');
+  const wasOpen = dd && dd.classList.contains('open');
+  closeCaseDropdowns();
+  if (dd && !wasOpen) dd.classList.add('open');
+}
+
+async function logoutCaseUser() {
+  try { await fetch(`${API}/auth/logout`, { method: 'POST', credentials: 'include' }); } catch {}
+  sessionStorage.removeItem('rccs_token');
+  sessionStorage.removeItem('rccs_user');
+  location.href = 'login.html';
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.notif-wrap') && !e.target.closest('.user-menu')) closeCaseDropdowns();
+});
+
 /* ── check auth & show login gate if needed ── */
 async function checkAuthForGeneration() {
   if (getToken()) return true;
@@ -1860,6 +2129,7 @@ function navStep(dir) {
   updateProgress();
 }
 
+renderCaseHeader();
 buildSidebar();
 restoreCaseSidebar();
 updateNavUI();
