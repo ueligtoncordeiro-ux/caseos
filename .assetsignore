@@ -5,6 +5,7 @@ backend/rccs.db
 backend/*.db
 
 # Diretório Git
+.git
 .git/
 
 # Wrangler internos
