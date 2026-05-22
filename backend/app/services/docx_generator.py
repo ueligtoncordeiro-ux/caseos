@@ -6,7 +6,7 @@ import os
 import asyncio
 from pathlib import Path
 from docx import Document
-from docx.shared import Pt, Cm, RGBColor
+from docx.shared import Inches, Pt, Cm, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml.ns import qn
@@ -177,6 +177,44 @@ def _add_disclaimer(doc: Document):
     run.font.color.rgb = RGBColor(128, 128, 128)
 
 
+def _add_imagens(doc: Document, cko: CKO, sessao_id: str):
+    """Insert figures after Caso Clínico with CARE-compliant captions."""
+    if not cko.imagens:
+        return
+
+    imagens_sorted = sorted(cko.imagens, key=lambda x: x.numero_figura)
+    images_dir = Path("images_output") / sessao_id
+
+    for img in imagens_sorted:
+        if not img.filename:
+            continue
+        img_path = images_dir / img.filename
+        if not img_path.exists():
+            continue
+
+        try:
+            # Insert image centered
+            p_img = doc.add_paragraph()
+            p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = p_img.add_run()
+            run.add_picture(str(img_path), width=Inches(5.0))
+
+            # CARE caption: "Figura X – legenda."
+            p_cap = doc.add_paragraph()
+            p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p_cap.paragraph_format.space_after = Pt(12)
+            run_cap = p_cap.add_run(f"Figura {img.numero_figura} \u2013 {img.legenda}")
+            run_cap.font.name = "Times New Roman"
+            run_cap.font.size = Pt(11)
+            run_cap.font.italic = True
+        except Exception as exc:
+            # A missing or corrupt image must not break the whole document
+            import logging
+            logging.getLogger(__name__).warning(
+                "Falha ao inserir figura %s: %s", img.filename, exc
+            )
+
+
 async def gerar_docx(sessao_id: str, artigo: ArtigoGerado, cko: CKO) -> str:
     output_dir = Path(settings.docx_output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -184,12 +222,12 @@ async def gerar_docx(sessao_id: str, artigo: ArtigoGerado, cko: CKO) -> str:
 
     # Run synchronous python-docx in executor to avoid blocking
     loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, _build_docx, filepath, artigo, cko)
+    await loop.run_in_executor(None, _build_docx, filepath, artigo, cko, sessao_id)
 
     return str(filepath)
 
 
-def _build_docx(filepath: Path, artigo: ArtigoGerado, cko: CKO):
+def _build_docx(filepath: Path, artigo: ArtigoGerado, cko: CKO, sessao_id: str):
     doc = Document()
     _set_margins(doc)
     _configurar_estilos(doc)
@@ -199,6 +237,7 @@ def _build_docx(filepath: Path, artigo: ArtigoGerado, cko: CKO):
     _add_resumo(doc, artigo)
     _add_secao(doc, "Introdução", artigo.introducao)
     _add_secao(doc, "Apresentação do Caso", artigo.caso_clinico)
+    _add_imagens(doc, cko, sessao_id)  # figures after case presentation
     _add_secao(doc, "Discussão", artigo.discussao)
     _add_secao(doc, "Conclusão", artigo.conclusao)
     _add_referencias(doc, artigo)

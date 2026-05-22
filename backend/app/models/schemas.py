@@ -87,6 +87,13 @@ class Editorial(BaseModel):
     email_usuario: Optional[str] = None
 
 
+class ImagemCaso(BaseModel):
+    numero_figura: int          # 1, 2, 3...
+    legenda: str                # full CARE caption text
+    titulo_abrev: Optional[str] = None   # short title for figure list
+    filename: Optional[str] = None       # stored server filename
+
+
 class CKO(BaseModel):
     sessao_id: str
     identificacao: Identificacao
@@ -99,6 +106,7 @@ class CKO(BaseModel):
     desfechos: Desfechos
     perspectiva_paciente: Optional[str] = None
     editorial: Editorial
+    imagens: list[ImagemCaso] = []
 
     @field_validator("sessao_id")
     @classmethod

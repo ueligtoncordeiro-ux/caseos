@@ -1463,21 +1463,16 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
         </div>
 
         <!-- image upload -->
-        <div class="section-card">
-          <div class="section-card-title">🖼️ Imagens do artigo</div>
+        <div class="section-card" id="imageUploadCard">
+          <div class="section-card-title">🖼️ Figuras do Caso (opcional)</div>
           <p style="font-size:13px;color:var(--t2);margin-bottom:14px;line-height:1.6">
-            Insira imagens para serem incluídas no artigo (fotos clínicas, exames de imagem, anatomopatológico, figuras, gráficos). Máx 10 imagens · 5 MB cada · JPG, PNG, GIF, TIFF.
+            Adicione imagens clínicas (RX, TC, histologia, fotos cirúrgicas). Serão inseridas no documento com legenda CARE após a Apresentação do Caso.
           </p>
-
-          <div class="upload-zone" id="uploadZone">
-            <input type="file" id="imgFileInput" accept="image/jpeg,image/png,image/gif,image/tiff" multiple />
-            <div class="upload-icon">🖼️</div>
-            <h3>Arraste imagens aqui</h3>
-            <p>ou clique para selecionar arquivos</p>
-            <p class="upload-hint">JPG · PNG · GIF · TIFF · máx 5 MB por arquivo · até 10 imagens</p>
-          </div>
-
-          <div class="img-grid" id="imgGrid"></div>
+          <div id="figurasList" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
+          <button type="button" class="btn-outline" onclick="adicionarFigura()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Adicionar figura
+          </button>
         </div>
 
         <div class="section-card">
@@ -1957,61 +1952,76 @@ async function runAssist(menuBtn, acao, campo) {
   }
 }
 
-/* ══ IMAGE UPLOAD ══ */
-const uploadedImages = [];
-const uploadZone = document.getElementById('uploadZone');
-const imgFileInput = document.getElementById('imgFileInput');
-const imgGrid = document.getElementById('imgGrid');
+/* ══ IMAGE UPLOAD — per-figure CARE upload ══ */
+let _figurasUpload = []; // {numero_figura, file, legenda, titulo_abrev, uploaded_filename}
+let _figuraCounter = 0;
 
-uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.classList.add('drag-over'); });
-uploadZone.addEventListener('dragleave', function() { uploadZone.classList.remove('drag-over'); });
-uploadZone.addEventListener('drop', function(e) {
-  e.preventDefault();
-  uploadZone.classList.remove('drag-over');
-  handleFiles(e.dataTransfer.files);
-});
-imgFileInput.addEventListener('change', function() { handleFiles(imgFileInput.files); });
-
-function handleFiles(files) {
-  const allowed = ['image/jpeg','image/png','image/gif','image/tiff'];
-  const maxSize = 5 * 1024 * 1024;
-  Array.from(files).forEach(function(file) {
-    if (!allowed.includes(file.type)) { showToast('Tipo não suportado: ' + file.name, 'error'); return; }
-    if (file.size > maxSize) { showToast('Arquivo muito grande: ' + file.name + ' (máx 5 MB)', 'error'); return; }
-    if (uploadedImages.length >= 10) { showToast('Limite de 10 imagens atingido.', 'error'); return; }
-    const reader = new FileReader();
-    const imgId = Date.now() + '_' + Math.random().toString(36).substr(2,5);
-    reader.onload = function(ev) {
-      uploadedImages.push({ id: imgId, name: file.name, type: file.type, base64: ev.target.result, caption: '' });
-      renderImgGrid();
-    };
-    reader.readAsDataURL(file);
-  });
-  imgFileInput.value = '';
+function adicionarFigura() {
+  _figuraCounter++;
+  var num = _figuraCounter;
+  var id = 'figura-' + num;
+  var container = document.createElement('div');
+  container.id = id;
+  container.style.cssText = 'border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--light2);';
+  container.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">' +
+      '<span style="font-weight:600;font-size:13px;">Figura ' + num + '</span>' +
+      '<button type="button" onclick="removerFigura(' + num + ')" style="background:none;border:none;cursor:pointer;color:var(--t3);font-size:18px;">\u00d7</button>' +
+    '</div>' +
+    '<input type="file" id="file-' + num + '" accept="image/*" onchange="previewFigura(' + num + ')" style="display:none">' +
+    '<div id="preview-' + num + '" onclick="document.getElementById(\'file-' + num + '\').click()" style="' +
+      'border:2px dashed var(--border);border-radius:8px;height:120px;display:flex;' +
+      'align-items:center;justify-content:center;cursor:pointer;overflow:hidden;margin-bottom:10px;' +
+      'color:var(--t3);font-size:13px;">' +
+      'Clique para selecionar imagem' +
+    '</div>' +
+    '<input type="text" id="legenda-' + num + '" placeholder="Legenda da figura (ex.: TC de pesco\u00e7o evidenciando linfonodo submandibular direito...)" ' +
+      'style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;" />';
+  document.getElementById('figurasList').appendChild(container);
+  _figurasUpload.push({numero_figura: num, file: null, legenda: '', uploaded_filename: null});
 }
 
-function renderImgGrid() {
-  if (uploadedImages.length === 0) { imgGrid.innerHTML = ''; return; }
-  imgGrid.innerHTML = uploadedImages.map(function(img) {
-    return '<div class="img-card">' +
-      '<img class="thumb" src="' + img.base64 + '" alt="' + img.name + '" />' +
-      '<div class="img-body">' +
-        '<input type="text" value="' + (img.caption||'') + '" placeholder="Legenda da imagem..." ' +
-          'oninput="updateCaption(\'' + img.id + '\',this.value)" />' +
-        '<button class="remove-img" onclick="removeImg(\'' + img.id + '\')">✕ Remover</button>' +
-      '</div></div>';
-  }).join('');
+function previewFigura(num) {
+  var fileInput = document.getElementById('file-' + num);
+  var file = fileInput.files[0];
+  if (!file) return;
+  var entry = _figurasUpload.find(function(f) { return f.numero_figura === num; });
+  if (entry) entry.file = file;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var prev = document.getElementById('preview-' + num);
+    prev.innerHTML = '<img src="' + e.target.result + '" style="max-height:116px;max-width:100%;object-fit:contain;">';
+  };
+  reader.readAsDataURL(file);
 }
 
-function updateCaption(id, val) {
-  const img = uploadedImages.find(function(i) { return i.id === id; });
-  if (img) img.caption = val;
+function removerFigura(num) {
+  var el = document.getElementById('figura-' + num);
+  if (el) el.remove();
+  _figurasUpload = _figurasUpload.filter(function(f) { return f.numero_figura !== num; });
 }
 
-function removeImg(id) {
-  const idx = uploadedImages.findIndex(function(i) { return i.id === id; });
-  if (idx !== -1) uploadedImages.splice(idx, 1);
-  renderImgGrid();
+async function uploadFiguras(sessaoId) {
+  var results = [];
+  for (var i = 0; i < _figurasUpload.length; i++) {
+    var fig = _figurasUpload[i];
+    if (!fig.file) continue;
+    var legenda = (document.getElementById('legenda-' + fig.numero_figura) || {}).value || ('Figura ' + fig.numero_figura);
+    var fd = new FormData();
+    fd.append('arquivo', fig.file);
+    fd.append('numero_figura', fig.numero_figura);
+    fd.append('legenda', legenda);
+    fd.append('titulo_abrev', 'Figura ' + fig.numero_figura);
+    try {
+      var resp = await fetch(API + '/imagens/' + sessaoId, {method: 'POST', body: fd});
+      if (resp.ok) {
+        var data = await resp.json();
+        results.push({numero_figura: fig.numero_figura, legenda: legenda, titulo_abrev: data.titulo_abrev, filename: data.filename});
+        fig.uploaded_filename = data.filename;
+      }
+    } catch(e) { console.warn('Falha upload figura', fig.numero_figura, e); }
+  }
+  return results;
 }
 
 /* ══ HELPERS ══ */
@@ -2081,9 +2091,7 @@ function coletarDados() {
       eventos_adversos: getV('eventosAdversos')
     },
     perspectiva_paciente: getV('perspectivaPaciente'),
-    imagens: uploadedImages.map(function(img) {
-      return { nome: img.name, tipo: img.type, base64: img.base64, legenda: img.caption };
-    }),
+    imagens: [],  // populated by uploadFiguras() before submission
     editorial: {
       problemas_clinicos: getV('problemasClinicos'),
       diferencial_caso: getV('diferencialCaso'),
@@ -2186,6 +2194,11 @@ async function iniciarGeracao() {
   if (!_validarFormulario()) return;
 
   const dados = coletarDados();
+
+  // Upload figures first, then attach metadata to CKO payload
+  const imagensUpload = await uploadFiguras(sessaoId);
+  dados.imagens = imagensUpload;
+
   document.getElementById('pipelineModal').classList.add('show');
   _resetPipelineUI(false);
   _abrirPipelineWS('/artigo/iniciar', dados, true);

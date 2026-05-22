@@ -1,28 +1,62 @@
 """
 Agente Redator — Claude Sonnet 4.6 (alta complexidade).
 Escrita científica longa em PT-BR exige contexto extenso e raciocínio profundo.
+Usa duas chamadas LLM para evitar truncamento: Pass 1 gera as seções iniciais,
+Pass 2 gera Discussão, Conclusão e referências usadas com contexto completo.
 """
 from app.models.schemas import CKO, ArtigoGerado, Resumo, Referencia
 from app.services.llm_router import chamar, extrair_json, Complexidade
 
-_SYSTEM = """Você é um redator científico especialista em relatos de caso clínico,
+_SYSTEM = """Você é um redator científico sênior especialista em relatos de caso clínico,
 com domínio do checklist CARE 2013, normas Vancouver/ICMJE e escrita médica em português brasileiro.
+Você publica regularmente. Escreve como clínico experiente, não como robô acadêmico.
 
-REGRAS ABSOLUTAS:
+━━ REGRAS ABSOLUTAS ━━
 1. Escreva APENAS em português brasileiro formal e técnico
-2. Tempo verbal: passado para eventos do caso, presente para discussão
+2. Tempo verbal: passado para eventos do caso; presente para afirmações da discussão
 3. Voz: terceira pessoa ("o paciente", "os autores")
 4. Citações: formato [N] após o ponto final da afirmação citada
 5. NÃO invente dados clínicos — use APENAS o que está no CKO
 6. NÃO cite artigos fora da lista fornecida
 7. Cada parágrafo da Discussão cita pelo menos 1 referência
-8. Responda APENAS com JSON válido
-9. TÍTULO: capitalize TODAS as palavras (exceto artigos e preposições curtas) — ex.: "Carcinoma Espinocelular de Língua em Estágio III: Relato de Caso de Abordagem Multimodal"
-10. PROIBIDO usar travessão (—) em qualquer parte do texto; substitua por vírgula, ponto e vírgula ou reescreva a frase
-11. REFERÊNCIAS OBRIGATÓRIAS: use no mínimo 15 referências da lista fornecida; distribua as citações por toda a Introdução, Caso Clínico e Discussão; inclua TODOS os números usados em "referencias_usadas"
-12. Cada afirmação epidemiológica, fisiopatológica ou terapêutica DEVE ter citação [N]"""
+8. Responda APENAS com JSON válido, sem markdown extra
+9. TÍTULO: capitalize TODAS as palavras significativas (exceto artigos e preposições curtas); contém diagnóstico principal e "Relato de Caso"
+10. REFERÊNCIAS: use mínimo 15 diferentes; distribua por Introdução, Caso Clínico e Discussão; liste todos os números usados em "referencias_usadas"
+11. Cada afirmação epidemiológica, fisiopatológica ou terapêutica DEVE ter citação [N]
 
-_TEMPLATE = """Redija um relato de caso clínico científico completo e publicável.
+━━ PALAVRAS E CONSTRUÇÕES ABSOLUTAMENTE PROIBIDAS ━━
+Nunca use nenhum dos itens abaixo — em nenhuma seção, nem paráfrase próxima:
+
+TRAVESSÃO: proibido em qualquer contexto (—). Substitua por vírgula, ponto e vírgula ou reescreva.
+
+PALAVRAS PROIBIDAS (detectadas por IA como não naturais):
+  inequivocamente, evidencia que, ressalta, corrobora, amplamente, robusto, notável,
+  fundamental, crucial, imperativo, abrangente, denota, configura, revela que,
+  destaca-se, cabe ressaltar, vale destacar, nesse contexto, diante do exposto,
+  à luz dos dados, emergir, permear, elucidar, catalisar, paradigma (exceto citação direta),
+  no âmbito, sob a ótica, delinear, preconizar, suscitar reflexões
+
+INÍCIOS PROIBIDOS:
+  - Nunca inicie NENHUMA seção com "O presente relato..." ou "O presente estudo..." ou "O presente caso..."
+  - Nunca inicie dois parágrafos consecutivos com a mesma palavra ou estrutura
+
+ESTRUTURAS PROIBIDAS:
+  - "tanto... quanto" em excesso (máx 1 por artigo)
+  - "não apenas... mas também" em excesso (máx 1 por artigo)
+  - Aliterações e frases com ritmo repetitivo
+  - Frases com 4 ou mais adjetivos seguidos
+  - Orações relativas encaixadas em excesso (mais de 2 por parágrafo)
+
+━━ COMO ESCREVER (OBRIGATÓRIO) ━━
+- VARIE o comprimento das frases deliberadamente: algumas curtas (menos de 10 palavras), maioria média, ocasionalmente longa
+- Seja direto e específico: cite números, datas, medidas, doses reais
+- Use voz ativa quando possível
+- Acadêmico mas não cerimonioso: escreva como clínico sênior que publica
+- Assimetria é permitida: nem toda afirmação precisa de um conector de citação
+- Parágrafos devem começar de modos diferentes entre si"""
+
+# ── Pass 1: title, abstract, intro, case presentation (max_tokens=5000) ──────
+_TEMPLATE_PASS1 = """Redija a primeira metade de um relato de caso clínico científico.
 
 ══ CKO ══
 PACIENTE: {idade} {idade_unidade} | {sexo} | Procedência: {procedencia}
@@ -52,32 +86,74 @@ PERIÓDICO: {periodico} | FORMATO: {formato_ref}
 ══ REFERÊNCIAS DISPONÍVEIS ══
 {referencias}
 
-══ ESTRUTURA OBRIGATÓRIA ══
+══ ESTRUTURA (APENAS ESTAS SEÇÕES) ══
 TÍTULO: capitalize TODAS as palavras significativas; NÃO use travessão; contém "Relato de Caso" + diagnóstico principal
 PALAVRAS-CHAVE: 3–5 descritores MeSH/DeCS em português
 RESUMO: máx 250 palavras — 4 subseções (Introdução | Apresentação do Caso | Discussão | Conclusão)
-INTRODUÇÃO: 3 parágrafos ~300 palavras — P1=contexto(cite 3 refs), P2=fisiopatologia(cite 3 refs), P3=objetivo
-CASO CLÍNICO: narrativa cronológica ~450 palavras — cite referências para dados comparativos (ex.: estadiamento, critérios diagnósticos)
-DISCUSSÃO: 10 parágrafos ~900 palavras — cada parágrafo cita ao menos 2 refs diferentes
-  P1=diferencial do caso (cite 2), P2=epidemiologia (cite 3), P3=fisiopatologia (cite 2),
-  P4=achados vs literatura (cite 2), P5=métodos diagnósticos (cite 2),
-  P6=diagnósticos diferenciais (cite 2), P7=intervenção (cite 2),
-  P8=desfechos (cite 2), P9=perspectiva/limitações (cite 1), P10=lições clínicas (cite 1)
-CONCLUSÃO: 1–2 parágrafos ~120 palavras
+INTRODUÇÃO: 3 parágrafos ~300 palavras
+  P1: contexto epidemiológico (cite 3 refs diferentes)
+  P2: fisiopatologia e quadro clínico (cite 3 refs diferentes)
+  P3: objetivo do relato (sem citação, 1 frase objetiva)
+CASO CLÍNICO: narrativa cronológica ~450 palavras
+  — apresentação, exames, diagnóstico, intervenção, desfecho
+  — cite referências para critérios diagnósticos e dados comparativos
 
-ATENÇÃO CRÍTICA — REFERÊNCIAS:
-- Use MÍNIMO 15 referências diferentes da lista fornecida
-- Distribua as citações por toda a Introdução, Caso Clínico e Discussão
-- Nunca repita a mesma citação em dois parágrafos consecutivos sem necessidade
-- Liste em "referencias_usadas" TODOS os números de referência efetivamente citados no texto
+Aplique todas as regras de escrita humana do system prompt.
 
-JSON de resposta:
+JSON de resposta (APENAS estes campos):
 {{
   "titulo": "...",
   "palavras_chave": ["..."],
   "resumo": {{"introducao":"...","caso":"...","discussao":"...","conclusao":"..."}},
   "introducao": ["P1","P2","P3"],
-  "caso_clinico": ["P1","P2","..."],
+  "caso_clinico": ["P1","P2","P3","P4","..."],
+  "referencias_usadas_parcial": [1,2,3]
+}}"""
+
+
+# ── Pass 2: discussao, conclusao, referencias_usadas (max_tokens=6000) ────────
+_TEMPLATE_PASS2 = """Você está finalizando um relato de caso clínico. As seções iniciais já foram escritas (abaixo).
+Escreva APENAS as seções que faltam: Discussão, Conclusão e lista final de referências.
+
+══ CKO (resumo) ══
+PACIENTE: {idade} {idade_unidade} | {sexo}
+DIAGNÓSTICO: {diagnostico}
+INTERVENÇÃO ({tipo_intervencao}): {desc_intervencao}
+DESFECHO: {desfecho}
+PROBLEMA CLÍNICO: {problema}
+DIFERENCIAL DO CASO: {diferencial}
+
+══ SEÇÕES JÁ ESCRITAS (contexto para consistência) ══
+TÍTULO: {titulo}
+INTRODUÇÃO (resumida): {intro_resumo}
+CASO CLÍNICO (resumido): {caso_resumo}
+
+══ REFERÊNCIAS DISPONÍVEIS ══
+{referencias}
+
+══ ESTRUTURA OBRIGATÓRIA (APENAS ESTAS SEÇÕES) ══
+DISCUSSÃO: 10 parágrafos ~900 palavras — cada parágrafo cita ao menos 2 refs diferentes
+  P1: diferencial do caso (cite 2 refs) — por que este diagnóstico e não os diferenciais?
+  P2: epidemiologia (cite 3 refs) — incidência, prevalência, grupos de risco
+  P3: fisiopatologia (cite 2 refs) — mecanismo molecular/celular relevante
+  P4: achados do caso vs. literatura (cite 2 refs) — compare com outros relatos
+  P5: métodos diagnósticos (cite 2 refs) — exames usados, sensibilidade/especificidade
+  P6: diagnósticos diferenciais (cite 2 refs) — como foram descartados
+  P7: intervenção (cite 2 refs) — escolha terapêutica, alternativas, justificativa
+  P8: desfechos e seguimento (cite 2 refs) — prognóstico, recidiva, qualidade de vida
+  P9: perspectiva do paciente e limitações do relato (cite 1 ref)
+  P10: lições clínicas (cite 1 ref) — o que este caso ensina?
+CONCLUSÃO: 1–2 parágrafos ~120 palavras — síntese objetiva, sem repetir a introdução
+
+ATENÇÃO CRÍTICA — REFERÊNCIAS:
+- O total acumulado (Pass 1 + Pass 2) deve usar MÍNIMO 15 referências diferentes
+- Não repita a mesma citação em dois parágrafos consecutivos sem necessidade
+- Liste em "referencias_usadas" TODOS os números efetivamente citados no texto completo (Pass 1 + Pass 2)
+
+Aplique todas as regras de escrita humana do system prompt.
+
+JSON de resposta (APENAS estes campos):
+{{
   "discussao": ["P1","P2","P3","P4","P5","P6","P7","P8","P9","P10"],
   "conclusao": ["P1"],
   "referencias_usadas": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
@@ -101,7 +177,8 @@ def _refs_txt(artigos: list[dict]) -> str:
     return "\n\n".join(linhas)
 
 
-async def executar(cko: CKO, artigos: list[dict]) -> ArtigoGerado:
+def _build_cko_kwargs(cko: CKO) -> dict:
+    """Return the shared keyword args used to format both pass templates."""
     i = cko.identificacao
     h = cko.historia
     a = cko.achados
@@ -113,9 +190,9 @@ async def executar(cko: CKO, artigos: list[dict]) -> ArtigoGerado:
 
     mudanca = "Não"
     if iv.houve_mudanca:
-        mudanca = f"Sim — {iv.desc_mudanca or ''} (justificativa: {iv.just_mudanca or ''})"
+        mudanca = f"Sim: {iv.desc_mudanca or ''} (justificativa: {iv.just_mudanca or ''})"
 
-    prompt = _TEMPLATE.format(
+    return dict(
         idade=i.idade or "não informada", idade_unidade=i.idade_unidade,
         sexo=i.sexo or "não informado", procedencia=i.procedencia or "não informada",
         queixa=h.queixa_principal, duracao=h.duracao_sintomas or "não informada",
@@ -137,23 +214,69 @@ async def executar(cko: CKO, artigos: list[dict]) -> ArtigoGerado:
         perspectiva=cko.perspectiva_paciente or "Não coletada.",
         problema=ed.problemas_clinicos, diferencial=ed.diferencial_caso,
         periodico=ed.periodico or "Não especificado.", formato_ref=ed.formato_ref,
-        referencias=_refs_txt(artigos),
     )
 
-    resp = await chamar(_SYSTEM, prompt, complexidade=Complexidade.ALTA, max_tokens=8192)
-    data = extrair_json(resp)
 
-    # Garantia mínima: se LLM citou menos de 15 refs, completa com as mais relevantes do pool
-    refs_idx = set(data.get("referencias_usadas", []))
+async def executar(cko: CKO, artigos: list[dict]) -> ArtigoGerado:
+    kw = _build_cko_kwargs(cko)
+    refs_txt = _refs_txt(artigos)
+
+    # ── Pass 1: titulo, palavras_chave, resumo, introducao, caso_clinico ─────
+    prompt1 = _TEMPLATE_PASS1.format(**kw, referencias=refs_txt)
+    resp1 = await chamar(_SYSTEM, prompt1, complexidade=Complexidade.ALTA, max_tokens=5000)
+    data1 = extrair_json(resp1)
+
+    titulo = data1.get("titulo", f"Relato de Caso: {cko.diagnostico.diagnostico_definitivo}")
+    palavras_chave = data1.get("palavras_chave", [])
+    resumo_raw = data1.get("resumo", {})
+    introducao = data1.get("introducao", [])
+    caso_clinico = data1.get("caso_clinico", [])
+    refs_parcial: set[int] = set(data1.get("referencias_usadas_parcial", []))
+
+    # Build short summaries for Pass 2 context (avoid re-sending full text)
+    intro_resumo = " // ".join(p[:120] + "..." for p in introducao[:3]) if introducao else "Não gerada."
+    caso_resumo = " // ".join(p[:120] + "..." for p in caso_clinico[:3]) if caso_clinico else "Não gerado."
+
+    # ── Pass 2: discussao, conclusao, referencias_usadas ─────────────────────
+    prompt2 = _TEMPLATE_PASS2.format(
+        idade=kw["idade"], idade_unidade=kw["idade_unidade"], sexo=kw["sexo"],
+        diagnostico=kw["diagnostico"], tipo_intervencao=kw["tipo_intervencao"],
+        desc_intervencao=kw["desc_intervencao"], desfecho=kw["desfecho"],
+        problema=kw["problema"], diferencial=kw["diferencial"],
+        titulo=titulo,
+        intro_resumo=intro_resumo,
+        caso_resumo=caso_resumo,
+        referencias=refs_txt,
+    )
+
+    discussao: list[str] = []
+    conclusao: list[str] = []
+    refs_final: set[int] = set()
+
+    try:
+        resp2 = await chamar(_SYSTEM, prompt2, complexidade=Complexidade.ALTA, max_tokens=6000)
+        data2 = extrair_json(resp2)
+        discussao = data2.get("discussao", [])
+        conclusao = data2.get("conclusao", [])
+        refs_final = set(data2.get("referencias_usadas", []))
+    except Exception:
+        # Pass 2 failed: keep empty sections, article is still usable
+        discussao = []
+        conclusao = []
+        refs_final = refs_parcial
+
+    # Merge reference sets from both passes
+    refs_idx = refs_parcial | refs_final
     if not refs_idx:
         refs_idx = set(range(1, len(artigos) + 1))
+
+    # Guarantee minimum 15 references
     MIN_REFS = 15
     if len(refs_idx) < MIN_REFS and len(artigos) >= MIN_REFS:
-        todos_numeros = [a["numero"] for a in artigos]
-        for num in todos_numeros:
+        for art in artigos:
             if len(refs_idx) >= MIN_REFS:
                 break
-            refs_idx.add(num)
+            refs_idx.add(art["numero"])
 
     referencias = [
         Referencia(
@@ -168,14 +291,22 @@ async def executar(cko: CKO, artigos: list[dict]) -> ArtigoGerado:
         for art in artigos if art["numero"] in refs_idx
     ]
 
+    # Reconstruct Resumo — use whatever the LLM returned, with safe defaults
+    resumo_obj = Resumo(
+        introducao=resumo_raw.get("introducao", ""),
+        caso=resumo_raw.get("caso", ""),
+        discussao=resumo_raw.get("discussao", ""),
+        conclusao=resumo_raw.get("conclusao", ""),
+    )
+
     return ArtigoGerado(
-        titulo=data["titulo"],
-        palavras_chave=data.get("palavras_chave", []),
-        resumo=Resumo(**data["resumo"]),
-        introducao=data.get("introducao", []),
-        caso_clinico=data.get("caso_clinico", []),
-        discussao=data.get("discussao", []),
-        conclusao=data.get("conclusao", []),
+        titulo=titulo,
+        palavras_chave=palavras_chave,
+        resumo=resumo_obj,
+        introducao=introducao,
+        caso_clinico=caso_clinico,
+        discussao=discussao,
+        conclusao=conclusao,
         referencias=referencias,
     )
 

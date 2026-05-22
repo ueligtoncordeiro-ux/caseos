@@ -7,7 +7,7 @@ from app.config import settings
 from app.models.database import init_db
 from app.services.websocket_manager import manager
 from app.services.auth import decode_token
-from app.routers import artigo, auth, webhooks, chat
+from app.routers import artigo, auth, webhooks, chat, imagens
 
 
 @asynccontextmanager
@@ -40,6 +40,7 @@ app.include_router(artigo.router)
 app.include_router(auth.router)
 app.include_router(webhooks.router)
 app.include_router(chat.router)
+app.include_router(imagens.router)
 
 
 @app.websocket("/ws/{sessao_id}")
