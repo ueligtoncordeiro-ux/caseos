@@ -162,7 +162,7 @@ body {
 .sidebar.collapsed:hover .btn-upgrade span,
 .sidebar.collapsed:focus-within .btn-upgrade span { display: inline; }
 
-/* Main wrapper adjusts for collapsed sidebar */
+/* Content stays anchored; the sidebar expands as an overlay, without moving the page. */
 .main-wrapper.sidebar-collapsed { margin-left: var(--sidebar-collapsed-w); }
 
 .sidebar-control {
@@ -502,14 +502,14 @@ body {
    MAIN CONTENT AREA
 ═══════════════════════════════════════════════════════════════ */
 .main-wrapper {
-  margin-left: var(--sidebar-w);
+  margin-left: var(--sidebar-collapsed-w);
   flex: 1;
   display: flex;
   flex-direction: column;
   padding-top: var(--topbar-h);
   min-height: 100vh;
   min-width: 0;
-  transition: margin-left 0.22s ease, margin-right 0.3s ease;
+  transition: margin-right 0.3s ease;
   background: var(--bg);
 }
 
@@ -3694,11 +3694,9 @@ let _sidebarCollapsed = true;
 function toggleSidebarCollapse() {
   _sidebarCollapsed = !_sidebarCollapsed;
   const sidebar  = document.getElementById('sidebar');
-  const wrapper  = document.getElementById('mainWrapper');
   const btn      = document.getElementById('sidebarCollapseBtn');
 
   sidebar.classList.toggle('collapsed', _sidebarCollapsed);
-  wrapper.classList.toggle('sidebar-collapsed', _sidebarCollapsed);
   if (btn) btn.textContent = _sidebarCollapsed ? '›' : '‹';
   if (btn) {
     btn.title = _sidebarCollapsed ? 'Expandir menu' : 'Recolher menu';
@@ -3714,10 +3712,8 @@ function toggleSidebarCollapse() {
   try {
     _sidebarCollapsed = true;
     const sidebar = document.getElementById('sidebar');
-    const wrapper = document.getElementById('mainWrapper');
     const btn     = document.getElementById('sidebarCollapseBtn');
     if (sidebar) sidebar.classList.toggle('collapsed', _sidebarCollapsed);
-    if (wrapper) wrapper.classList.toggle('sidebar-collapsed', _sidebarCollapsed);
     if (btn) {
       btn.textContent = _sidebarCollapsed ? '›' : '‹';
       btn.title = _sidebarCollapsed ? 'Expandir menu' : 'Recolher menu';
