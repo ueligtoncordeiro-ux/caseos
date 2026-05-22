@@ -54,6 +54,8 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
   padding: 20px 14px 18px;
   border-bottom: 1px solid var(--border);
   display: flex;
+  flex-direction: column;
+  gap: 10px;
   justify-content: center;
   align-items: center;
 }
@@ -71,7 +73,6 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
   display: block;
 }
 .sidebar-collapse-btn {
-  margin-left: 8px;
   width: 28px;
   height: 28px;
   border: 1px solid var(--border);
@@ -86,6 +87,11 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
 
 .sidebar.collapsed {
   width: var(--sidebar-collapsed-w);
+}
+.sidebar.collapsed:hover,
+.sidebar.collapsed:focus-within {
+  width: var(--sidebar-w);
+  box-shadow: 18px 0 40px rgba(0,0,0,0.08);
 }
 .sidebar.collapsed .sidebar-head {
   padding: 18px 10px;
@@ -114,6 +120,38 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
 }
 .sidebar.collapsed .prog-track {
   height: 6px;
+}
+.sidebar.collapsed:hover .logo-link,
+.sidebar.collapsed:focus-within .logo-link,
+.sidebar.collapsed:hover .sidebar-label,
+.sidebar.collapsed:focus-within .sidebar-label,
+.sidebar.collapsed:hover .step-info,
+.sidebar.collapsed:focus-within .step-info,
+.sidebar.collapsed:hover .prog-label,
+.sidebar.collapsed:focus-within .prog-label {
+  display: flex;
+}
+.sidebar.collapsed:hover .sidebar-label,
+.sidebar.collapsed:focus-within .sidebar-label { display: block; }
+.sidebar.collapsed:hover .step-list,
+.sidebar.collapsed:focus-within .step-list { padding: 0 12px 16px; }
+.sidebar.collapsed:hover .step-item,
+.sidebar.collapsed:focus-within .step-item {
+  justify-content: flex-start;
+  padding: 8px;
+  min-height: auto;
+}
+.sidebar.collapsed:hover .step-num,
+.sidebar.collapsed:focus-within .step-num {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+}
+.step-num svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+  image-rendering: pixelated;
 }
 
 .sidebar-label {
@@ -639,7 +677,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
       <!-- ══ STEP 1 — Identificação do Paciente ══ -->
       <div class="step-panel active" id="step-1">
         <div class="step-header">
-          <h1>🧑‍⚕️ Identificação do Paciente</h1>
+          <h1>Identificação do Paciente</h1>
           <p>Dados demográficos básicos. Mantenha o anonimato — não insira nome completo nem CPF.</p>
         </div>
         <div class="step-divider"></div>
@@ -648,7 +686,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
           <div class="section-card-title">📋 Dados demográficos</div>
           <div class="form-grid form-grid-3">
             <div class="form-group">
-              <label><span class="lbl-icon">🎂</span> Idade <span class="required">*</span></label>
+              <label>Idade <span class="required">*</span></label>
               <div class="input-unit-row">
                 <input type="number" id="idade" min="0" max="150" placeholder="Ex: 45" />
                 <select id="idadeUnidade">
@@ -659,7 +697,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
               </div>
             </div>
             <div class="form-group">
-              <label><span class="lbl-icon">⚧</span> Sexo biológico <span class="required">*</span></label>
+              <label>Sexo biológico <span class="required">*</span></label>
               <select id="sexo">
                 <option value="">Selecione</option>
                 <option value="Masculino">Masculino</option>
@@ -669,7 +707,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
               </select>
             </div>
             <div class="form-group">
-              <label><span class="lbl-icon">🏳️‍🌈</span> Gênero</label>
+              <label>Gênero</label>
               <select id="genero">
                 <option value="">Selecione</option>
                 <option value="Homem cisgênero">Homem cisgênero</option>
@@ -683,7 +721,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
           </div>
           <div class="form-grid form-grid-2" style="margin-top:16px">
             <div class="form-group">
-              <label><span class="lbl-icon">🌍</span> Etnia / raça</label>
+              <label>Etnia / raça</label>
               <select id="etnia">
                 <option value="">Selecione</option>
                 <option value="Branca">Branca</option>
@@ -695,16 +733,16 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
               </select>
             </div>
             <div class="form-group">
-              <label><span class="lbl-icon">💼</span> Ocupação</label>
+              <label>Ocupação</label>
               <input type="text" id="ocupacao" placeholder="Ex: Professor universitário" />
             </div>
           </div>
           <div class="form-group" style="margin-top:16px">
-            <label><span class="lbl-icon">📍</span> Procedência</label>
+            <label>Procedência</label>
             <input type="text" id="procedencia" placeholder="Ex: São Paulo – SP, Brasil" />
           </div>
           <div class="form-group" style="margin-top:16px">
-            <label><span class="lbl-icon">📝</span> Outras informações relevantes</label>
+            <label>Outras informações relevantes</label>
             <div class="assist-wrap">
               <textarea id="outrasInfoPaciente" rows="3" placeholder="Comorbidades, histórico relevante brevemente..."></textarea>
               <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
@@ -731,7 +769,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
       <!-- ══ STEP 2 — História Clínica ══ -->
       <div class="step-panel" id="step-2">
         <div class="step-header">
-          <h1>📖 História Clínica</h1>
+          <h1>História Clínica</h1>
           <p>Descreva a apresentação do caso, história pregressa e contexto familiar/psicossocial.</p>
         </div>
         <div class="step-divider"></div>
@@ -829,7 +867,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
       <!-- ══ STEP 3 — Intervenções Anteriores ══ -->
       <div class="step-panel" id="step-3">
         <div class="step-header">
-          <h1>💊 Intervenções Anteriores</h1>
+          <h1>Intervenções Anteriores</h1>
           <p>Tratamentos prévios, medicamentos em uso e alergias conhecidas.</p>
         </div>
         <div class="step-divider"></div>
@@ -890,7 +928,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
       <!-- ══ STEP 4 — Achados Clínicos ══ -->
       <div class="step-panel" id="step-4">
         <div class="step-header">
-          <h1>🔬 Achados Clínicos</h1>
+          <h1>Achados Clínicos</h1>
           <p>Exame físico geral, sinais vitais e achados específicos do sistema/órgão acometido.</p>
         </div>
         <div class="step-divider"></div>
@@ -948,7 +986,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
       <!-- ══ STEP 5 — Linha do Tempo ══ -->
       <div class="step-panel" id="step-5">
         <div class="step-header">
-          <h1>⏱️ Linha do Tempo</h1>
+          <h1>Linha do Tempo</h1>
           <p>Crie uma cronologia dos eventos clínicos chave do caso.</p>
         </div>
         <div class="step-divider"></div>
@@ -1004,7 +1042,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
       <!-- ══ STEP 6 — Diagnóstico ══ -->
       <div class="step-panel" id="step-6">
         <div class="step-header">
-          <h1>🔍 Diagnóstico</h1>
+          <h1>Diagnóstico</h1>
           <p>Exames realizados, hipóteses diagnósticas e diagnóstico definitivo.</p>
         </div>
         <div class="step-divider"></div>
@@ -1117,7 +1155,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
       <!-- ══ STEP 7 — Intervenção ══ -->
       <div class="step-panel" id="step-7">
         <div class="step-header">
-          <h1>⚕️ Intervenção Terapêutica</h1>
+          <h1>Intervenção Terapêutica</h1>
           <p>Descreva o tratamento principal realizado e eventuais mudanças de conduta.</p>
         </div>
         <div class="step-divider"></div>
@@ -1192,7 +1230,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
       <!-- ══ STEP 8 — Desfechos ══ -->
       <div class="step-panel" id="step-8">
         <div class="step-header">
-          <h1>📊 Desfechos Clínicos</h1>
+          <h1>Desfechos Clínicos</h1>
           <p>Resultados obtidos, exames de seguimento, adesão e eventos adversos.</p>
         </div>
         <div class="step-divider"></div>
@@ -1278,7 +1316,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
       <!-- ══ STEP 9 — Perspectiva do Paciente ══ -->
       <div class="step-panel" id="step-9">
         <div class="step-header">
-          <h1>🗣️ Perspectiva do Paciente</h1>
+          <h1>Perspectiva do Paciente</h1>
           <p>O checklist CARE recomenda incluir a visão do paciente — como ele vivenciou a doença e o tratamento.</p>
         </div>
         <div class="step-divider"></div>
@@ -1312,7 +1350,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
       <!-- ══ STEP 10 — Editorial + Imagens ══ -->
       <div class="step-panel" id="step-10">
         <div class="step-header">
-          <h1>📄 Editorial &amp; Publicação</h1>
+          <h1>Editorial &amp; Publicação</h1>
           <p>Defina o contexto editorial do relato, insira imagens e inicie a geração do artigo.</p>
         </div>
         <div class="step-divider"></div>
@@ -1705,16 +1743,16 @@ sessionStorage.removeItem('rccs_gate_sessao'); // cleanup after restore
 
 /* ── step state ── */
 const STEPS = [
-  { title: '🧑‍⚕️ Identificação',    sub: 'Dados do paciente' },
-  { title: '📖 História Clínica',   sub: 'HDA e antecedentes' },
-  { title: '💊 Intervenções Ant.',  sub: 'Fármacos e alergias' },
-  { title: '🔬 Achados Clínicos',   sub: 'Exame físico' },
-  { title: '⏱️ Linha do Tempo',     sub: 'Cronologia de eventos' },
-  { title: '🔍 Diagnóstico',        sub: 'Exames e hipóteses' },
-  { title: '⚕️ Intervenção',        sub: 'Tratamento realizado' },
-  { title: '📊 Desfechos',          sub: 'Resultados e seguimento' },
-  { title: '🗣️ Perspectiva',        sub: 'Relato do paciente' },
-  { title: '📄 Editorial',          sub: 'Publicação e imagens' },
+  { title: 'Identificação',       sub: 'Dados do paciente',       icon: 'px-home' },
+  { title: 'História Clínica',    sub: 'HDA e antecedentes',      icon: 'px-books' },
+  { title: 'Intervenções Ant.',   sub: 'Fármacos e alergias',     icon: 'px-lightning' },
+  { title: 'Achados Clínicos',    sub: 'Exame físico',            icon: 'px-magnify' },
+  { title: 'Linha do Tempo',      sub: 'Cronologia de eventos',   icon: 'px-clipboard' },
+  { title: 'Diagnóstico',         sub: 'Exames e hipóteses',      icon: 'px-magnify' },
+  { title: 'Intervenção',         sub: 'Tratamento realizado',    icon: 'px-lightning' },
+  { title: 'Desfechos',           sub: 'Resultados e seguimento', icon: 'px-docstar' },
+  { title: 'Perspectiva',         sub: 'Relato do paciente',      icon: 'px-books' },
+  { title: 'Editorial',           sub: 'Publicação e imagens',    icon: 'px-docstar' },
 ];
 let currentStep = 1;
 const completed = new Set();
@@ -1735,9 +1773,7 @@ function toggleCaseSidebar(force) {
 
 function restoreCaseSidebar() {
   try {
-    if (localStorage.getItem('caseos_case_sidebar_collapsed') === '1') {
-      toggleCaseSidebar(true);
-    }
+    toggleCaseSidebar(true);
   } catch {}
 }
 
@@ -1752,7 +1788,7 @@ function buildSidebar() {
     item.id = 'sidebar-step-' + n;
     item.onclick = () => goToStep(n);
     item.innerHTML =
-      '<div class="step-num">' + (completed.has(n) ? '✓' : n) + '</div>' +
+      '<div class="step-num">' + (completed.has(n) ? '✓' : '<svg><use href="#' + s.icon + '"/></svg>') + '</div>' +
       '<div class="step-info">' +
         '<div class="step-title">' + s.title + '</div>' +
         '<div class="step-sub">' + s.sub + '</div>' +
@@ -1779,7 +1815,7 @@ function goToStep(n) {
 
 function updateNavUI() {
   document.getElementById('topbarBadge').textContent = 'Etapa ' + currentStep + ' de ' + STEPS.length;
-  document.getElementById('topbarTitle').textContent = STEPS[currentStep-1].title.replace(/^\S+\s/, '');
+  document.getElementById('topbarTitle').textContent = STEPS[currentStep-1].title;
   document.getElementById('navStepText').textContent = 'Etapa ' + currentStep + ' de ' + STEPS.length;
   document.getElementById('btnPrev').disabled = currentStep === 1;
   if (currentStep === STEPS.length) {

@@ -137,15 +137,45 @@ body {
 .sidebar.collapsed .plan-badge { display: none; }
 .sidebar.collapsed .btn-upgrade span { display: none; }
 .sidebar.collapsed .btn-upgrade { padding: 9px; justify-content: center; }
+.sidebar.collapsed:hover,
+.sidebar.collapsed:focus-within {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  box-shadow: 18px 0 40px rgba(0,0,0,0.08);
+}
+.sidebar.collapsed:hover .sidebar-logo img,
+.sidebar.collapsed:focus-within .sidebar-logo img { display: block; }
+.sidebar.collapsed:hover .nav-label,
+.sidebar.collapsed:focus-within .nav-label { opacity: 1; height: auto; padding: 12px 10px 5px; }
+.sidebar.collapsed:hover .nav-divider,
+.sidebar.collapsed:focus-within .nav-divider { margin: 6px 8px; }
+.sidebar.collapsed:hover .nav-item,
+.sidebar.collapsed:focus-within .nav-item { justify-content: flex-start; padding: 8px 10px; min-height: auto; }
+.sidebar.collapsed:hover .nav-item span.nav-text,
+.sidebar.collapsed:focus-within .nav-item span.nav-text { opacity: 1; width: auto; }
+.sidebar.collapsed:hover .nav-icon,
+.sidebar.collapsed:focus-within .nav-icon { width: 18px; height: auto; font-size: 14px; }
+.sidebar.collapsed:hover .nav-icon svg,
+.sidebar.collapsed:focus-within .nav-icon svg { width: 16px; height: 16px; }
+.sidebar.collapsed:hover .sidebar-footer,
+.sidebar.collapsed:focus-within .sidebar-footer { padding: 12px 10px; }
+.sidebar.collapsed:hover .usage-bar-wrap,
+.sidebar.collapsed:focus-within .usage-bar-wrap,
+.sidebar.collapsed:hover .plan-badge,
+.sidebar.collapsed:focus-within .plan-badge { display: block; }
+.sidebar.collapsed:hover .btn-upgrade span,
+.sidebar.collapsed:focus-within .btn-upgrade span { display: inline; }
 
 /* Main wrapper adjusts for collapsed sidebar */
 .main-wrapper.sidebar-collapsed { margin-left: var(--sidebar-collapsed-w); }
 
 /* Logo area */
 .sidebar-logo {
-  padding: 20px 14px 18px;
+  padding: 20px 14px 12px;
   border-bottom: 1px solid var(--sidebar-bdr);
   display: flex;
+  flex-direction: column;
+  gap: 10px;
   justify-content: center;
   align-items: center;
 }
@@ -161,6 +191,19 @@ body {
   object-fit: contain;
   display: block;
 }
+.sidebar-collapse-btn {
+  background: var(--card-bg);
+  border: 1px solid var(--sidebar-bdr);
+  border-radius: 8px;
+  padding: 5px 9px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--t2);
+  transition: all .15s;
+  line-height: 1;
+  box-shadow: var(--shadow-xs);
+}
+.sidebar-collapse-btn:hover { border-color: var(--obsidian); color: var(--obsidian); }
 
 .logo-link {
   display: flex;
@@ -333,6 +376,11 @@ body {
   padding: 10px 12px;
   margin-bottom: 8px;
   box-shadow: var(--shadow-xs);
+}
+.plan-usage {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--card-bdr);
 }
 
 .plan-badge-label {
@@ -2274,13 +2322,11 @@ tbody td {
 <aside class="sidebar" id="sidebar">
 
   <!-- Logo + collapse toggle -->
-  <div class="sidebar-logo" style="position:relative;">
-    <a href="landing.html" class="logo-link">
+  <div class="sidebar-logo">
+    <a href="dashboard.html" class="logo-link">
       <img src="assets/logo-caseos-light.png" alt="CaseOS">
     </a>
-    <button onclick="toggleSidebarCollapse()" title="Recolher sidebar"
-      style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:1px solid var(--sidebar-bdr);border-radius:5px;padding:3px 6px;cursor:pointer;font-size:10px;color:var(--t3);transition:all .15s;line-height:1;"
-      id="sidebarCollapseBtn">‹</button>
+    <button class="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="Expandir menu" aria-label="Expandir menu" id="sidebarCollapseBtn">›</button>
   </div>
 
   <!-- Nav -->
@@ -2320,26 +2366,25 @@ tbody td {
     <div class="nav-label">Pesquisa</div>
 
     <button class="nav-item" onclick="mostrarSecaoPubMed()">
-      <span class="nav-icon">🔬</span>
+      <span class="nav-icon"><svg><use href="#px-star"/></svg></span>
       <span class="nav-text">Buscar artigos</span>
     </button>
   </nav>
 
   <!-- Footer -->
   <div class="sidebar-footer">
-    <!-- Usage bar -->
-    <div class="usage-bar-wrap" id="sidebarUsageWrap">
-      <div class="usage-bar-header">
-        <span class="usage-bar-label">Créditos usados</span>
-        <span class="usage-bar-count" id="sidebarUsageText">—</span>
-      </div>
-      <div class="usage-bar-track">
-        <div class="usage-bar-fill" id="sidebarUsageFill" style="width:0%"></div>
-      </div>
-    </div>
     <div class="plan-badge">
       <div class="plan-badge-label">Plano atual</div>
       <div class="plan-badge-name" id="sidebarPlanName">GRATUITO</div>
+      <div class="usage-bar-wrap plan-usage" id="sidebarUsageWrap">
+        <div class="usage-bar-header">
+          <span class="usage-bar-label">Créditos usados</span>
+          <span class="usage-bar-count" id="sidebarUsageText">—</span>
+        </div>
+        <div class="usage-bar-track">
+          <div class="usage-bar-fill" id="sidebarUsageFill" style="width:0%"></div>
+        </div>
+      </div>
     </div>
     <button class="btn-upgrade" id="sidebarUpgradeBtn" onclick="abrirModalPlanos()">
       <svg class="btn-icon-lg"><use href="#px-crown"/></svg><span> Fazer Upgrade</span>
@@ -2362,16 +2407,6 @@ tbody td {
     </div>
 
     <div class="topbar-right">
-      <!-- Novo Relato quick button -->
-      <a href="index.html" class="btn-topbar-novo">
-        <span>+</span><span>Novo Relato</span>
-      </a>
-
-      <a href="https://membros.voandonaia.com/dashboard" target="_blank" rel="noopener" class="btn-topbar-caseos" title="Abrir área do usuário Voando na IA">
-        <img src="assets/logo-voando-na-ia.png" alt="">
-        <span>Voando na IA</span>
-      </a>
-
       <!-- Notification bell -->
       <div style="position:relative">
         <button class="notif-btn" id="notifBtn" onclick="toggleNotifDropdown()" aria-label="Notificações" title="Notificações">
@@ -2424,7 +2459,12 @@ tbody td {
         <div class="greeting-title" id="greetingTitle">Olá, pesquisador</div>
         <div class="greeting-sub" id="greetingSubtitle">Pronto para publicar ciência hoje?</div>
       </div>
-      <img class="greeting-char" src="assets/pixel-char-tablet.png" alt="" aria-hidden="true">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:flex-end;">
+        <a href="index.html" class="btn btn-primary">
+          <svg class="btn-icon"><use href="#px-pencil"/></svg>&nbsp;Novo Relato
+        </a>
+        <img class="greeting-char" src="assets/pixel-char-tablet.png" alt="" aria-hidden="true">
+      </div>
     </div>
 
     <!-- Stats row -->
@@ -2597,13 +2637,13 @@ tbody td {
     <!-- Scientific Search Section (hidden by default) -->
     <div id="pubmedSection" style="display:none;">
       <div class="section-header" style="margin-top:32px;">
-        <span class="section-title">🔬 Busca científica</span>
+        <span class="section-title">Busca científica</span>
       </div>
       <div class="table-card" style="margin-bottom:20px;">
         <div class="table-toolbar" style="flex-direction:column;align-items:stretch;gap:10px;">
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <div class="table-search" style="max-width:100%;flex:1;">
-              <span style="color:var(--t3);font-size:14px;flex-shrink:0">🔍</span>
+              <svg style="width:16px;height:16px;color:var(--t3);flex-shrink:0"><use href="#px-star"/></svg>
               <input type="text" id="pubmedInput" placeholder="Ex: Síndrome de Brugada case report, fisioterapia neurológica..."
                 style="font-size:14px;" onkeydown="if(event.key==='Enter')buscarPubMed()">
             </div>
@@ -2626,7 +2666,7 @@ tbody td {
         <!-- Results -->
         <div id="pubmedResults" style="padding:0 18px 18px;">
           <div id="pubmedEmpty" style="text-align:center;padding:32px 16px;color:var(--t3);font-size:13px;">
-            <div style="font-size:36px;margin-bottom:12px;">🔬</div>
+            <div style="font-size:36px;margin-bottom:12px;color:var(--t3);"><svg style="width:36px;height:36px;"><use href="#px-star"/></svg></div>
             Digite um diagnóstico, condição clínica ou termo e pressione Buscar.
           </div>
           <div id="pubmedLoading" style="display:none;text-align:center;padding:32px;color:var(--t3);font-size:13px;">
@@ -3583,7 +3623,7 @@ function toggleSidebar() {
   document.getElementById('sidebarOverlay').classList.toggle('open');
 }
 
-let _sidebarCollapsed = false;
+let _sidebarCollapsed = true;
 function toggleSidebarCollapse() {
   _sidebarCollapsed = !_sidebarCollapsed;
   const sidebar  = document.getElementById('sidebar');
@@ -3593,6 +3633,10 @@ function toggleSidebarCollapse() {
   sidebar.classList.toggle('collapsed', _sidebarCollapsed);
   wrapper.classList.toggle('sidebar-collapsed', _sidebarCollapsed);
   if (btn) btn.textContent = _sidebarCollapsed ? '›' : '‹';
+  if (btn) {
+    btn.title = _sidebarCollapsed ? 'Expandir menu' : 'Recolher menu';
+    btn.setAttribute('aria-label', btn.title);
+  }
 
   // Persist preference
   try { localStorage.setItem('caseos_sidebar_collapsed', _sidebarCollapsed ? '1' : '0'); } catch {}
@@ -3601,15 +3645,16 @@ function toggleSidebarCollapse() {
 // Restore collapsed state on load
 (function() {
   try {
-    const saved = localStorage.getItem('caseos_sidebar_collapsed');
-    if (saved === '1') {
-      _sidebarCollapsed = true;
-      const sidebar = document.getElementById('sidebar');
-      const wrapper = document.getElementById('mainWrapper');
-      const btn     = document.getElementById('sidebarCollapseBtn');
-      if (sidebar) sidebar.classList.add('collapsed');
-      if (wrapper) wrapper.classList.add('sidebar-collapsed');
-      if (btn) btn.textContent = '›';
+    _sidebarCollapsed = true;
+    const sidebar = document.getElementById('sidebar');
+    const wrapper = document.getElementById('mainWrapper');
+    const btn     = document.getElementById('sidebarCollapseBtn');
+    if (sidebar) sidebar.classList.toggle('collapsed', _sidebarCollapsed);
+    if (wrapper) wrapper.classList.toggle('sidebar-collapsed', _sidebarCollapsed);
+    if (btn) {
+      btn.textContent = _sidebarCollapsed ? '›' : '‹';
+      btn.title = _sidebarCollapsed ? 'Expandir menu' : 'Recolher menu';
+      btn.setAttribute('aria-label', btn.title);
     }
   } catch {}
 })();
