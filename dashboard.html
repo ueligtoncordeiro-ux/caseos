@@ -3853,7 +3853,6 @@ async function salvarBuscaAtual() {
   await salvarBiblioteca({
     tipo: 'busca',
     query: _ultimaBuscaCientifica.query,
-    operador: 'AND',
     fontes: _ultimaBuscaCientifica.fontes || [],
     artigos: _ultimaBuscaCientifica.artigos,
     observacao: 'Busca salva no dashboard',
@@ -3866,7 +3865,6 @@ async function salvarArtigoBusca(idx, tipo) {
   await salvarBiblioteca({
     tipo,
     query: _ultimaBuscaCientifica.query || art.titulo || 'Artigo salvo',
-    operador: 'AND',
     fontes: _ultimaBuscaCientifica.fontes || [],
     artigos: [art],
     observacao: tipo === 'caso_clinico' ? 'Artigo selecionado para uso em caso clínico' : 'Artigo salvo no dashboard',
