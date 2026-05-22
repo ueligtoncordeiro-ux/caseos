@@ -12,10 +12,9 @@ from app.services.llm_router import chamar, Complexidade, mensagem_usuario_erro
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
-_SYSTEM = """Você é o assistente oficial do neuraxIA CaseOS.
+_SYSTEM = """Você é o assistente oficial do CaseOS.
 
 IDENTIDADE
-- neuraxIA é a empresa; CaseOS é o produto.
 - O CaseOS ajuda profissionais de saúde brasileiros a transformar experiências clínicas em relatos de caso científicos, com estrutura CARE 2013, busca bibliográfica, revisão editorial e geração de DOCX.
 - Atenda médicos, enfermeiros, fisioterapeutas, farmacêuticos, odontólogos, psicólogos, nutricionistas, biomédicos, estudantes, residentes, docentes e pesquisadores.
 
@@ -46,10 +45,11 @@ LIMITES E SEGURANCA
 
 ESTILO
 - Responda sempre em português brasileiro.
-- Seja direto, acolhedor e tecnicamente confiável.
-- Prefira listas curtas quando houver passos.
+- Seja direto, útil e tecnicamente confiável.
+- Não se apresente em toda resposta. Se perguntarem quem é você, diga apenas: "Sou o assistente do CaseOS."
+- Prefira respostas de 1 a 4 frases. Use lista curta só quando houver passos.
 - Use linguagem adequada ao profissional de saúde, sem soar robótico.
-- Mantenha respostas com até 300 palavras, salvo se o usuário pedir detalhamento."""
+- Mantenha respostas com até 120 palavras, salvo se o usuário pedir detalhamento."""
 
 
 class MensagemChat(BaseModel):
@@ -89,7 +89,7 @@ async def chat(
             system=_SYSTEM,
             user=user_prompt,
             complexidade=Complexidade.BAIXA,
-            max_tokens=900,
+            max_tokens=260,
         )
     except Exception as exc:
         raise HTTPException(

@@ -1,5 +1,6 @@
 import os
 import asyncio
+import re
 from pathlib import Path
 from typing import Optional, Any
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -18,7 +19,7 @@ router = APIRouter(prefix="/artigo", tags=["artigo"])
 
 class SalvarPesquisaRequest(BaseModel):
     query: str = Field(..., min_length=3, max_length=300)
-    operador: str = Field(default="AND", pattern="^(AND|OR)$")
+    operador: str = "AND"
     fontes: list[str] = Field(default_factory=list)
     artigos: list[dict[str, Any]] = Field(default_factory=list)
     tipo: str = Field(default="busca", pattern="^(busca|artigo|caso_clinico)$")
@@ -310,16 +311,46 @@ async def buscar_pubmed(
     }
 
 
-def _query_booleana(q: str, operador: str) -> str:
-    operador = operador.upper() if operador else "AND"
-    if operador not in {"AND", "OR"}:
-        operador = "AND"
-    if " AND " in q.upper() or " OR " in q.upper():
-        return q
-    termos = [t.strip() for t in q.replace(",", " ").split() if len(t.strip()) > 1]
-    if len(termos) <= 1:
-        return q
-    return f" {operador} ".join(termos)
+_STOPWORDS_BUSCA = {
+    "and", "or", "e", "ou", "de", "da", "do", "das", "dos", "the", "a", "an",
+    "of", "for", "in", "on", "with", "em", "com", "para", "por",
+}
+
+
+def _termos_relevantes(q: str) -> list[str]:
+    termos = re.findall(r"[A-Za-zÀ-ÿ0-9]+", q.lower())
+    return [t for t in termos if len(t) >= 3 and t not in _STOPWORDS_BUSCA]
+
+
+def _variantes_termo(termo: str) -> set[str]:
+    variantes = {termo}
+    if termo.endswith("s") and len(termo) > 4:
+        variantes.add(termo[:-1])
+    if termo.endswith("ics") and len(termo) > 6:
+        variantes.add(termo[:-3])
+    if termo.endswith("ic") and len(termo) > 5:
+        variantes.add(termo[:-2])
+    return variantes
+
+
+def _pontuar_relevancia(art: dict, termos: list[str]) -> int:
+    if not termos:
+        return 1
+
+    titulo = (art.get("titulo") or "").lower()
+    resumo = (art.get("abstract") or "").lower()
+    periodico = (art.get("periodico") or "").lower()
+    score = 0
+
+    for termo in termos:
+        variantes = _variantes_termo(termo)
+        if any(v in titulo for v in variantes):
+            score += 4
+        if any(v in resumo for v in variantes):
+            score += 2
+        if any(v in periodico for v in variantes):
+            score += 1
+    return score
 
 
 def _url_artigo(art: dict) -> str:
@@ -372,7 +403,6 @@ def _deduplicar_artigos(artigos: list[dict]) -> list[dict]:
 async def buscar_biblioteca(
     q: str = Query(..., min_length=3, max_length=300),
     max: int = Query(default=12, ge=1, le=30),
-    operador: str = Query(default="AND", pattern="^(AND|OR)$"),
     fontes: list[str] = Query(default=["pubmed", "semantic", "openalex", "crossref"]),
     user: Usuario = Depends(get_verified_user),
 ):
@@ -383,7 +413,8 @@ async def buscar_biblioteca(
     from app.utils.crossref import buscar as buscar_crossref
 
     fontes_norm = {f.lower() for f in fontes}
-    query_busca = _query_booleana(q, operador)
+    query_busca = q.strip()
+    termos = _termos_relevantes(query_busca)
     tarefas = []
 
     if "pubmed" in fontes_norm:
@@ -408,16 +439,29 @@ async def buscar_biblioteca(
         artigos.extend(item)
 
     artigos = _deduplicar_artigos(artigos)
+    artigos = [
+        art for art in artigos
+        if _pontuar_relevancia(art, termos) > 0
+    ]
+    prioridade_fonte = {
+        "PubMed": 0,
+        "Semantic Scholar": 1,
+        "OpenAlex": 2,
+        "Crossref": 3,
+    }
     artigos = sorted(
         artigos,
-        key=lambda a: (a.get("citation_count") or a.get("citacoes") or 0, a.get("ano") or ""),
-        reverse=True,
+        key=lambda a: (
+            prioridade_fonte.get(a.get("fonte") or ("PubMed" if a.get("pmid") else ""), 9),
+            -_pontuar_relevancia(a, termos),
+            -(a.get("citation_count") or a.get("citacoes") or 0),
+            -(int(a.get("ano") or 0) if str(a.get("ano") or "").isdigit() else 0),
+        ),
     )[:max]
 
     return {
         "query": q,
         "query_executada": query_busca,
-        "operador": operador,
         "fontes": sorted(fontes_norm),
         "total": len(artigos),
         "erros": erros,
