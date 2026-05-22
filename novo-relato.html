@@ -162,16 +162,17 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
 }
 .sidebar.collapsed .step-item {
   justify-content: center;
-  padding: 7px 0;
-  min-height: 48px;
+  padding: 5px 0;
+  min-height: 40px;
   border-bottom: 0;
   border-radius: 10px;
   margin-bottom: 4px;
 }
 .sidebar.collapsed .step-num {
-  width: 34px;
-  height: 34px;
-  font-size: 13px;
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  border-radius: 8px;
 }
 .sidebar.collapsed .sidebar-progress {
   padding: 12px 10px 18px;
@@ -190,21 +191,22 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
 .sidebar.collapsed:hover .step-item,
 .sidebar.collapsed:focus-within .step-item {
   justify-content: flex-start;
-  padding: 8px 10px;
-  min-height: 42px;
+  padding: 8px 12px;
+  min-height: 38px;
   border-bottom: 1px solid var(--border);
   border-radius: 10px;
   margin-bottom: 0;
 }
 .sidebar.collapsed:hover .step-num,
 .sidebar.collapsed:focus-within .step-num {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   font-size: 11px;
+  border-radius: 7px;
 }
 .step-num svg {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
   display: block;
   image-rendering: pixelated;
 }
@@ -218,11 +220,11 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
 /* step list */
 .step-list { padding: 6px 10px 14px; flex: 1; overflow-y: auto; }
 .step-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 10px; border-bottom: 1px solid var(--border); cursor: pointer;
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer;
   transition: background .15s;
   margin-bottom: 0;
-  min-height: 42px;
+  min-height: 38px;
   border-radius: 10px;
 }
 .step-item:last-child { border-bottom: 0; }
@@ -230,7 +232,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
 .step-item.active { background: transparent; }
 .step-item.done .step-num { background: var(--obsidian); color: var(--acid); }
 .step-num {
-  width: 26px; height: 26px; flex-shrink: 0; border-radius: 8px;
+  width: 22px; height: 22px; flex-shrink: 0; border-radius: 7px;
   background: var(--border); color: var(--t3);
   font-size: 11px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
@@ -464,7 +466,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
   .sidebar.collapsed:hover .step-item,
   .sidebar.collapsed:focus-within .step-item {
     justify-content: center;
-    padding: 7px 0;
+    padding: 5px 0;
   }
   .sidebar:not(.collapsed) {
     position: fixed;
@@ -486,10 +488,10 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
   .sidebar:not(.collapsed) .step-item {
     justify-content: flex-start;
     gap: 10px;
-    padding: 8px 10px;
-    min-height: 42px;
+    padding: 8px 12px;
+    min-height: 38px;
   }
-  .sidebar:not(.collapsed) .step-num { width: 26px; height: 26px; }
+  .sidebar:not(.collapsed) .step-num { width: 22px; height: 22px; }
   .sidebar-collapse-btn {
     top: 12px;
     right: -15px;

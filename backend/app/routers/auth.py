@@ -36,6 +36,12 @@ from app.services.email import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+STRIPE_CURRENT_PRICE_IDS = {
+    PLANO_STARTER:       "price_1TZxQv3oJrMmxd1m332GRzl2",  # R$49
+    PLANO_PRO:           "price_1TZxR43oJrMmxd1m0BsTg21X",  # R$99
+    PLANO_INSTITUCIONAL: "price_1TZxR73oJrMmxd1m1ZVKBsDS",  # R$349
+}
+
 _GOOGLE_AUTH_URL   = "https://accounts.google.com/o/oauth2/v2/auth"
 _GOOGLE_TOKEN_URL  = "https://oauth2.googleapis.com/token"
 _GOOGLE_USERINFO   = "https://www.googleapis.com/oauth2/v3/userinfo"
@@ -382,7 +388,7 @@ async def listar_planos():
                 "artigos_mes":   QUOTA_MENSAL["pro"],
                 "tokens_limite": TOKENS_LIMITE["pro"],
                 "preco_brl":     PRECO_BRL["pro"],
-                "descricao":     "~12 artigos completos/mês · 300k tokens · CARE completo",
+                "descricao":     "~12 artigos/mês · 300k tokens · PubMed/OpenAlex/S2",
             },
             {
                 "id":            "institucional",
@@ -390,7 +396,7 @@ async def listar_planos():
                 "artigos_mes":   QUOTA_MENSAL["institucional"],
                 "tokens_limite": TOKENS_LIMITE["institucional"],
                 "preco_brl":     PRECO_BRL["institucional"],
-                "descricao":     "~60 artigos/mês · 1,5M tokens · Multi-usuário · Suporte 24h",
+                "descricao":     "~60 artigos/mês · 1,5M tokens · Multi-usuário",
             },
         ]
     }
@@ -409,11 +415,9 @@ async def criar_checkout(
 
     stripe.api_key = settings.stripe_secret_key
 
-    price_map = {
-        PLANO_STARTER:       settings.stripe_starter_price_id,
-        PLANO_PRO:           settings.stripe_pro_price_id,
-        PLANO_INSTITUCIONAL: settings.stripe_inst_price_id,
-    }
+    # Price IDs are not secrets. Use the current Stripe prices as source of truth
+    # so stale Render env vars cannot keep charging retired R$97/R$497 prices.
+    price_map = STRIPE_CURRENT_PRICE_IDS
     price_id = price_map.get(body.plano)
     if not price_id:
         raise HTTPException(status_code=400, detail="Plano inválido.")

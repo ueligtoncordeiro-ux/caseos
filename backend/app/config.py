@@ -44,9 +44,9 @@ class Settings(BaseSettings):
     # ── Stripe ────────────────────────────────────────────────────────────────
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
-    stripe_starter_price_id: str = ""
-    stripe_pro_price_id: str = ""
-    stripe_inst_price_id: str = ""
+    stripe_starter_price_id: str = "price_1TZxQv3oJrMmxd1m332GRzl2"
+    stripe_pro_price_id: str = "price_1TZxR43oJrMmxd1m0BsTg21X"
+    stripe_inst_price_id: str = "price_1TZxR73oJrMmxd1m1ZVKBsDS"
 
     # ── Token TTL ─────────────────────────────────────────────────────────────
     refresh_token_expire_days: int = 30

@@ -250,4 +250,4 @@ class TokenResponse(BaseModel):
 
 
 class CheckoutRequest(BaseModel):
-    plano: str  # "pro" | "institucional"
+    plano: str  # "starter" | "pro" | "institucional"

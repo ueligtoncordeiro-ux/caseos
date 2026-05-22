@@ -17,8 +17,18 @@ from app.services.email import enviar_boas_vindas_pro
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
+STRIPE_PRICE_TO_PLAN = {
+    "price_1TZxQv3oJrMmxd1m332GRzl2": PLANO_STARTER,       # Starter R$49
+    "price_1TZxR43oJrMmxd1m0BsTg21X": PLANO_PRO,           # Pro R$99
+    "price_1TZxR73oJrMmxd1m1ZVKBsDS": PLANO_INSTITUCIONAL, # Institucional R$349
+    "price_1TYHOA3oJrMmxd1m5HBpOtJp": PLANO_PRO,           # legado R$97
+    "price_1TYHON3oJrMmxd1mJuzYqTm4": PLANO_INSTITUCIONAL, # legado R$497
+}
+
 # Mapeamento Stripe price_id → plano interno
 def _plano_from_price(price_id: str) -> str:
+    if price_id in STRIPE_PRICE_TO_PLAN:
+        return STRIPE_PRICE_TO_PLAN[price_id]
     if price_id == settings.stripe_starter_price_id:
         return PLANO_STARTER
     if price_id == settings.stripe_pro_price_id:
