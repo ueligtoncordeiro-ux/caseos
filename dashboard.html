@@ -2337,7 +2337,7 @@ tbody td {
       <span class="nav-icon"><svg><use href="#px-home"/></svg></span>
       <span class="nav-text">Dashboard</span>
     </a>
-    <a class="nav-item" href="novo-relato.html">
+    <a class="nav-item" href="novo-relato">
       <span class="nav-icon"><svg><use href="#px-pencil"/></svg></span>
       <span class="nav-text">Novo Relato</span>
     </a>
@@ -2460,7 +2460,7 @@ tbody td {
         <div class="greeting-sub" id="greetingSubtitle">Pronto para publicar ciência hoje?</div>
       </div>
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:flex-end;">
-        <a href="novo-relato.html" class="btn btn-primary">
+        <a href="novo-relato" class="btn btn-primary">
           <svg class="btn-icon"><use href="#px-pencil"/></svg>&nbsp;Novo Relato
         </a>
         <img class="greeting-char" src="assets/pixel-char-tablet.png" alt="" aria-hidden="true">
@@ -2520,7 +2520,7 @@ tbody td {
 
     <!-- Quick actions -->
     <div class="quick-actions">
-      <a href="novo-relato.html" class="btn btn-primary">
+      <a href="novo-relato" class="btn btn-primary">
         <svg class="btn-icon"><use href="#px-pencil"/></svg>&nbsp;Novo Relato
       </a>
       <button class="btn btn-secondary" onclick="carregarHistorico(paginaAtual)">
@@ -2621,7 +2621,7 @@ tbody td {
           <span class="empty-tag">Pronto para decolar</span>
           <div class="empty-title">Nenhum relato ainda</div>
           <div class="empty-sub">Seu primeiro relato clínico está esperando por você.<br>A ciência começa com um caso.</div>
-          <a href="novo-relato.html" class="btn btn-primary">
+          <a href="novo-relato" class="btn btn-primary">
             <svg class="btn-icon"><use href="#px-pencil"/></svg>
             &nbsp;Criar primeiro relato
           </a>
@@ -3375,7 +3375,7 @@ async function downloadRelato(sessaoId) {
 
 async function visualizarRelato(sessaoId) {
   // Opens the main article editor/viewer page with this session
-  location.href = `novo-relato.html?sessao=${sessaoId}`;
+  location.href = `novo-relato?sessao=${sessaoId}`;
 }
 
 /* Filter & search */
