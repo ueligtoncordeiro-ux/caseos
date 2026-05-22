@@ -2,20 +2,19 @@
 LLM Router — roteamento por complexidade com fallback em cascata.
 
 Hierarquia definida (aplicada apenas se a chave estiver configurada):
-  ALTA complexidade  → Claude Sonnet 4.6  → GPT-4o         → Gemini
-  MÉDIA complexidade → GPT-4o mini        → Gemini         → Claude Haiku
-  BAIXA complexidade → Gemini apenas (chatbox e assistente acessíveis agora)
+  ALTA complexidade  → Claude Sonnet 4.6  → GPT-4o         → Gemini 2.5 Flash
+  MÉDIA complexidade → GPT-4o mini        → Gemini 2.5 Flash → Claude Haiku
+  BAIXA complexidade → Gemini 2.5 Flash   → Claude Haiku    (chatbox / assist)
 
 Regra de disponibilidade:
   • Providers sem chave configurada são automaticamente ignorados.
   • Gemini é o fallback universal — se for o único com chave, é sempre usado.
-  • Quando Claude/OpenAI forem contratados, basta adicionar as chaves ao .env
-    e a hierarquia entra em vigor automaticamente, sem alterar código.
+  • Basta adicionar/remover chaves no .env para ativar/desativar providers.
 
-Custo estimado por artigo (quando todos disponíveis):
-  Claude Sonnet 4.6  ~$0.35
-  GPT-4o mini        ~$0.02
-  Gemini Flash       baixo custo
+Custo estimado por artigo (com todos os providers ativos):
+  Claude Sonnet 4.6  ~$0.35   ← geração de artigos (ALTA)
+  GPT-4o mini        ~$0.02   ← revisão e assist (MEDIA)
+  Gemini 2.5 Flash   baixo    ← chatbox + fallback universal
 """
 import json
 import logging
@@ -209,10 +208,12 @@ async def chamar(
             ("Claude Haiku 4.5",  "claude",
              lambda: _chamar_claude(system, user, min(max_tokens, 4096))),
         ]
-    else:  # BAIXA — Gemini somente para evitar Anthropic/OpenAI sem saldo.
+    else:  # BAIXA — chatbox e assist: Gemini primeiro (barato), Claude Haiku como fallback.
         candidatos = [
-            ("Gemini",            "gemini",
+            ("Gemini",           "gemini",
              lambda: _chamar_gemini(system, user, max_tokens)),
+            ("Claude Haiku 3.5", "claude",
+             lambda: _chamar_claude(system, user, min(max_tokens, 2048))),
         ]
 
     # Filtra apenas providers com chave disponível
