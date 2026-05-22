@@ -1,0 +1,2401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Novo Relato — CaseOS</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+/* ── reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1); min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ── tokens ── */
+:root {
+  --acid:        #C8FF00;
+  --acid-dim:    rgba(200,255,0,0.10);
+  --obsidian:    #0A0A0B;
+  --slate:       #1C1C1E;
+  --bg:          #FFFFFF;
+  --light:       #F7F7F5;
+  --light2:      #EFEFED;
+  --border:      #E9E9E7;
+  --sidebar-bg:  #F7F7F5;
+  --card-bg:     #FFFFFF;
+  --t1:          #0A0A0B;
+  --t2:          #4B4B4F;
+  --t3:          #8A8A8E;
+  --danger:      #E53E3E;
+  --success:     #38A169;
+  --radius:      10px;
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md:   0 4px 16px rgba(0,0,0,0.10);
+  --sidebar-w:   280px;
+  --sidebar-collapsed-w: 76px;
+}
+
+/* ── layout ── */
+.app-shell { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── sidebar ── */
+.sidebar {
+  width: var(--sidebar-w); flex-shrink: 0;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: visible;
+  position: relative;
+  transition: width .22s ease;
+}
+.sidebar-head {
+  padding: 20px 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 92px;
+  position: relative;
+  background: var(--sidebar-bg);
+  z-index: 3;
+}
+.logo-link {
+  text-decoration: none;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+.logo-link img {
+  width: 100%;
+  max-width: 190px;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  transition: max-width .22s ease;
+}
+.sidebar-collapse-btn {
+  width: 32px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 0 9px 9px 0;
+  background: var(--card-bg);
+  color: var(--t2);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  position: absolute;
+  top: 28px;
+  right: -32px;
+  z-index: 5;
+  box-shadow: var(--shadow-sm);
+}
+.sidebar-collapse-btn:hover { border-color: var(--obsidian); color: var(--obsidian); }
+
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed-w);
+}
+.sidebar.collapsed:hover,
+.sidebar.collapsed:focus-within {
+  width: var(--sidebar-w);
+  box-shadow: 18px 0 40px rgba(0,0,0,0.08);
+}
+.sidebar.collapsed .sidebar-head {
+  padding: 16px 10px 14px;
+  min-height: 82px;
+}
+.sidebar.collapsed .sidebar-label,
+.sidebar.collapsed .step-info,
+.sidebar.collapsed .prog-label {
+  display: none;
+}
+.sidebar.collapsed .logo-link img {
+  max-width: 46px;
+}
+.sidebar.collapsed .step-list {
+  padding: 12px 10px 16px;
+}
+.sidebar.collapsed .step-item {
+  justify-content: center;
+  padding: 10px 0;
+  min-height: 52px;
+  border-bottom: 0;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+.sidebar.collapsed .step-num {
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+}
+.sidebar.collapsed .sidebar-progress {
+  padding: 12px 10px 18px;
+}
+.sidebar.collapsed .prog-track {
+  height: 6px;
+}
+.sidebar.collapsed:hover .logo-link img,
+.sidebar.collapsed:focus-within .logo-link img {
+  max-width: 190px;
+}
+.sidebar.collapsed:hover .sidebar-label,
+.sidebar.collapsed:focus-within .sidebar-label,
+.sidebar.collapsed:hover .step-info,
+.sidebar.collapsed:focus-within .step-info,
+.sidebar.collapsed:hover .prog-label,
+.sidebar.collapsed:focus-within .prog-label {
+  display: flex;
+}
+.sidebar.collapsed:hover .sidebar-label,
+.sidebar.collapsed:focus-within .sidebar-label { display: block; }
+.sidebar.collapsed:hover .step-list,
+.sidebar.collapsed:focus-within .step-list { padding: 0 12px 16px; }
+.sidebar.collapsed:hover .step-item,
+.sidebar.collapsed:focus-within .step-item {
+  justify-content: flex-start;
+  padding: 10px 8px;
+  min-height: auto;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  margin-bottom: 0;
+}
+.sidebar.collapsed:hover .step-num,
+.sidebar.collapsed:focus-within .step-num {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+}
+.step-num svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+  image-rendering: pixelated;
+}
+
+.sidebar-label {
+  padding: 16px 20px 6px;
+  font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--t3);
+}
+
+/* step list */
+.step-list { padding: 0 12px 16px; flex: 1; overflow-y: auto; }
+.step-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 8px; border-bottom: 1px solid var(--border); cursor: pointer;
+  transition: background .15s;
+  margin-bottom: 0;
+}
+.step-item:last-child { border-bottom: 0; }
+.step-item:hover { background: var(--light2); border-radius: 8px; }
+.step-item.active { background: transparent; }
+.step-item.done .step-num { background: var(--obsidian); color: var(--acid); }
+.step-num {
+  width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%;
+  background: var(--border); color: var(--t3);
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s, color .2s;
+}
+.step-item.active .step-num { background: var(--acid); color: var(--obsidian); }
+.step-info { flex: 1; min-width: 0; }
+.step-title { font-size: 13px; font-weight: 600; color: var(--t1); line-height: 1.3; }
+.step-sub { font-size: 11px; color: var(--t3); margin-top: 2px; }
+.step-item.active .step-title { color: var(--obsidian); }
+
+/* progress bar */
+.sidebar-progress { padding: 12px 20px 20px; border-top: 1px solid var(--border); }
+.prog-label { font-size: 12px; color: var(--t3); margin-bottom: 6px; display: flex; justify-content: space-between; }
+.prog-track { height: 4px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.prog-fill { height: 100%; background: var(--acid); border-radius: 99px; transition: width .4s ease; }
+
+/* ── main area ── */
+.main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* topbar */
+.topbar {
+  height: 56px; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+}
+.topbar-left { display: flex; align-items: center; gap: 8px; }
+.topbar-title { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; color: var(--t1); }
+.topbar-step-badge {
+  background: var(--acid-dim); color: var(--obsidian);
+  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px;
+}
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.btn-back-dash {
+  background: none; border: 1px solid var(--border); color: var(--t2);
+  font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: 7px;
+  cursor: pointer; transition: border-color .15s, color .15s;
+  font-family: 'Inter', sans-serif;
+}
+.btn-back-dash:hover { border-color: var(--obsidian); color: var(--obsidian); }
+
+/* content scroll */
+.content-scroll { flex: 1; overflow-y: auto; padding: 32px 40px; }
+
+/* ── step panels ── */
+.step-panel { display: none; }
+.step-panel.active { display: block; }
+
+.step-header { margin-bottom: 28px; }
+.step-header h1 {
+  font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700;
+  color: var(--t1); line-height: 1.25; margin-bottom: 6px;
+}
+.step-header p { font-size: 14px; color: var(--t3); line-height: 1.6; }
+.step-divider { height: 1px; background: var(--border); margin-bottom: 24px; }
+
+/* form groups */
+.form-grid { display: grid; gap: 18px; }
+.form-grid-2 { grid-template-columns: 1fr 1fr; }
+.form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 700px) { .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; } }
+
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label {
+  font-size: 13px; font-weight: 600; color: var(--t1);
+  display: flex; align-items: center; gap: 6px;
+}
+.form-group label .lbl-icon { font-size: 15px; }
+.form-group .hint { font-size: 11px; color: var(--t3); margin-top: -2px; }
+.required { color: var(--danger); margin-left: 2px; }
+
+input[type="text"], input[type="email"], input[type="number"], select, textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 14px; font-family: 'Inter', sans-serif;
+  color: var(--t1); background: var(--bg);
+  transition: border-color .15s, box-shadow .15s;
+  outline: none;
+  appearance: none; -webkit-appearance: none;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--obsidian);
+  box-shadow: 0 0 0 3px var(--acid-dim);
+}
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A8A8E' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
+
+/* ai assist wrapper */
+.assist-wrap { position: relative; }
+.assist-wrap textarea { padding-right: 44px; }
+.assist-btn {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--obsidian); color: var(--acid);
+  border: none; border-radius: 6px;
+  width: 28px; height: 28px;
+  font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .15s;
+  z-index: 1;
+}
+.assist-btn:hover { opacity: .85; }
+.assist-menu {
+  position: absolute; top: 40px; right: 8px; z-index: 100;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; box-shadow: var(--shadow-md);
+  min-width: 180px; overflow: hidden;
+  display: none;
+}
+.assist-menu.open { display: block; }
+.assist-menu button {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 9px 14px;
+  background: none; border: none; text-align: left;
+  font-size: 13px; font-family: 'Inter', sans-serif; color: var(--t1);
+  cursor: pointer; transition: background .12s;
+}
+.assist-menu button:hover { background: var(--light); }
+.assist-menu button .mi { font-size: 15px; }
+
+/* ── checkbox / toggle ── */
+.check-group { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: var(--light); border-radius: 8px; border: 1px solid var(--border); }
+.check-group input[type="checkbox"] { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; accent-color: var(--obsidian); cursor: pointer; }
+.check-group label { font-size: 13px; color: var(--t2); cursor: pointer; line-height: 1.5; }
+
+/* chip selector */
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  padding: 6px 14px; border-radius: 99px;
+  border: 1px solid var(--border); background: var(--bg);
+  font-size: 13px; font-weight: 500; color: var(--t2);
+  cursor: pointer; transition: all .15s; user-select: none;
+}
+.chip.selected { background: var(--obsidian); color: var(--acid); border-color: var(--obsidian); }
+.chip:hover:not(.selected) { border-color: var(--obsidian); color: var(--obsidian); }
+
+/* ── timeline builder ── */
+.timeline-toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
+.btn-sm {
+  padding: 6px 14px; border-radius: 7px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--t2); font-size: 13px; font-weight: 500;
+  cursor: pointer; font-family: 'Inter', sans-serif; transition: all .15s;
+}
+.btn-sm:hover { border-color: var(--obsidian); color: var(--obsidian); }
+.btn-sm.primary { background: var(--obsidian); color: var(--acid); border-color: var(--obsidian); }
+.timeline-table { width: 100%; border-collapse: collapse; }
+.timeline-table th { font-size: 12px; font-weight: 600; color: var(--t3); text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.timeline-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.timeline-table td input { padding: 5px 8px; font-size: 13px; border-radius: 6px; }
+.timeline-table .del-row { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px; padding: 4px 8px; }
+
+/* ── image upload ── */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 32px 24px;
+  text-align: center;
+  background: var(--light);
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  position: relative;
+}
+.upload-zone:hover, .upload-zone.drag-over { border-color: var(--obsidian); background: var(--light2); }
+.upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.upload-icon { font-size: 40px; margin-bottom: 10px; }
+.upload-zone h3 { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; color: var(--t1); margin-bottom: 6px; }
+.upload-zone p { font-size: 13px; color: var(--t3); }
+.upload-zone .upload-hint { font-size: 11px; color: var(--t3); margin-top: 8px; }
+
+.img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 16px; }
+.img-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); box-shadow: var(--shadow-sm); }
+.img-card .thumb { width: 100%; height: 120px; object-fit: cover; display: block; }
+.img-card .img-body { padding: 8px; }
+.img-card input { font-size: 12px; padding: 5px 8px; border-radius: 6px; }
+.img-card .remove-img { width: 100%; margin-top: 6px; padding: 4px; background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--danger); font-size: 12px; cursor: pointer; }
+.img-card .remove-img:hover { background: #fff0f0; }
+
+/* ── nav footer ── */
+.step-nav {
+  flex-shrink: 0;
+  padding: 16px 40px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-left { display: flex; align-items: center; gap: 12px; }
+.btn-prev {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 20px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg);
+  color: var(--t2); font-size: 14px; font-weight: 500;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  transition: all .15s;
+}
+.btn-prev:hover { border-color: var(--obsidian); color: var(--obsidian); }
+.btn-prev:disabled { opacity: .35; cursor: default; }
+.btn-next {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 24px; border-radius: 8px;
+  border: none; background: var(--obsidian);
+  color: #fff; font-size: 14px; font-weight: 600;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  transition: opacity .15s;
+}
+.btn-next:hover { opacity: .88; }
+.btn-submit {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 28px; border-radius: 8px;
+  border: none; background: var(--obsidian);
+  color: var(--acid); font-size: 15px; font-weight: 700;
+  cursor: pointer; font-family: 'Space Grotesk', sans-serif;
+  transition: opacity .15s; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+.btn-submit:hover { opacity: .88; }
+.nav-step-text { font-size: 13px; color: var(--t3); }
+
+/* ── assist loading overlay ── */
+.assist-loading {
+  position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 200;
+  display: none; align-items: center; justify-content: center;
+}
+.assist-loading.show { display: flex; }
+.assist-spinner {
+  background: var(--bg); border-radius: 12px; padding: 24px 32px;
+  display: flex; align-items: center; gap: 14px; box-shadow: var(--shadow-md);
+}
+.spinner-ring {
+  width: 24px; height: 24px; border: 3px solid var(--border);
+  border-top-color: var(--obsidian); border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── pipeline modal ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 300;
+  display: none; align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+  background: var(--bg); border-radius: 14px; padding: 32px 36px;
+  width: 560px; max-width: 95vw; box-shadow: 0 8px 40px rgba(0,0,0,.18);
+}
+
+/* Pipeline modal: character + steps side by side */
+.pipeline-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+.pipeline-character-col {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+.pipeline-char-img {
+  width: 100px;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  animation: char-bounce 2.2s ease-in-out infinite;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.12));
+}
+@keyframes char-bounce {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+.pipeline-char-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t3);
+  text-align: center;
+}
+.pipeline-steps-col { flex: 1; min-width: 0; }
+
+.modal-box h2 { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: var(--t1); margin-bottom: 4px; }
+.modal-box .modal-sub { font-size: 13px; color: var(--t3); margin-bottom: 20px; }
+.pipeline-steps { display: flex; flex-direction: column; gap: 8px; }
+.p-step {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--light);
+  transition: border-color 0.2s, background 0.2s;
+}
+.p-step.done { border-color: #22c55e; background: #f0fdf4; }
+.p-step.active { border-color: var(--obsidian); background: var(--acid-dim); }
+.p-step.error { border-color: var(--danger); background: #fff5f5; }
+.p-step-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.p-step-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+  image-rendering: pixelated;
+  color: var(--t2);
+}
+.p-step.done .p-step-icon svg   { color: #22c55e; }
+.p-step.active .p-step-icon svg { color: var(--obsidian); }
+.p-step.error .p-step-icon svg  { color: var(--danger); }
+.p-step-text { flex: 1; }
+.p-step-name { font-size: 13px; font-weight: 600; color: var(--t1); }
+.p-step-agent {
+  font-size: 10px;
+  font-weight: 600;
+  color: #5A6600;
+  background: var(--acid-dim);
+  border: 1px solid rgba(200,255,0,0.3);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-top: 3px;
+  display: inline-block;
+  letter-spacing: 0.02em;
+}
+.p-step-detail { font-size: 11.5px; color: var(--t3); margin-top: 3px; }
+.p-step-status { font-size: 16px; }
+.modal-actions { margin-top: 24px; display: flex; gap: 10px; justify-content: flex-end; }
+.btn-modal-ok {
+  padding: 10px 24px; border-radius: 8px; background: var(--obsidian); color: #fff;
+  border: none; font-size: 14px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── toast ── */
+.toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 500; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--obsidian); color: #fff;
+  padding: 12px 18px; border-radius: 8px; font-size: 14px;
+  box-shadow: var(--shadow-md); animation: slideIn .25s ease;
+  display: flex; align-items: center; gap: 8px;
+  max-width: 320px;
+}
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--light2); }
+
+/* section card */
+.section-card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px 22px; margin-bottom: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.section-card-title {
+  font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700;
+  color: var(--t1); margin-bottom: 16px;
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* number+unit */
+.input-unit-row { display: flex; gap: 8px; }
+.input-unit-row input { flex: 1; }
+.input-unit-row select { width: 110px; flex-shrink: 0; }
+/* ── Pixel icon system ── */
+.p-step-icon svg { image-rendering: pixelated; image-rendering: crisp-edges; }
+</style>
+</head>
+<body>
+
+<!-- ── Pixel Icons Sprite (inline) ── -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="px-home" viewBox="0 0 16 16">
+    <rect x="10" y="0" width="2" height="3" fill="currentColor"/>
+    <rect x="7"  y="2" width="2" height="1" fill="currentColor"/>
+    <rect x="6"  y="3" width="4" height="1" fill="currentColor"/>
+    <rect x="5"  y="4" width="6" height="1" fill="currentColor"/>
+    <rect x="4"  y="5" width="8" height="1" fill="currentColor"/>
+    <rect x="3"  y="6" width="10" height="1" fill="currentColor"/>
+    <rect x="2"  y="7" width="2" height="7" fill="currentColor"/>
+    <rect x="12" y="7" width="2" height="7" fill="currentColor"/>
+    <rect x="4"  y="7" width="8" height="1" fill="currentColor"/>
+    <rect x="4"  y="8" width="2" height="6" fill="currentColor"/>
+    <rect x="10" y="8" width="2" height="6" fill="currentColor"/>
+    <rect x="6"  y="10" width="4" height="4" fill="currentColor"/>
+    <rect x="2"  y="14" width="12" height="1" fill="currentColor"/>
+  </symbol>
+  <!-- MAGNIFIER: for Analysis step -->
+  <symbol id="px-magnify" viewBox="0 0 20 20">
+    <rect x="3"  y="1"  width="10" height="2" fill="currentColor"/>
+    <rect x="1"  y="3"  width="2"  height="8" fill="currentColor"/>
+    <rect x="13" y="3"  width="2"  height="8" fill="currentColor"/>
+    <rect x="3"  y="11" width="10" height="2" fill="currentColor"/>
+    <rect x="5"  y="5"  width="6"  height="1" fill="currentColor"/>
+    <rect x="7"  y="3"  width="2"  height="8" fill="currentColor"/>
+    <rect x="13" y="11" width="2"  height="2" fill="currentColor"/>
+    <rect x="14" y="13" width="2"  height="2" fill="currentColor"/>
+    <rect x="15" y="15" width="2"  height="2" fill="currentColor"/>
+    <rect x="16" y="17" width="3"  height="2" fill="currentColor"/>
+  </symbol>
+  <!-- LIGHTNING: for AI generation -->
+  <symbol id="px-lightning" viewBox="0 0 20 20">
+    <rect x="10" y="0"  width="7"  height="2" fill="currentColor"/>
+    <rect x="9"  y="2"  width="6"  height="2" fill="currentColor"/>
+    <rect x="8"  y="4"  width="5"  height="2" fill="currentColor"/>
+    <rect x="3"  y="6"  width="14" height="2" fill="currentColor"/>
+    <rect x="6"  y="8"  width="6"  height="2" fill="currentColor"/>
+    <rect x="5"  y="10" width="5"  height="2" fill="currentColor"/>
+    <rect x="1"  y="10" width="6"  height="2" fill="currentColor"/>
+    <rect x="2"  y="12" width="5"  height="2" fill="currentColor"/>
+    <rect x="1"  y="14" width="5"  height="2" fill="currentColor"/>
+    <rect x="0"  y="16" width="5"  height="2" fill="currentColor"/>
+    <rect x="0"  y="18" width="6"  height="2" fill="currentColor"/>
+  </symbol>
+  <!-- CLIPBOARD: for CARE checklist -->
+  <symbol id="px-clipboard" viewBox="0 0 20 20">
+    <rect x="2"  y="4"  width="16" height="15" fill="currentColor"/>
+    <rect x="6"  y="2"  width="8"  height="4"  fill="currentColor"/>
+    <rect x="8"  y="1"  width="4"  height="2"  fill="currentColor"/>
+    <rect x="4"  y="8"  width="4"  height="2"  fill="currentColor"/>
+    <rect x="9"  y="8"  width="7"  height="2"  fill="currentColor"/>
+    <rect x="4"  y="12" width="4"  height="2"  fill="currentColor"/>
+    <rect x="9"  y="12" width="7"  height="2"  fill="currentColor"/>
+    <rect x="4"  y="16" width="4"  height="2"  fill="currentColor"/>
+    <rect x="9"  y="16" width="5"  height="2"  fill="currentColor"/>
+  </symbol>
+  <!-- BOOKS: for references -->
+  <symbol id="px-books" viewBox="0 0 20 20">
+    <rect x="1"  y="2"  width="4" height="16" fill="currentColor"/>
+    <rect x="2"  y="3"  width="1" height="14" fill="currentColor"/>
+    <rect x="7"  y="5"  width="4" height="13" fill="currentColor"/>
+    <rect x="8"  y="6"  width="1" height="11" fill="currentColor"/>
+    <rect x="13" y="3"  width="4" height="15" fill="currentColor"/>
+    <rect x="14" y="4"  width="1" height="13" fill="currentColor"/>
+    <rect x="0"  y="18" width="20" height="2" fill="currentColor"/>
+  </symbol>
+  <!-- DOCSTAR: for final formatting -->
+  <symbol id="px-docstar" viewBox="0 0 20 20">
+    <rect x="2"  y="1"  width="12" height="16" fill="currentColor"/>
+    <rect x="14" y="1"  width="4"  height="4"  fill="currentColor"/>
+    <rect x="14" y="5"  width="4"  height="12" fill="currentColor"/>
+    <rect x="13" y="1"  width="1"  height="5"  fill="currentColor"/>
+    <rect x="13" y="5"  width="5"  height="1"  fill="currentColor"/>
+    <rect x="4"  y="5"  width="8"  height="1"  fill="currentColor"/>
+    <rect x="4"  y="8"  width="8"  height="1"  fill="currentColor"/>
+    <rect x="4"  y="11" width="6"  height="1"  fill="currentColor"/>
+    <rect x="13" y="14" width="6"  height="2"  fill="currentColor"/>
+    <rect x="15" y="12" width="2"  height="6"  fill="currentColor"/>
+    <rect x="14" y="13" width="4"  height="4"  fill="currentColor"/>
+  </symbol>
+</svg>
+
+<div class="app-shell">
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="sidebar" id="caseSidebar">
+    <div class="sidebar-head">
+      <a href="dashboard.html" class="logo-link">
+        <img src="assets/logo-caseos-light.png" alt="CaseOS">
+      </a>
+      <button class="sidebar-collapse-btn" id="caseSidebarBtn" onclick="toggleCaseSidebar()" title="Recolher menu" aria-label="Recolher menu">‹</button>
+    </div>
+
+    <div class="sidebar-label">Etapas do relato</div>
+
+    <div class="step-list" id="stepList">
+      <!-- populated by JS -->
+    </div>
+
+    <div class="sidebar-progress">
+      <div class="prog-label">
+        <span>Progresso</span>
+        <span id="progPct">0%</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ══ -->
+  <div class="main-area">
+    <!-- topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title" id="topbarTitle">Novo Relato</span>
+        <span class="topbar-step-badge" id="topbarBadge">Etapa 1 de 10</span>
+      </div>
+      <div class="topbar-right">
+        <button class="btn-back-dash" onclick="location.href='dashboard.html'">← Início</button>
+      </div>
+    </header>
+
+    <!-- scrollable content -->
+    <div class="content-scroll" id="contentScroll">
+
+      <!-- ══ STEP 1 — Identificação do Paciente ══ -->
+      <div class="step-panel active" id="step-1">
+        <div class="step-header">
+          <h1>Identificação do Paciente</h1>
+          <p>Dados demográficos básicos. Mantenha o anonimato — não insira nome completo nem CPF.</p>
+        </div>
+        <div class="step-divider"></div>
+
+        <div class="section-card">
+          <div class="section-card-title">📋 Dados demográficos</div>
+          <div class="form-grid form-grid-3">
+            <div class="form-group">
+              <label>Idade <span class="required">*</span></label>
+              <div class="input-unit-row">
+                <input type="number" id="idade" min="0" max="150" placeholder="Ex: 45" />
+                <select id="idadeUnidade">
+                  <option value="anos">anos</option>
+                  <option value="meses">meses</option>
+                  <option value="dias">dias</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Sexo biológico <span class="required">*</span></label>
+              <select id="sexo">
+                <option value="">Selecione</option>
+                <option value="Masculino">Masculino</option>
+                <option value="Feminino">Feminino</option>
+                <option value="Intersexo">Intersexo</option>
+                <option value="Não informado">Não informado</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Gênero</label>
+              <select id="genero">
+                <option value="">Selecione</option>
+                <option value="Homem cisgênero">Homem cisgênero</option>
+                <option value="Mulher cisgênero">Mulher cisgênero</option>
+                <option value="Homem transgênero">Homem transgênero</option>
+                <option value="Mulher transgênera">Mulher transgênera</option>
+                <option value="Não-binário">Não-binário</option>
+                <option value="Prefiro não informar">Prefiro não informar</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid form-grid-2" style="margin-top:16px">
+            <div class="form-group">
+              <label>Etnia / raça</label>
+              <select id="etnia">
+                <option value="">Selecione</option>
+                <option value="Branca">Branca</option>
+                <option value="Preta">Preta</option>
+                <option value="Parda">Parda</option>
+                <option value="Amarela">Amarela</option>
+                <option value="Indígena">Indígena</option>
+                <option value="Não declarado">Não declarado</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Ocupação</label>
+              <input type="text" id="ocupacao" placeholder="Ex: Professor universitário" />
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:16px">
+            <label>Procedência</label>
+            <input type="text" id="procedencia" placeholder="Ex: São Paulo – SP, Brasil" />
+          </div>
+          <div class="form-group" style="margin-top:16px">
+            <label>Outras informações relevantes</label>
+            <div class="assist-wrap">
+              <textarea id="outrasInfoPaciente" rows="3" placeholder="Comorbidades, histórico relevante brevemente..."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','outras informações do paciente')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','outras informações do paciente')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'encurtar','outras informações do paciente')"><span class="mi">✂️</span> Encurtar</button>
+                <button onclick="runAssist(this,'expandir','outras informações do paciente')"><span class="mi">🔭</span> Expandir</button>
+                <button onclick="runAssist(this,'formalizar','outras informações do paciente')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-card-title">✅ Consentimento</div>
+          <div class="check-group">
+            <input type="checkbox" id="declResponsavel" />
+            <label for="declResponsavel">Declaro que tenho consentimento documentado do paciente (ou responsável legal) para publicação deste relato de caso, conforme normas do CEP/CFM.</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ STEP 2 — História Clínica ══ -->
+      <div class="step-panel" id="step-2">
+        <div class="step-header">
+          <h1>História Clínica</h1>
+          <p>Descreva a apresentação do caso, história pregressa e contexto familiar/psicossocial.</p>
+        </div>
+        <div class="step-divider"></div>
+
+        <div class="section-card">
+          <div class="section-card-title">🚨 Queixa principal</div>
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label>Queixa principal <span class="required">*</span></label>
+              <div class="assist-wrap">
+                <textarea id="queixaPrincipal" rows="3" placeholder="Motivo principal da consulta/internação, em linguagem clínica..."></textarea>
+                <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+                <div class="assist-menu">
+                  <button onclick="runAssist(this,'melhorar','queixa principal')"><span class="mi">✨</span> Melhorar</button>
+                  <button onclick="runAssist(this,'corrigir','queixa principal')"><span class="mi">✏️</span> Corrigir</button>
+                  <button onclick="runAssist(this,'encurtar','queixa principal')"><span class="mi">✂️</span> Encurtar</button>
+                  <button onclick="runAssist(this,'expandir','queixa principal')"><span class="mi">🔭</span> Expandir</button>
+                  <button onclick="runAssist(this,'formalizar','queixa principal')"><span class="mi">🎓</span> Formalizar</button>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Duração dos sintomas</label>
+              <input type="text" id="duracaoSintomas" placeholder="Ex: 3 semanas, 6 meses, desde nascimento..." />
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-card-title">🏥 História da doença atual (HDA)</div>
+          <div class="form-group">
+            <div class="assist-wrap">
+              <textarea id="hda" rows="6" placeholder="Descreva cronologicamente o curso da doença, sintomas, evolução, fatores de melhora/piora, achados relevantes..."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','história da doença atual')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','história da doença atual')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'encurtar','história da doença atual')"><span class="mi">✂️</span> Encurtar</button>
+                <button onclick="runAssist(this,'expandir','história da doença atual')"><span class="mi">🔭</span> Expandir</button>
+                <button onclick="runAssist(this,'formalizar','história da doença atual')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-card-title">📜 Antecedentes e contexto</div>
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label>Histórico médico prévio</label>
+              <div class="assist-wrap">
+                <textarea id="historicoPrevio" rows="4" placeholder="Doenças prévias, cirurgias, hospitalizações..."></textarea>
+                <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+                <div class="assist-menu">
+                  <button onclick="runAssist(this,'melhorar','histórico médico prévio')"><span class="mi">✨</span> Melhorar</button>
+                  <button onclick="runAssist(this,'corrigir','histórico médico prévio')"><span class="mi">✏️</span> Corrigir</button>
+                  <button onclick="runAssist(this,'encurtar','histórico médico prévio')"><span class="mi">✂️</span> Encurtar</button>
+                  <button onclick="runAssist(this,'expandir','histórico médico prévio')"><span class="mi">🔭</span> Expandir</button>
+                  <button onclick="runAssist(this,'formalizar','histórico médico prévio')"><span class="mi">🎓</span> Formalizar</button>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>História familiar</label>
+              <div class="assist-wrap">
+                <textarea id="historiaFamiliar" rows="4" placeholder="Doenças hereditárias, padrões familiares relevantes..."></textarea>
+                <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+                <div class="assist-menu">
+                  <button onclick="runAssist(this,'melhorar','história familiar')"><span class="mi">✨</span> Melhorar</button>
+                  <button onclick="runAssist(this,'corrigir','história familiar')"><span class="mi">✏️</span> Corrigir</button>
+                  <button onclick="runAssist(this,'encurtar','história familiar')"><span class="mi">✂️</span> Encurtar</button>
+                  <button onclick="runAssist(this,'expandir','história familiar')"><span class="mi">🔭</span> Expandir</button>
+                  <button onclick="runAssist(this,'formalizar','história familiar')"><span class="mi">🎓</span> Formalizar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:16px">
+            <label>História psicossocial</label>
+            <div class="assist-wrap">
+              <textarea id="historiaPsicossocial" rows="4" placeholder="Situação socioeconômica, suporte familiar, tabagismo, etilismo, substâncias, estressores..."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','história psicossocial')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','história psicossocial')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'encurtar','história psicossocial')"><span class="mi">✂️</span> Encurtar</button>
+                <button onclick="runAssist(this,'expandir','história psicossocial')"><span class="mi">🔭</span> Expandir</button>
+                <button onclick="runAssist(this,'formalizar','história psicossocial')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ STEP 3 — Intervenções Anteriores ══ -->
+      <div class="step-panel" id="step-3">
+        <div class="step-header">
+          <h1>Intervenções Anteriores</h1>
+          <p>Tratamentos prévios, medicamentos em uso e alergias conhecidas.</p>
+        </div>
+        <div class="step-divider"></div>
+
+        <div class="section-card">
+          <div class="section-card-title">🏨 Tratamentos anteriores</div>
+          <div class="form-group">
+            <div class="assist-wrap">
+              <textarea id="tratamentosAnteriores" rows="5" placeholder="Internações, procedimentos, cirurgias, tratamentos ambulatoriais já realizados para esta condição..."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','tratamentos anteriores')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','tratamentos anteriores')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'encurtar','tratamentos anteriores')"><span class="mi">✂️</span> Encurtar</button>
+                <button onclick="runAssist(this,'expandir','tratamentos anteriores')"><span class="mi">🔭</span> Expandir</button>
+                <button onclick="runAssist(this,'formalizar','tratamentos anteriores')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-card-title">💉 Medicamentos em uso</div>
+          <div class="form-group">
+            <p class="hint" style="margin-bottom:8px">Liste nome, dose, via, frequência e indicação de cada medicamento.</p>
+            <div class="assist-wrap">
+              <textarea id="medicamentos" rows="5" placeholder="Ex: Metformina 850 mg VO 2x/dia (DM2), Losartana 50 mg VO 1x/dia (HAS)..."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','medicamentos em uso')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','medicamentos em uso')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'encurtar','medicamentos em uso')"><span class="mi">✂️</span> Encurtar</button>
+                <button onclick="runAssist(this,'expandir','medicamentos em uso')"><span class="mi">🔭</span> Expandir</button>
+                <button onclick="runAssist(this,'formalizar','medicamentos em uso')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-card-title">⚠️ Alergias e reações adversas</div>
+          <div class="form-group">
+            <div class="assist-wrap">
+              <textarea id="alergias" rows="3" placeholder="Ex: Penicilina – anafilaxia; AINEs – broncoespasmo. Sem alergias conhecidas."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','alergias')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','alergias')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'encurtar','alergias')"><span class="mi">✂️</span> Encurtar</button>
+                <button onclick="runAssist(this,'expandir','alergias')"><span class="mi">🔭</span> Expandir</button>
+                <button onclick="runAssist(this,'formalizar','alergias')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ STEP 4 — Achados Clínicos ══ -->
+      <div class="step-panel" id="step-4">
+        <div class="step-header">
+          <h1>Achados Clínicos</h1>
+          <p>Exame físico geral, sinais vitais e achados específicos do sistema/órgão acometido.</p>
+        </div>
+        <div class="step-divider"></div>
+
+        <div class="section-card">
+          <div class="section-card-title">🩺 Sinais vitais</div>
+          <div class="form-group">
+            <div class="assist-wrap">
+              <textarea id="sinaisVitais" rows="3" placeholder="PA: 120/80 mmHg · FC: 88 bpm · FR: 18 irpm · SpO2: 98% (AA) · Temp: 37,2°C · Glasgow: 15..."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','sinais vitais')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','sinais vitais')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'formalizar','sinais vitais')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-card-title">🫀 Exame físico geral</div>
+          <div class="form-group">
+            <div class="assist-wrap">
+              <textarea id="exameFisicoGeral" rows="5" placeholder="Estado geral, nível de consciência, hidratação, corado/anictérico, exame de pele, mucosas, gânglios, edemas..."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','exame físico geral')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','exame físico geral')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'encurtar','exame físico geral')"><span class="mi">✂️</span> Encurtar</button>
+                <button onclick="runAssist(this,'expandir','exame físico geral')"><span class="mi">🔭</span> Expandir</button>
+                <button onclick="runAssist(this,'formalizar','exame físico geral')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-card-title">🎯 Achados específicos</div>
+          <div class="form-group">
+            <div class="assist-wrap">
+              <textarea id="achadosEspecificos" rows="5" placeholder="Achados do sistema/aparelho de interesse: neurológico, cardiovascular, respiratório, abdome, musculoesquelético, etc..."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','achados específicos')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','achados específicos')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'encurtar','achados específicos')"><span class="mi">✂️</span> Encurtar</button>
+                <button onclick="runAssist(this,'expandir','achados específicos')"><span class="mi">🔭</span> Expandir</button>
+                <button onclick="runAssist(this,'formalizar','achados específicos')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ STEP 5 — Linha do Tempo ══ -->
+      <div class="step-panel" id="step-5">
+        <div class="step-header">
+          <h1>Linha do Tempo</h1>
+          <p>Crie uma cronologia dos eventos clínicos chave do caso.</p>
+        </div>
+        <div class="step-divider"></div>
+
+        <div class="section-card">
+          <div class="section-card-title">⚙️ Configurações da timeline</div>
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label>Formato de data/tempo</label>
+              <select id="tlFormato">
+                <option value="data-absoluta">Data absoluta (dd/mm/aaaa)</option>
+                <option value="dia-relativo">Dia relativo (D0, D+1...)</option>
+                <option value="semana">Por semana</option>
+                <option value="mes">Por mês</option>
+                <option value="livre">Livre (texto)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Saída desejada</label>
+              <select id="tlSaida">
+                <option value="tabela">Tabela</option>
+                <option value="figura">Figura/Diagrama</option>
+                <option value="narrativa">Narrativa integrada</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-card-title">📅 Eventos clínicos</div>
+          <div class="timeline-toolbar">
+            <button class="btn-sm primary" onclick="adicionarEvento()">+ Adicionar evento</button>
+            <button class="btn-sm" onclick="limparTimeline()">🗑 Limpar tudo</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="timeline-table" id="timelineTable">
+              <thead>
+                <tr>
+                  <th>Data / Tempo</th>
+                  <th>Evento</th>
+                  <th>Tipo</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="timelineBody">
+              </tbody>
+            </table>
+          </div>
+          <p style="margin-top:10px;font-size:12px;color:var(--t3)">💡 Dica: adicione pelo menos os eventos mais relevantes — admissão, diagnóstico, intervenção e desfecho.</p>
+        </div>
+      </div>
+
+      <!-- ══ STEP 6 — Diagnóstico ══ -->
+      <div class="step-panel" id="step-6">
+        <div class="step-header">
+          <h1>Diagnóstico</h1>
+          <p>Exames realizados, hipóteses diagnósticas e diagnóstico definitivo.</p>
+        </div>
+        <div class="step-divider"></div>
+
+        <div class="section-card">
+          <div class="section-card-title">🧪 Exames complementares</div>
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label>Exames laboratoriais</label>
+              <div class="assist-wrap">
+                <textarea id="examesLab" rows="5" placeholder="Hemograma, bioquímica, sorologias, marcadores tumorais, líquor, culturas, PCR, etc..."></textarea>
+                <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+                <div class="assist-menu">
+                  <button onclick="runAssist(this,'melhorar','exames laboratoriais')"><span class="mi">✨</span> Melhorar</button>
+                  <button onclick="runAssist(this,'corrigir','exames laboratoriais')"><span class="mi">✏️</span> Corrigir</button>
+                  <button onclick="runAssist(this,'encurtar','exames laboratoriais')"><span class="mi">✂️</span> Encurtar</button>
+                  <button onclick="runAssist(this,'expandir','exames laboratoriais')"><span class="mi">🔭</span> Expandir</button>
+                  <button onclick="runAssist(this,'formalizar','exames laboratoriais')"><span class="mi">🎓</span> Formalizar</button>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Exames de imagem</label>
+              <div class="assist-wrap">
+                <textarea id="examesImagem" rows="5" placeholder="RX, TC, RM, USG, PET-CT, angiografia — descreva os laudos relevantes..."></textarea>
+                <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+                <div class="assist-menu">
+                  <button onclick="runAssist(this,'melhorar','exames de imagem')"><span class="mi">✨</span> Melhorar</button>
+                  <button onclick="runAssist(this,'corrigir','exames de imagem')"><span class="mi">✏️</span> Corrigir</button>
+                  <button onclick="runAssist(this,'encurtar','exames de imagem')"><span class="mi">✂️</span> Encurtar</button>
+                  <button onclick="runAssist(this,'expandir','exames de imagem')"><span class="mi">🔭</span> Expandir</button>
+                  <button onclick="runAssist(this,'formalizar','exames de imagem')"><span class="mi">🎓</span> Formalizar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:16px">
+            <label>Outros exames (anatomopatológico, genético, funcional...)</label>
+            <div class="assist-wrap">
+              <textarea id="outrosExames" rows="4" placeholder="Biópsia, citologia, eletroneuromiografia, espirometria, audiometria, etc..."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','outros exames')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','outros exames')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'encurtar','outros exames')"><span class="mi">✂️</span> Encurtar</button>
+                <button onclick="runAssist(this,'expandir','outros exames')"><span class="mi">🔭</span> Expandir</button>
+                <button onclick="runAssist(this,'formalizar','outros exames')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-card-title">✅ Diagnóstico</div>
+          <div class="form-group">
+            <label>Diagnóstico definitivo <span class="required">*</span></label>
+            <div class="assist-wrap">
+              <textarea id="diagnosticoDefinitivo" rows="3" placeholder="Diagnóstico principal confirmado, com CID-10 se possível..."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','diagnóstico definitivo')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','diagnóstico definitivo')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'formalizar','diagnóstico definitivo')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+          <div class="form-grid form-grid-2" style="margin-top:16px">
+            <div class="form-group">
+              <label>Diagnósticos diferenciais considerados</label>
+              <div class="assist-wrap">
+                <textarea id="diferenciais" rows="4" placeholder="Liste os principais diagnósticos considerados e por que foram excluídos..."></textarea>
+                <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+                <div class="assist-menu">
+                  <button onclick="runAssist(this,'melhorar','diagnósticos diferenciais')"><span class="mi">✨</span> Melhorar</button>
+                  <button onclick="runAssist(this,'corrigir','diagnósticos diferenciais')"><span class="mi">✏️</span> Corrigir</button>
+                  <button onclick="runAssist(this,'expandir','diagnósticos diferenciais')"><span class="mi">🔭</span> Expandir</button>
+                  <button onclick="runAssist(this,'formalizar','diagnósticos diferenciais')"><span class="mi">🎓</span> Formalizar</button>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Desafios diagnósticos</label>
+              <div class="assist-wrap">
+                <textarea id="desafiosDiagnosticos" rows="4" placeholder="O que tornou este diagnóstico difícil ou incomum?"></textarea>
+                <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+                <div class="assist-menu">
+                  <button onclick="runAssist(this,'melhorar','desafios diagnósticos')"><span class="mi">✨</span> Melhorar</button>
+                  <button onclick="runAssist(this,'corrigir','desafios diagnósticos')"><span class="mi">✏️</span> Corrigir</button>
+                  <button onclick="runAssist(this,'expandir','desafios diagnósticos')"><span class="mi">🔭</span> Expandir</button>
+                  <button onclick="runAssist(this,'formalizar','desafios diagnósticos')"><span class="mi">🎓</span> Formalizar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:16px">
+            <label>Prognóstico</label>
+            <div class="assist-wrap">
+              <textarea id="prognostico" rows="3" placeholder="Prognóstico esperado com base na literatura e características do caso..."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','prognóstico')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','prognóstico')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'formalizar','prognóstico')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ STEP 7 — Intervenção ══ -->
+      <div class="step-panel" id="step-7">
+        <div class="step-header">
+          <h1>Intervenção Terapêutica</h1>
+          <p>Descreva o tratamento principal realizado e eventuais mudanças de conduta.</p>
+        </div>
+        <div class="step-divider"></div>
+
+        <div class="section-card">
+          <div class="section-card-title">🏥 Tipo e descrição da intervenção</div>
+          <div class="form-group">
+            <label>Tipo de intervenção</label>
+            <div class="chip-row" id="tipoIntervencaoChips">
+              <div class="chip" onclick="selecionarChip(this,'tipoIntervencao')">Farmacológica</div>
+              <div class="chip" onclick="selecionarChip(this,'tipoIntervencao')">Cirúrgica</div>
+              <div class="chip" onclick="selecionarChip(this,'tipoIntervencao')">Procedimento</div>
+              <div class="chip" onclick="selecionarChip(this,'tipoIntervencao')">Reabilitação</div>
+              <div class="chip" onclick="selecionarChip(this,'tipoIntervencao')">Psicoterapia</div>
+              <div class="chip" onclick="selecionarChip(this,'tipoIntervencao')">Paliativa</div>
+              <div class="chip" onclick="selecionarChip(this,'tipoIntervencao')">Multidisciplinar</div>
+              <div class="chip" onclick="selecionarChip(this,'tipoIntervencao')">Outra</div>
+            </div>
+            <input type="hidden" id="tipoIntervencao" />
+          </div>
+          <div class="form-group" style="margin-top:16px">
+            <label>Descrição detalhada da intervenção</label>
+            <div class="assist-wrap">
+              <textarea id="descIntervencao" rows="6" placeholder="Descreva o protocolo, fármacos e doses, técnica cirúrgica, cronograma terapêutico..."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','descrição da intervenção')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','descrição da intervenção')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'encurtar','descrição da intervenção')"><span class="mi">✂️</span> Encurtar</button>
+                <button onclick="runAssist(this,'expandir','descrição da intervenção')"><span class="mi">🔭</span> Expandir</button>
+                <button onclick="runAssist(this,'formalizar','descrição da intervenção')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-card-title">🔄 Mudanças de conduta</div>
+          <div class="check-group" style="margin-bottom:14px">
+            <input type="checkbox" id="houveMudanca" onchange="toggleMudanca(this)" />
+            <label for="houveMudanca">Houve mudança de conduta durante o tratamento</label>
+          </div>
+          <div id="mudancaFields" style="display:none">
+            <div class="form-group" style="margin-bottom:14px">
+              <label>Descrição da mudança</label>
+              <div class="assist-wrap">
+                <textarea id="descMudanca" rows="4" placeholder="O que mudou e quando?"></textarea>
+                <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+                <div class="assist-menu">
+                  <button onclick="runAssist(this,'melhorar','descrição da mudança de conduta')"><span class="mi">✨</span> Melhorar</button>
+                  <button onclick="runAssist(this,'corrigir','descrição da mudança de conduta')"><span class="mi">✏️</span> Corrigir</button>
+                  <button onclick="runAssist(this,'formalizar','descrição da mudança de conduta')"><span class="mi">🎓</span> Formalizar</button>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Justificativa da mudança</label>
+              <div class="assist-wrap">
+                <textarea id="justMudanca" rows="3" placeholder="Motivo clínico, efeito adverso, falha terapêutica..."></textarea>
+                <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+                <div class="assist-menu">
+                  <button onclick="runAssist(this,'melhorar','justificativa da mudança')"><span class="mi">✨</span> Melhorar</button>
+                  <button onclick="runAssist(this,'corrigir','justificativa da mudança')"><span class="mi">✏️</span> Corrigir</button>
+                  <button onclick="runAssist(this,'formalizar','justificativa da mudança')"><span class="mi">🎓</span> Formalizar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ STEP 8 — Desfechos ══ -->
+      <div class="step-panel" id="step-8">
+        <div class="step-header">
+          <h1>Desfechos Clínicos</h1>
+          <p>Resultados obtidos, exames de seguimento, adesão e eventos adversos.</p>
+        </div>
+        <div class="step-divider"></div>
+
+        <div class="section-card">
+          <div class="section-card-title">✅ Desfecho clínico</div>
+          <div class="form-group">
+            <label>Tipo de desfecho</label>
+            <div class="chip-row" id="desfechoChips">
+              <div class="chip" onclick="selecionarChip(this,'tipoDesfecho')">Cura completa</div>
+              <div class="chip" onclick="selecionarChip(this,'tipoDesfecho')">Melhora parcial</div>
+              <div class="chip" onclick="selecionarChip(this,'tipoDesfecho')">Estabilização</div>
+              <div class="chip" onclick="selecionarChip(this,'tipoDesfecho')">Progressão</div>
+              <div class="chip" onclick="selecionarChip(this,'tipoDesfecho')">Óbito</div>
+              <div class="chip" onclick="selecionarChip(this,'tipoDesfecho')">Perda de seguimento</div>
+            </div>
+            <input type="hidden" id="tipoDesfecho" />
+          </div>
+          <div class="form-group" style="margin-top:16px">
+            <label>Descrição do desfecho clínico</label>
+            <div class="assist-wrap">
+              <textarea id="desfechoClinco" rows="5" placeholder="Descreva o estado do paciente ao final do seguimento, incluindo parâmetros objetivos de melhora/piora..."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','desfecho clínico')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','desfecho clínico')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'encurtar','desfecho clínico')"><span class="mi">✂️</span> Encurtar</button>
+                <button onclick="runAssist(this,'expandir','desfecho clínico')"><span class="mi">🔭</span> Expandir</button>
+                <button onclick="runAssist(this,'formalizar','desfecho clínico')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-card-title">🔁 Seguimento</div>
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label>Exames de seguimento</label>
+              <div class="assist-wrap">
+                <textarea id="examesSeguimento" rows="4" placeholder="Resultados de exames de controle realizados após a intervenção..."></textarea>
+                <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+                <div class="assist-menu">
+                  <button onclick="runAssist(this,'melhorar','exames de seguimento')"><span class="mi">✨</span> Melhorar</button>
+                  <button onclick="runAssist(this,'corrigir','exames de seguimento')"><span class="mi">✏️</span> Corrigir</button>
+                  <button onclick="runAssist(this,'formalizar','exames de seguimento')"><span class="mi">🎓</span> Formalizar</button>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Tempo de acompanhamento</label>
+              <input type="text" id="tempoAcompanhamento" placeholder="Ex: 6 meses, 2 anos, até alta hospitalar..." />
+            </div>
+          </div>
+          <div class="form-grid form-grid-2" style="margin-top:16px">
+            <div class="form-group">
+              <label>Adesão ao tratamento</label>
+              <select id="adesao">
+                <option value="">Selecione</option>
+                <option value="Boa adesão">Boa adesão</option>
+                <option value="Adesão parcial">Adesão parcial</option>
+                <option value="Baixa adesão">Baixa adesão</option>
+                <option value="Abandono">Abandono</option>
+                <option value="Não avaliado">Não avaliado</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Eventos adversos</label>
+              <div class="assist-wrap">
+                <textarea id="eventosAdversos" rows="3" placeholder="Efeitos adversos, complicações observadas durante o tratamento..."></textarea>
+                <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+                <div class="assist-menu">
+                  <button onclick="runAssist(this,'melhorar','eventos adversos')"><span class="mi">✨</span> Melhorar</button>
+                  <button onclick="runAssist(this,'corrigir','eventos adversos')"><span class="mi">✏️</span> Corrigir</button>
+                  <button onclick="runAssist(this,'formalizar','eventos adversos')"><span class="mi">🎓</span> Formalizar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ STEP 9 — Perspectiva do Paciente ══ -->
+      <div class="step-panel" id="step-9">
+        <div class="step-header">
+          <h1>Perspectiva do Paciente</h1>
+          <p>O checklist CARE recomenda incluir a visão do paciente — como ele vivenciou a doença e o tratamento.</p>
+        </div>
+        <div class="step-divider"></div>
+
+        <div class="section-card">
+          <div class="section-card-title">💬 Relato do paciente</div>
+          <div class="form-group">
+            <div class="assist-wrap">
+              <textarea id="perspectivaPaciente" rows="8" placeholder="Descreva como o paciente relatou sua experiência com a doença e com o tratamento. Inclua seu entendimento sobre o diagnóstico, expectativas, preocupações, qualidade de vida e satisfação com o cuidado recebido..."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','perspectiva do paciente')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','perspectiva do paciente')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'encurtar','perspectiva do paciente')"><span class="mi">✂️</span> Encurtar</button>
+                <button onclick="runAssist(this,'expandir','perspectiva do paciente')"><span class="mi">🔭</span> Expandir</button>
+                <button onclick="runAssist(this,'formalizar','perspectiva do paciente')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+            <p class="hint" style="margin-top:6px">Este campo pode ser deixado em branco se o paciente não pôde ou não quis se manifestar.</p>
+          </div>
+        </div>
+
+        <div class="section-card" style="background:var(--acid-dim);border-color:rgba(200,255,0,0.3)">
+          <div class="section-card-title">💡 Por que isso importa?</div>
+          <p style="font-size:14px;color:var(--t2);line-height:1.7">
+            O checklist CARE 2013 (item 11) exige que o relato inclua a perspectiva do paciente. Periódicos de alto impacto como <em>BMJ Case Reports</em>, <em>JAMA Case Reports</em> e <em>The Lancet</em> valorizam fortemente esse aspecto, pois reflete o cuidado centrado na pessoa e aumenta a relevância clínica do relato.
+          </p>
+        </div>
+      </div>
+
+      <!-- ══ STEP 10 — Editorial + Imagens ══ -->
+      <div class="step-panel" id="step-10">
+        <div class="step-header">
+          <h1>Editorial &amp; Publicação</h1>
+          <p>Defina o contexto editorial do relato, insira imagens e inicie a geração do artigo.</p>
+        </div>
+        <div class="step-divider"></div>
+
+        <div class="section-card">
+          <div class="section-card-title">🏥 Contexto clínico</div>
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label>Área de atuação</label>
+              <input type="text" id="areaAtuacao" placeholder="Ex: Neurologia, Cardiologia, Pediatria..." />
+            </div>
+            <div class="form-group">
+              <label>Especialidade</label>
+              <input type="text" id="especialidade" placeholder="Ex: Neurocirurgia, Hematologia..." />
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:16px">
+            <label>Relevância clínica deste caso</label>
+            <div class="assist-wrap">
+              <textarea id="problemasClinicos" rows="4" placeholder="Por que este caso é único, incomum ou de interesse para publicação? Qual é a lição clínica principal?"></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','relevância clínica')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','relevância clínica')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'encurtar','relevância clínica')"><span class="mi">✂️</span> Encurtar</button>
+                <button onclick="runAssist(this,'expandir','relevância clínica')"><span class="mi">🔭</span> Expandir</button>
+                <button onclick="runAssist(this,'formalizar','relevância clínica')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:16px">
+            <label>O que diferencia este caso na literatura?</label>
+            <div class="assist-wrap">
+              <textarea id="diferencialCaso" rows="4" placeholder="Apresentação atípica, resposta inesperada, associação rara, inovação diagnóstica ou terapêutica..."></textarea>
+              <button class="assist-btn" title="IA ✦" onclick="toggleAssist(this)">✦</button>
+              <div class="assist-menu">
+                <button onclick="runAssist(this,'melhorar','diferencial do caso')"><span class="mi">✨</span> Melhorar</button>
+                <button onclick="runAssist(this,'corrigir','diferencial do caso')"><span class="mi">✏️</span> Corrigir</button>
+                <button onclick="runAssist(this,'expandir','diferencial do caso')"><span class="mi">🔭</span> Expandir</button>
+                <button onclick="runAssist(this,'formalizar','diferencial do caso')"><span class="mi">🎓</span> Formalizar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-card-title">📰 Publicação alvo</div>
+          <div class="form-grid form-grid-2">
+            <div class="form-group">
+              <label>Periódico alvo</label>
+              <select id="periodico">
+                <option value="">— deixe a IA sugerir —</option>
+                <option value="BMJ Case Reports">BMJ Case Reports</option>
+                <option value="JAMA Case Reports">JAMA Case Reports</option>
+                <option value="American Journal of Case Reports">American Journal of Case Reports</option>
+                <option value="Journal of Medical Case Reports">Journal of Medical Case Reports</option>
+                <option value="The Lancet">The Lancet</option>
+                <option value="NEJM Case Records">NEJM Case Records</option>
+                <option value="Autopsy & Case Reports">Autopsy &amp; Case Reports</option>
+                <option value="Frontiers in Medicine – Case Report">Frontiers in Medicine – Case Report</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Formato de referência</label>
+              <select id="formatoRef">
+                <option value="Vancouver">Vancouver</option>
+                <option value="APA">APA</option>
+                <option value="ABNT">ABNT</option>
+                <option value="Chicago">Chicago</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:16px">
+            <label>Tipo de produto final</label>
+            <div class="chip-row" id="tipoProdutoChips">
+              <div class="chip selected" onclick="selecionarChip(this,'tipoProduto')">Relato de caso completo</div>
+              <div class="chip" onclick="selecionarChip(this,'tipoProduto')">Resumo estruturado</div>
+              <div class="chip" onclick="selecionarChip(this,'tipoProduto')">Abstract (inglês)</div>
+              <div class="chip" onclick="selecionarChip(this,'tipoProduto')">Discussão + revisão</div>
+            </div>
+            <input type="hidden" id="tipoProduto" value="Relato de caso completo" />
+          </div>
+          <div class="form-group" style="margin-top:16px">
+            <label>Seu e-mail (para notificação)</label>
+            <input type="email" id="emailUsuario" placeholder="medico@hospital.com" />
+          </div>
+        </div>
+
+        <!-- image upload -->
+        <div class="section-card">
+          <div class="section-card-title">🖼️ Imagens do artigo</div>
+          <p style="font-size:13px;color:var(--t2);margin-bottom:14px;line-height:1.6">
+            Insira imagens para serem incluídas no artigo (fotos clínicas, exames de imagem, anatomopatológico, figuras, gráficos). Máx 10 imagens · 5 MB cada · JPG, PNG, GIF, TIFF.
+          </p>
+
+          <div class="upload-zone" id="uploadZone">
+            <input type="file" id="imgFileInput" accept="image/jpeg,image/png,image/gif,image/tiff" multiple />
+            <div class="upload-icon">🖼️</div>
+            <h3>Arraste imagens aqui</h3>
+            <p>ou clique para selecionar arquivos</p>
+            <p class="upload-hint">JPG · PNG · GIF · TIFF · máx 5 MB por arquivo · até 10 imagens</p>
+          </div>
+
+          <div class="img-grid" id="imgGrid"></div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-card-title">✅ Consentimento para publicação</div>
+          <div class="check-group">
+            <input type="checkbox" id="consentimentoInformado" />
+            <label for="consentimentoInformado">Confirmo que possuo consentimento informado e documentado do paciente (ou responsável legal) para publicação deste relato de caso em periódico científico, incluindo as imagens inseridas acima.</label>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content-scroll -->
+
+    <!-- ── nav bar ── -->
+    <footer class="step-nav">
+      <div class="nav-left">
+        <button class="btn-prev" id="btnPrev" onclick="navStep(-1)" disabled>
+          ← Anterior
+        </button>
+        <span class="nav-step-text" id="navStepText">Etapa 1 de 10</span>
+      </div>
+      <div>
+        <button class="btn-next" id="btnNext" onclick="navStep(1)">
+          Avançar →
+        </button>
+        <button class="btn-submit" id="btnSubmit" onclick="iniciarGeracao()" style="display:none">
+          🚀 Iniciar geração do artigo
+        </button>
+      </div>
+    </footer>
+  </div><!-- /main-area -->
+</div><!-- /app-shell -->
+
+<!-- ── Assist loading overlay ── -->
+<div class="assist-loading" id="assistLoading">
+  <div class="assist-spinner">
+    <div class="spinner-ring"></div>
+    <span style="font-size:14px;font-weight:600;color:var(--t1)">IA processando texto…</span>
+  </div>
+</div>
+
+<!-- ── Pipeline modal ── -->
+<div class="modal-overlay" id="pipelineModal">
+  <div class="modal-box">
+    <h2>Gerando seu relato</h2>
+    <p class="modal-sub" id="pipelineStatusMsg">Pipeline iniciado — aguarde...</p>
+
+    <div class="pipeline-layout">
+      <!-- Character column -->
+      <div class="pipeline-character-col">
+        <img class="pipeline-char-img" id="pipelineChar" src="assets/pixel-char-glow.png" alt="" aria-hidden="true">
+        <div class="pipeline-char-label" id="pipelineCharLabel">Analisando</div>
+      </div>
+
+      <!-- Steps column -->
+      <div class="pipeline-steps-col">
+        <div class="pipeline-steps" id="pipelineSteps">
+          <div class="p-step" id="ps-1">
+            <span class="p-step-icon">
+              <svg><use href="#px-magnify"/></svg>
+            </span>
+            <div class="p-step-text">
+              <div class="p-step-name">Validação</div>
+              <div class="p-step-agent" id="pa-1">Verificador de dados clínicos</div>
+              <div class="p-step-detail">Aguardando...</div>
+            </div>
+            <span class="p-step-status">⏳</span>
+          </div>
+          <div class="p-step" id="ps-2">
+            <span class="p-step-icon">
+              <svg><use href="#px-magnify"/></svg>
+            </span>
+            <div class="p-step-text">
+              <div class="p-step-name">Anti-duplicação</div>
+              <div class="p-step-agent" id="pa-2">Agente de originalidade</div>
+              <div class="p-step-detail">Aguardando...</div>
+            </div>
+            <span class="p-step-status">⏳</span>
+          </div>
+          <div class="p-step" id="ps-3">
+            <span class="p-step-icon">
+              <svg><use href="#px-books"/></svg>
+            </span>
+            <div class="p-step-text">
+              <div class="p-step-name">Pesquisa bibliográfica</div>
+              <div class="p-step-agent" id="pa-3">PubMed · OpenAlex · Crossref</div>
+              <div class="p-step-detail">Aguardando...</div>
+            </div>
+            <span class="p-step-status">⏳</span>
+          </div>
+          <div class="p-step" id="ps-4">
+            <span class="p-step-icon">
+              <svg><use href="#px-lightning"/></svg>
+            </span>
+            <div class="p-step-text">
+              <div class="p-step-name">Redação</div>
+              <div class="p-step-agent" id="pa-4">Claude Sonnet 4.6 · GPT-4o</div>
+              <div class="p-step-detail">Aguardando...</div>
+            </div>
+            <span class="p-step-status">⏳</span>
+          </div>
+          <div class="p-step" id="ps-5">
+            <span class="p-step-icon">
+              <svg><use href="#px-clipboard"/></svg>
+            </span>
+            <div class="p-step-text">
+              <div class="p-step-name">Revisão CARE</div>
+              <div class="p-step-agent" id="pa-5">GPT-4o · CARE 2013</div>
+              <div class="p-step-detail">Aguardando...</div>
+            </div>
+            <span class="p-step-status">⏳</span>
+          </div>
+          <div class="p-step" id="ps-6">
+            <span class="p-step-icon">
+              <svg><use href="#px-docstar"/></svg>
+            </span>
+            <div class="p-step-text">
+              <div class="p-step-name">Finalização DOCX</div>
+              <div class="p-step-agent" id="pa-6">DOCX Generator · ABNT</div>
+              <div class="p-step-detail">Aguardando...</div>
+            </div>
+            <span class="p-step-status">⏳</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-modal-ok" id="btnModalOk" onclick="location.href='dashboard.html'" style="display:none">Ver no Dashboard →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Demo Result Modal ── -->
+<div class="modal-overlay" id="demoResultModal" style="overflow-y:auto;align-items:flex-start;padding:24px 16px;">
+  <div class="modal-box" style="max-width:720px;width:100%;padding:40px;margin:auto;position:relative;">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(200,255,0,0.12);border:1px solid rgba(200,255,0,0.3);border-radius:99px;padding:5px 14px;font-size:12px;font-weight:600;color:#9acd00;margin-bottom:16px;">
+        ⚡ Prévia gerada por IA
+      </div>
+      <h2 id="demoTitulo" style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;line-height:1.4;color:var(--t1);margin-bottom:8px;">Relato de Caso Clínico</h2>
+      <p style="font-size:13px;color:var(--t3);">Introdução e Apresentação do Caso geradas a partir dos seus dados</p>
+    </div>
+
+    <!-- Sections unlocked -->
+    <div id="demoConteudo" style="margin-bottom:0;">
+      <!-- Introdução -->
+      <div style="margin-bottom:28px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-bottom:12px;">Introdução</div>
+        <div id="demoIntroducao" style="font-size:14.5px;line-height:1.75;color:var(--t1);display:flex;flex-direction:column;gap:14px;"></div>
+      </div>
+      <!-- Caso Clínico -->
+      <div style="margin-bottom:0;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-bottom:12px;">Apresentação do Caso</div>
+        <div id="demoCasoClinco" style="font-size:14.5px;line-height:1.75;color:var(--t1);display:flex;flex-direction:column;gap:14px;"></div>
+      </div>
+    </div>
+
+    <!-- Locked sections gradient -->
+    <div style="position:relative;margin-top:28px;">
+      <!-- gradient fade -->
+      <div style="position:absolute;top:-60px;left:0;right:0;height:80px;background:linear-gradient(to bottom,transparent,rgba(255,255,255,0.97));z-index:1;pointer-events:none;"></div>
+      <!-- lock card -->
+      <div style="background:var(--light);border:1.5px solid var(--border);border-radius:14px;padding:36px 28px;text-align:center;">
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:24px;opacity:.45;pointer-events:none;user-select:none;">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:500;color:var(--t2);">
+            🔒 <span>Discussão (10 parágrafos com referências ABNT)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:500;color:var(--t2);">
+            🔒 <span>Conclusão · Resumo CARE · Palavras-chave MeSH</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:500;color:var(--t2);">
+            🔒 <span>Referências bibliográficas · Score CARE 2013</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:500;color:var(--t2);">
+            🔒 <span>Download DOCX formatado (ABNT/Vancouver)</span>
+          </div>
+        </div>
+        <p style="font-size:15px;font-weight:600;color:var(--t1);margin-bottom:6px;">Gostou da prévia?</p>
+        <p style="font-size:13px;color:var(--t3);line-height:1.6;margin-bottom:24px;">
+          Crie sua conta gratuita para gerar o relato <strong>completo</strong> com Discussão,<br>
+          Referências, Score CARE e download em DOCX — em menos de 3 minutos.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:10px;align-items:center;">
+          <button onclick="irParaLogin('register')" style="display:inline-flex;align-items:center;gap:8px;padding:14px 32px;background:var(--acid);border:none;border-radius:10px;font-size:15px;font-weight:700;color:var(--obsidian);cursor:pointer;letter-spacing:-.01em;">
+            🔓 Criar conta grátis e gerar relato completo
+          </button>
+          <button onclick="irParaLogin('login')" style="background:none;border:none;font-size:13px;color:var(--t3);cursor:pointer;text-decoration:underline;">
+            Já tenho conta — entrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Login Gate Modal ── -->
+<div class="modal-overlay" id="loginGateModal" onclick="fecharLoginGate()" style="background:rgba(10,10,11,0.65);backdrop-filter:blur(4px);">
+  <div class="modal-box" onclick="event.stopPropagation()" style="max-width:420px;text-align:center;padding:48px 40px 40px;">
+    <img src="assets/pixel-researcher.png" alt="" style="width:80px;height:auto;image-rendering:pixelated;margin:0 auto 20px;display:block;">
+    <h2 style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--t1);margin-bottom:10px;">Prévia gratuita</h2>
+    <p style="font-size:14px;color:var(--t3);line-height:1.6;margin-bottom:28px;">
+      Veja a Introdução e o Caso Clínico gerados pela IA — sem criar conta.<br>
+      Crie uma conta gratuita para gerar o relato <strong>completo</strong> com DOCX.
+    </p>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+      <button onclick="irParaLogin('google')" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 20px;background:#fff;border:1.5px solid var(--border);border-radius:9px;font-size:14px;font-weight:600;color:var(--t1);cursor:pointer;transition:border-color .15s,box-shadow .15s;" onmouseover="this.style.borderColor='#999'" onmouseout="this.style.borderColor='var(--border)'">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58Z"/></svg>
+        Entrar com Google
+      </button>
+      <button onclick="irParaLogin('login')" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;background:var(--obsidian);border:none;border-radius:9px;font-size:14px;font-weight:600;color:#fff;cursor:pointer;transition:opacity .15s;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+        Entrar com e-mail
+      </button>
+      <button onclick="irParaLogin('register')" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 20px;background:transparent;border:1.5px solid var(--border);border-radius:9px;font-size:14px;font-weight:600;color:var(--t2);cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor=var('--obsidian')" onmouseout="this.style.borderColor='var(--border)'">
+        Criar conta grátis →
+      </button>
+    </div>
+
+    <button onclick="fecharLoginGate();iniciarDemo();" style="display:flex;align-items:center;justify-content:center;width:100%;padding:12px 20px;background:rgba(200,255,0,0.12);border:1.5px solid rgba(200,255,0,0.35);border-radius:9px;font-size:14px;font-weight:600;color:#7aa300;cursor:pointer;margin-bottom:10px;margin-top:6px;">
+      ⚡ Ver prévia gratuita (sem login)
+    </button>
+    <button onclick="fecharLoginGate()" style="background:none;border:none;font-size:12px;color:var(--t3);cursor:pointer;text-decoration:underline;">
+      Continuar preenchendo
+    </button>
+  </div>
+</div>
+
+<!-- ── Toast container ── -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ══ JAVASCRIPT ══ -->
+<script>
+const API = window.location.hostname === 'localhost'
+  ? 'http://localhost:8000'
+  : 'https://caseos-api-bhdx.onrender.com';
+
+/* ── auth helpers ── */
+function getToken() { return sessionStorage.getItem('rccs_token'); }
+
+async function tryRefreshToken() {
+  try {
+    const res = await fetch(`${API}/auth/refresh`, { method: 'POST', credentials: 'include' });
+    if (!res.ok) return false;
+    const data = await res.json();
+    sessionStorage.setItem('rccs_token', data.access_token);
+    sessionStorage.setItem('rccs_user', JSON.stringify(data.usuario));
+    return true;
+  } catch { return false; }
+}
+
+function getUser() {
+  try { return JSON.parse(sessionStorage.getItem('rccs_user') || 'null'); } catch { return null; }
+}
+
+/* ── check auth & show login gate if needed ── */
+async function checkAuthForGeneration() {
+  if (getToken()) return true;
+  // try refresh via httpOnly cookie
+  const ok = await tryRefreshToken();
+  if (ok) return true;
+  // not authenticated — show gate modal
+  abrirLoginGate();
+  return false;
+}
+
+function abrirLoginGate() {
+  document.getElementById('loginGateModal').classList.add('show');
+}
+function fecharLoginGate() {
+  document.getElementById('loginGateModal').classList.remove('show');
+}
+function irParaLogin(modo) {
+  // Salva o sessaoId para recuperar ao voltar
+  sessionStorage.setItem('rccs_gate_sessao', sessaoId);
+  location.href = 'login.html' + (modo === 'register' ? '?tab=register' : '');
+}
+
+/* ── session id (restore if returning from login gate) ── */
+let sessaoId = new URLSearchParams(location.search).get('sessao')
+  || sessionStorage.getItem('rccs_gate_sessao')
+  || crypto.randomUUID();
+sessionStorage.removeItem('rccs_gate_sessao'); // cleanup after restore
+
+/* ── step state ── */
+const STEPS = [
+  { title: 'Identificação',       sub: 'Dados do paciente',       icon: 'px-home' },
+  { title: 'História Clínica',    sub: 'HDA e antecedentes',      icon: 'px-books' },
+  { title: 'Intervenções Ant.',   sub: 'Fármacos e alergias',     icon: 'px-lightning' },
+  { title: 'Achados Clínicos',    sub: 'Exame físico',            icon: 'px-magnify' },
+  { title: 'Linha do Tempo',      sub: 'Cronologia de eventos',   icon: 'px-clipboard' },
+  { title: 'Diagnóstico',         sub: 'Exames e hipóteses',      icon: 'px-magnify' },
+  { title: 'Intervenção',         sub: 'Tratamento realizado',    icon: 'px-lightning' },
+  { title: 'Desfechos',           sub: 'Resultados e seguimento', icon: 'px-docstar' },
+  { title: 'Perspectiva',         sub: 'Relato do paciente',      icon: 'px-books' },
+  { title: 'Editorial',           sub: 'Publicação e imagens',    icon: 'px-docstar' },
+];
+let currentStep = 1;
+const completed = new Set();
+
+function toggleCaseSidebar(force) {
+  const sidebar = document.getElementById('caseSidebar');
+  const btn = document.getElementById('caseSidebarBtn');
+  if (!sidebar) return;
+  const shouldCollapse = typeof force === 'boolean' ? force : !sidebar.classList.contains('collapsed');
+  sidebar.classList.toggle('collapsed', shouldCollapse);
+  if (btn) {
+    btn.textContent = shouldCollapse ? '›' : '‹';
+    btn.title = shouldCollapse ? 'Expandir menu' : 'Recolher menu';
+    btn.setAttribute('aria-label', btn.title);
+  }
+  try { localStorage.setItem('caseos_case_sidebar_collapsed', shouldCollapse ? '1' : '0'); } catch {}
+}
+
+function restoreCaseSidebar() {
+  try {
+    toggleCaseSidebar(true);
+  } catch {}
+}
+
+/* ── build sidebar step list ── */
+function buildSidebar() {
+  const list = document.getElementById('stepList');
+  list.innerHTML = '';
+  STEPS.forEach((s, i) => {
+    const n = i + 1;
+    const item = document.createElement('div');
+    item.className = 'step-item' + (n === currentStep ? ' active' : '') + (completed.has(n) ? ' done' : '');
+    item.id = 'sidebar-step-' + n;
+    item.onclick = () => goToStep(n);
+    item.innerHTML =
+      '<div class="step-num">' + (completed.has(n) ? '✓' : '<svg><use href="#' + s.icon + '"/></svg>') + '</div>' +
+      '<div class="step-info">' +
+        '<div class="step-title">' + s.title + '</div>' +
+        '<div class="step-sub">' + s.sub + '</div>' +
+      '</div>';
+    list.appendChild(item);
+  });
+}
+
+function updateProgress() {
+  const pct = Math.round((completed.size / STEPS.length) * 100);
+  document.getElementById('progPct').textContent = pct + '%';
+  document.getElementById('progFill').style.width = pct + '%';
+}
+
+function goToStep(n) {
+  if (n < 1 || n > STEPS.length) return;
+  document.getElementById('step-' + currentStep).classList.remove('active');
+  currentStep = n;
+  document.getElementById('step-' + currentStep).classList.add('active');
+  document.getElementById('contentScroll').scrollTo(0, 0);
+  buildSidebar();
+  updateNavUI();
+}
+
+function updateNavUI() {
+  document.getElementById('topbarBadge').textContent = 'Etapa ' + currentStep + ' de ' + STEPS.length;
+  document.getElementById('topbarTitle').textContent = STEPS[currentStep-1].title;
+  document.getElementById('navStepText').textContent = 'Etapa ' + currentStep + ' de ' + STEPS.length;
+  document.getElementById('btnPrev').disabled = currentStep === 1;
+  if (currentStep === STEPS.length) {
+    document.getElementById('btnNext').style.display = 'none';
+    document.getElementById('btnSubmit').style.display = 'flex';
+  } else {
+    document.getElementById('btnNext').style.display = 'flex';
+    document.getElementById('btnSubmit').style.display = 'none';
+  }
+}
+
+function navStep(dir) {
+  if (dir > 0) completed.add(currentStep);
+  goToStep(currentStep + dir);
+  updateProgress();
+}
+
+buildSidebar();
+restoreCaseSidebar();
+updateNavUI();
+updateProgress();
+
+/* ══ TIMELINE ══ */
+let timeline = [];
+
+function adicionarEvento() {
+  const id = Date.now();
+  timeline.push({ id: id, data: '', evento: '', tipo: '' });
+  renderTimeline();
+}
+function removerEvento(id) {
+  timeline = timeline.filter(function(e) { return e.id !== id; });
+  renderTimeline();
+}
+function limparTimeline() {
+  if (timeline.length === 0) return;
+  if (!confirm('Remover todos os eventos da timeline?')) return;
+  timeline = [];
+  renderTimeline();
+}
+function renderTimeline() {
+  const tbody = document.getElementById('timelineBody');
+  if (timeline.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--t3);padding:20px;font-size:13px">Nenhum evento. Clique em "+ Adicionar evento".</td></tr>';
+    return;
+  }
+  tbody.innerHTML = timeline.map(function(e) {
+    return '<tr data-id="' + e.id + '">' +
+      '<td><input type="text" value="' + (e.data||'') + '" placeholder="Ex: D0, 01/01/2024" oninput="updateEvento(' + e.id + ',\'data\',this.value)" /></td>' +
+      '<td><input type="text" value="' + (e.evento||'') + '" placeholder="Descrição do evento" style="width:100%" oninput="updateEvento(' + e.id + ',\'evento\',this.value)" /></td>' +
+      '<td><select onchange="updateEvento(' + e.id + ',\'tipo\',this.value)">' +
+        '<option value="">— tipo —</option>' +
+        ['Sintoma','Consulta','Exame','Diagnóstico','Tratamento','Cirurgia','Alta','Seguimento','Óbito'].map(function(t) {
+          return '<option value="' + t + '"' + (e.tipo===t?' selected':'') + '>' + t + '</option>';
+        }).join('') +
+      '</select></td>' +
+      '<td><button class="del-row" onclick="removerEvento(' + e.id + ')">✕</button></td>' +
+    '</tr>';
+  }).join('');
+}
+function updateEvento(id, field, val) {
+  const ev = timeline.find(function(e) { return e.id === id; });
+  if (ev) ev[field] = val;
+}
+renderTimeline();
+
+/* ══ CHIP SELECTOR ══ */
+function selecionarChip(el, fieldId) {
+  const parent = el.closest('.chip-row');
+  parent.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('selected'); });
+  el.classList.add('selected');
+  const hidden = document.getElementById(fieldId);
+  if (hidden) hidden.value = el.textContent.trim();
+}
+
+/* ══ MUDANÇA DE CONDUTA TOGGLE ══ */
+function toggleMudanca(cb) {
+  document.getElementById('mudancaFields').style.display = cb.checked ? 'block' : 'none';
+}
+
+/* ══ IA ASSIST ══ */
+function toggleAssist(btn) {
+  const menu = btn.nextElementSibling;
+  document.querySelectorAll('.assist-menu.open').forEach(function(m) { if (m !== menu) m.classList.remove('open'); });
+  menu.classList.toggle('open');
+  const close = function(e) {
+    if (!menu.contains(e.target) && e.target !== btn) {
+      menu.classList.remove('open');
+      document.removeEventListener('click', close);
+    }
+  };
+  setTimeout(function() { document.addEventListener('click', close); }, 0);
+}
+
+async function runAssist(menuBtn, acao, campo) {
+  const menu = menuBtn.closest('.assist-menu');
+  const wrap = menu.closest('.assist-wrap');
+  const textarea = wrap.querySelector('textarea');
+  const texto = textarea.value.trim();
+  if (!texto) { showToast('Escreva algum texto antes de usar a IA.', 'error'); return; }
+  menu.classList.remove('open');
+  document.getElementById('assistLoading').classList.add('show');
+  try {
+    const res = await fetch(API + '/chat/assist-texto', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+      body: JSON.stringify({ texto: texto, acao: acao, contexto_campo: campo })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    textarea.value = data.resposta;
+    showToast('✦ Texto atualizado pela IA', 'success');
+  } catch(e) {
+    showToast('Erro ao processar: ' + e.message, 'error');
+  } finally {
+    document.getElementById('assistLoading').classList.remove('show');
+  }
+}
+
+/* ══ IMAGE UPLOAD ══ */
+const uploadedImages = [];
+const uploadZone = document.getElementById('uploadZone');
+const imgFileInput = document.getElementById('imgFileInput');
+const imgGrid = document.getElementById('imgGrid');
+
+uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', function() { uploadZone.classList.remove('drag-over'); });
+uploadZone.addEventListener('drop', function(e) {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  handleFiles(e.dataTransfer.files);
+});
+imgFileInput.addEventListener('change', function() { handleFiles(imgFileInput.files); });
+
+function handleFiles(files) {
+  const allowed = ['image/jpeg','image/png','image/gif','image/tiff'];
+  const maxSize = 5 * 1024 * 1024;
+  Array.from(files).forEach(function(file) {
+    if (!allowed.includes(file.type)) { showToast('Tipo não suportado: ' + file.name, 'error'); return; }
+    if (file.size > maxSize) { showToast('Arquivo muito grande: ' + file.name + ' (máx 5 MB)', 'error'); return; }
+    if (uploadedImages.length >= 10) { showToast('Limite de 10 imagens atingido.', 'error'); return; }
+    const reader = new FileReader();
+    const imgId = Date.now() + '_' + Math.random().toString(36).substr(2,5);
+    reader.onload = function(ev) {
+      uploadedImages.push({ id: imgId, name: file.name, type: file.type, base64: ev.target.result, caption: '' });
+      renderImgGrid();
+    };
+    reader.readAsDataURL(file);
+  });
+  imgFileInput.value = '';
+}
+
+function renderImgGrid() {
+  if (uploadedImages.length === 0) { imgGrid.innerHTML = ''; return; }
+  imgGrid.innerHTML = uploadedImages.map(function(img) {
+    return '<div class="img-card">' +
+      '<img class="thumb" src="' + img.base64 + '" alt="' + img.name + '" />' +
+      '<div class="img-body">' +
+        '<input type="text" value="' + (img.caption||'') + '" placeholder="Legenda da imagem..." ' +
+          'oninput="updateCaption(\'' + img.id + '\',this.value)" />' +
+        '<button class="remove-img" onclick="removeImg(\'' + img.id + '\')">✕ Remover</button>' +
+      '</div></div>';
+  }).join('');
+}
+
+function updateCaption(id, val) {
+  const img = uploadedImages.find(function(i) { return i.id === id; });
+  if (img) img.caption = val;
+}
+
+function removeImg(id) {
+  const idx = uploadedImages.findIndex(function(i) { return i.id === id; });
+  if (idx !== -1) uploadedImages.splice(idx, 1);
+  renderImgGrid();
+}
+
+/* ══ HELPERS ══ */
+function getV(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+function getC(id) { const el = document.getElementById(id); return el ? el.checked : false; }
+
+/* ══ CKO DATA COLLECTION ══ */
+function coletarDados() {
+  return {
+    sessao_id: sessaoId,
+    identificacao: {
+      idade: getV('idade'),
+      idade_unidade: getV('idadeUnidade'),
+      sexo: getV('sexo'),
+      genero: getV('genero'),
+      etnia: getV('etnia'),
+      ocupacao: getV('ocupacao'),
+      procedencia: getV('procedencia'),
+      outras_infos: getV('outrasInfoPaciente'),
+      decl_responsavel: getC('declResponsavel')
+    },
+    historia: {
+      queixa_principal: getV('queixaPrincipal'),
+      duracao_sintomas: getV('duracaoSintomas'),
+      hda: getV('hda'),
+      historico_previo: getV('historicoPrevio'),
+      historia_familiar: getV('historiaFamiliar'),
+      historia_psicossocial: getV('historiaPsicossocial')
+    },
+    intervencoes_anteriores: {
+      tratamentos: getV('tratamentosAnteriores'),
+      medicamentos: getV('medicamentos'),
+      alergias: getV('alergias')
+    },
+    achados: {
+      exame_geral: getV('exameFisicoGeral'),
+      achados_especificos: getV('achadosEspecificos'),
+      sinais_vitais: getV('sinaisVitais')
+    },
+    timeline: {
+      formato: getV('tlFormato'),
+      saida: getV('tlSaida'),
+      eventos: timeline
+    },
+    diagnostico: {
+      exames_lab: getV('examesLab'),
+      exames_imagem: getV('examesImagem'),
+      outros_exames: getV('outrosExames'),
+      diagnostico_definitivo: getV('diagnosticoDefinitivo'),
+      diferenciais: getV('diferenciais'),
+      desafios: getV('desafiosDiagnosticos'),
+      prognostico: getV('prognostico')
+    },
+    intervencao: {
+      tipo: getV('tipoIntervencao'),
+      descricao: getV('descIntervencao'),
+      houve_mudanca: getC('houveMudanca'),
+      desc_mudanca: getV('descMudanca'),
+      just_mudanca: getV('justMudanca')
+    },
+    desfechos: {
+      tipo_desfecho: getV('tipoDesfecho'),
+      desfecho_clinico: getV('desfechoClinco'),
+      exames_seguimento: getV('examesSeguimento'),
+      adesao: getV('adesao'),
+      tempo_acompanhamento: getV('tempoAcompanhamento'),
+      eventos_adversos: getV('eventosAdversos')
+    },
+    perspectiva_paciente: getV('perspectivaPaciente'),
+    imagens: uploadedImages.map(function(img) {
+      return { nome: img.name, tipo: img.type, base64: img.base64, legenda: img.caption };
+    }),
+    editorial: {
+      problemas_clinicos: getV('problemasClinicos'),
+      diferencial_caso: getV('diferencialCaso'),
+      tipo_desfecho: getV('tipoDesfecho'),
+      consentimento: getC('consentimentoInformado'),
+      area_atuacao: getV('areaAtuacao'),
+      especialidade: getV('especialidade'),
+      periodico: getV('periodico'),
+      formato_ref: getV('formatoRef'),
+      tipo_produto: getV('tipoProduto'),
+      email_usuario: getV('emailUsuario')
+    }
+  };
+}
+
+/* ══ INICIAR GERAÇÃO ══ */
+let _isDemoMode = false;
+
+function _validarFormulario() {
+  if (!getC('consentimentoInformado')) {
+    showToast('⚠️ Confirme o consentimento para publicação antes de continuar.', 'error');
+    return false;
+  }
+  if (!getV('diagnosticoDefinitivo') && !getV('queixaPrincipal')) {
+    showToast('⚠️ Preencha pelo menos a queixa principal e o diagnóstico.', 'error');
+    return false;
+  }
+  return true;
+}
+
+function _resetPipelineUI(demoMode) {
+  _isDemoMode = demoMode;
+  for (let i = 1; i <= 6; i++) {
+    const el = document.getElementById('ps-' + i);
+    if (!el) continue;
+    el.className = 'p-step';
+    if (demoMode && i >= 5) {
+      el.querySelector('.p-step-status').textContent = '🔒';
+      el.querySelector('.p-step-detail').textContent = 'Disponível após login';
+      el.style.opacity = '0.4';
+    } else {
+      el.querySelector('.p-step-status').textContent = '⏳';
+      el.querySelector('.p-step-detail').textContent = 'Aguardando...';
+      el.style.opacity = '';
+    }
+  }
+  document.getElementById('btnModalOk').style.display = 'none';
+  setPipelineChar(1, false);
+}
+
+function _abrirPipelineWS(endpoint, dados, autenticado) {
+  const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsHost = window.location.hostname === 'localhost'
+    ? 'localhost:8000'
+    : 'caseos-api-bhdx.onrender.com';
+  const wsUrl = wsProto + '//' + wsHost + '/ws/' + sessaoId;
+
+  let wsConnected = false;
+
+  try {
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = function() {
+      wsConnected = true;
+      document.getElementById('pipelineStatusMsg').textContent = 'Pipeline conectado — processando...';
+    };
+
+    ws.onmessage = function(evt) {
+      let msg;
+      try { msg = JSON.parse(evt.data); } catch(e) { return; }
+      handlePipelineMessage(msg);
+    };
+
+    ws.onerror = function() {
+      if (!wsConnected) {
+        if (_isDemoMode) httpFallbackDemo();
+        else httpFallback();
+      }
+    };
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (autenticado && getToken()) headers['Authorization'] = 'Bearer ' + getToken();
+
+    fetch(API + endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(dados)
+    }).catch(function() {});
+
+  } catch(e) {
+    if (_isDemoMode) httpFallbackDemo();
+    else httpFallback();
+  }
+}
+
+async function iniciarGeracao() {
+  const autenticado = await checkAuthForGeneration();
+  if (!autenticado) return; // login gate shown — user can choose "Ver prévia gratuita"
+
+  if (!_validarFormulario()) return;
+
+  const dados = coletarDados();
+  document.getElementById('pipelineModal').classList.add('show');
+  _resetPipelineUI(false);
+  _abrirPipelineWS('/artigo/iniciar', dados, true);
+}
+
+async function iniciarDemo() {
+  if (!_validarFormulario()) return;
+
+  const dados = coletarDados();
+  document.getElementById('pipelineModal').classList.add('show');
+  _resetPipelineUI(true);
+  document.getElementById('pipelineStatusMsg').textContent = 'Gerando prévia gratuita — aguarde...';
+  _abrirPipelineWS('/artigo/demo', dados, false);
+}
+
+/* ── Pipeline character switcher ── */
+const PIPELINE_CHARS = {
+  1: { src: 'assets/pixel-char-glow.png',     label: 'Validando…'   },
+  2: { src: 'assets/pixel-char-lupa.png',     label: 'Verificando…' },
+  3: { src: 'assets/pixel-char-database.png', label: 'Pesquisando…' },
+  4: { src: 'assets/pixel-char-flask.png',    label: 'Redigindo…'   },
+  5: { src: 'assets/pixel-char-lupa.png',     label: 'Revisando…'   },
+  6: { src: 'assets/pixel-char-hologram.png', label: 'Finalizando…' },
+};
+function setPipelineChar(step, done) {
+  const img   = document.getElementById('pipelineChar');
+  const label = document.getElementById('pipelineCharLabel');
+  if (!img) return;
+  if (done) {
+    img.src           = 'assets/pixel-char-tablet.png';
+    label.textContent = '✓ Concluído!';
+    label.style.color = '#22c55e';
+  } else {
+    const c = PIPELINE_CHARS[step] || PIPELINE_CHARS[1];
+    img.src           = c.src;
+    label.textContent = c.label;
+    label.style.color = '';
+  }
+}
+
+function handlePipelineMessage(msg) {
+  const tipo = msg.tipo || '';
+
+  // ── Demo completed ──────────────────────────────────────────────────────
+  if (tipo === 'concluido_demo') {
+    // Mark steps 1-4 done
+    for (let i = 1; i <= 4; i++) {
+      const el = document.getElementById('ps-' + i);
+      if (el) {
+        el.className = 'p-step done';
+        el.querySelector('.p-step-status').textContent = '✅';
+        el.style.opacity = '';
+      }
+    }
+    setPipelineChar(4, true);
+    document.getElementById('pipelineStatusMsg').textContent = '⚡ Prévia gerada! Veja abaixo...';
+
+    // Small delay then show demo result
+    setTimeout(function() {
+      document.getElementById('pipelineModal').classList.remove('show');
+      mostrarResultadoDemo(msg.resultado || {});
+    }, 900);
+    return;
+  }
+
+  // ── Full pipeline completed ─────────────────────────────────────────────
+  if (tipo === 'concluido' || (msg.status === 'done' && msg.etapa === 6)) {
+    const el6 = document.getElementById('ps-6');
+    if (el6) {
+      el6.className = 'p-step done';
+      el6.querySelector('.p-step-status').textContent = '✅';
+      el6.querySelector('.p-step-detail').textContent = 'Documento gerado!';
+    }
+    setPipelineChar(6, true);
+    document.getElementById('pipelineStatusMsg').textContent = '✅ Relato gerado com sucesso!';
+    document.getElementById('btnModalOk').style.display = 'inline-flex';
+    if (msg.resultado && msg.resultado.care_score) {
+      document.getElementById('pipelineStatusMsg').textContent =
+        `✅ Relato pronto! CARE Score: ${msg.resultado.care_score}/100 · ${msg.resultado.referencias || 0} referências`;
+    }
+    return;
+  }
+
+  if (tipo === 'erro') {
+    document.getElementById('pipelineStatusMsg').textContent = '❌ ' + (msg.mensagem || 'Erro no pipeline');
+    return;
+  }
+
+  // ── etapa / progresso ───────────────────────────────────────────────────
+  const etapa = msg.etapa;
+  if (!etapa) return;
+
+  // In demo mode, don't touch steps 5-6
+  if (_isDemoMode && etapa >= 5) return;
+
+  const el = document.getElementById('ps-' + etapa);
+  if (!el) return;
+
+  if (tipo === 'progresso') {
+    if (msg.detalhe) el.querySelector('.p-step-detail').textContent = msg.detalhe;
+    return;
+  }
+
+  // tipo === 'etapa' — mark previous done, current active
+  for (let i = 1; i < etapa; i++) {
+    if (_isDemoMode && i >= 5) continue;
+    const prev = document.getElementById('ps-' + i);
+    if (prev && !prev.classList.contains('done')) {
+      prev.className = 'p-step done';
+      prev.querySelector('.p-step-status').textContent = '✅';
+      prev.style.opacity = '';
+    }
+  }
+
+  el.className = 'p-step active';
+  el.style.opacity = '';
+  el.querySelector('.p-step-status').textContent = '⚙️';
+  if (msg.detalhe) el.querySelector('.p-step-detail').textContent = msg.detalhe;
+  if (msg.agente) {
+    const agentEl = el.querySelector('.p-step-agent');
+    if (agentEl) agentEl.textContent = msg.agente;
+  }
+
+  setPipelineChar(etapa, false);
+  document.getElementById('pipelineStatusMsg').textContent = `Agente: ${msg.nome || 'Processando'} — aguarde...`;
+}
+
+/* ── Demo result ───────────────────────────────────────────────────────── */
+function mostrarResultadoDemo(resultado) {
+  function _esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Title
+  const titulo = resultado.titulo || 'Relato de Caso Clínico';
+  document.getElementById('demoTitulo').textContent = titulo;
+
+  // Introduction
+  const introEl = document.getElementById('demoIntroducao');
+  const intro = Array.isArray(resultado.introducao) ? resultado.introducao : [];
+  introEl.innerHTML = intro.length
+    ? intro.map(function(p) { return '<p>' + _esc(p) + '</p>'; }).join('')
+    : '<p style="color:var(--t3);font-style:italic;">Introdução não disponível.</p>';
+
+  // Case presentation
+  const casoEl = document.getElementById('demoCasoClinco');
+  const caso = Array.isArray(resultado.caso_clinico) ? resultado.caso_clinico : [];
+  casoEl.innerHTML = caso.length
+    ? caso.map(function(p) { return '<p>' + _esc(p) + '</p>'; }).join('')
+    : '<p style="color:var(--t3);font-style:italic;">Caso clínico não disponível.</p>';
+
+  document.getElementById('demoResultModal').classList.add('show');
+}
+
+async function httpFallbackDemo() {
+  const nomes = ['Validação', 'Anti-duplicação', 'Pesquisa bibliográfica', 'Redação'];
+  document.getElementById('pipelineStatusMsg').textContent = 'Gerando prévia…';
+  for (let i = 1; i <= 4; i++) {
+    setPipelineChar(i, false);
+    const el = document.getElementById('ps-' + i);
+    if (!el) continue;
+    el.className = 'p-step active';
+    el.style.opacity = '';
+    el.querySelector('.p-step-status').textContent = '⚙️';
+    document.getElementById('pipelineStatusMsg').textContent = `Agente: ${nomes[i-1]} — aguarde...`;
+    await new Promise(function(r) { setTimeout(r, 1200); });
+    el.className = 'p-step done';
+    el.querySelector('.p-step-status').textContent = '✅';
+  }
+  setPipelineChar(4, true);
+  document.getElementById('pipelineStatusMsg').textContent = '⚡ Prévia gerada!';
+  setTimeout(function() {
+    document.getElementById('pipelineModal').classList.remove('show');
+    mostrarResultadoDemo({});
+  }, 800);
+}
+
+async function httpFallback() {
+  const nomes = ['Validação', 'Anti-duplicação', 'Pesquisa bibliográfica', 'Redação', 'Revisão CARE', 'Finalização'];
+  document.getElementById('pipelineStatusMsg').textContent = 'Processando…';
+  for (let i = 1; i <= 6; i++) {
+    setPipelineChar(i, false);
+    const el = document.getElementById('ps-' + i);
+    if (!el) continue;
+    el.className = 'p-step active';
+    el.querySelector('.p-step-status').textContent = '⚙️';
+    document.getElementById('pipelineStatusMsg').textContent = `Agente: ${nomes[i-1]} — aguarde...`;
+    await new Promise(function(r) { setTimeout(r, 1400); });
+    el.className = 'p-step done';
+    el.querySelector('.p-step-status').textContent = '✅';
+  }
+  setPipelineChar(6, true);
+  document.getElementById('pipelineStatusMsg').textContent = '✅ Relato gerado com sucesso!';
+  document.getElementById('btnModalOk').style.display = 'inline-flex';
+}
+
+/* ══ TOAST ══ */
+function showToast(msg, type) {
+  const wrap = document.getElementById('toastWrap');
+  const t = document.createElement('div');
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(function() { t.remove(); }, 4000);
+}
+
+/* ── close assist menus on escape ── */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') document.querySelectorAll('.assist-menu.open').forEach(function(m) { m.classList.remove('open'); });
+});
+</script>
+</body>
+</html>
