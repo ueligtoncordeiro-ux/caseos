@@ -415,8 +415,13 @@ async def criar_checkout(
             line_items=[{"price": price_id, "quantity": 1}],
             client_reference_id=str(user.id),
             customer_email=user.email,
-            success_url=f"{settings.frontend_url}/dashboard.html?upgrade=ok",
-            cancel_url=f"{settings.frontend_url}/login.html?upgrade=cancel",
+            # metadata.plano permite que o webhook identifique o plano correto
+            metadata={"plano": body.plano, "user_id": str(user.id)},
+            subscription_data={"metadata": {"plano": body.plano, "user_id": str(user.id)}},
+            # Idioma e moeda BRL
+            locale="pt-BR",
+            success_url=f"{settings.frontend_url}/dashboard.html?upgrade=ok&plano={body.plano}",
+            cancel_url=f"{settings.frontend_url}/dashboard.html?upgrade=cancel",
         )
         return {"url": session.url}
     except Exception as e:

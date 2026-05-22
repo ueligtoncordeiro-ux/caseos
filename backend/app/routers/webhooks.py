@@ -93,10 +93,15 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         if not user:
             return {"received": True}
 
-        # Descobrir plano a partir do line_item (precisa do price_id)
-        # Stripe envia subscription → expandir via API ou ler de metadata
-        # Por ora, usamos o price_id do primeiro item via metadata ou fallback Pro
-        plano = data.get("metadata", {}).get("plano", PLANO_PRO)
+        # Plano via metadata da session (definido no checkout) ou fallback pelo price_id
+        plano = (
+            data.get("metadata", {}).get("plano")
+            or _plano_from_price(
+                # tenta extrair price_id do subscription expandido (se disponível)
+                data.get("subscription_data", {}).get("metadata", {}).get("plano", "")
+            )
+            or PLANO_PRO  # fallback seguro
+        )
 
         user.stripe_customer_id         = customer
         user.stripe_subscription_id     = sub_id
