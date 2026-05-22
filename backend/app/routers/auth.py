@@ -357,11 +357,33 @@ async def google_callback(
 
 @router.get("/planos")
 async def listar_planos():
+    from app.models.database import TOKENS_LIMITE, PRECO_BRL, QUOTA_MENSAL
     return {
         "planos": [
-            {"id": "free",          "nome": "Gratuito",       "artigos_mes": 1,    "preco_brl": 0},
-            {"id": "pro",           "nome": "Pro",            "artigos_mes": 30,   "preco_brl": 9700},
-            {"id": "institucional", "nome": "Institucional",  "artigos_mes": None, "preco_brl": 49700},
+            {
+                "id":            "free",
+                "nome":          "Gratuito",
+                "artigos_mes":   QUOTA_MENSAL["free"],
+                "tokens_limite": TOKENS_LIMITE["free"],
+                "preco_brl":     PRECO_BRL["free"],
+                "descricao":     "Prévias demo ilimitadas · 1 artigo/mês · 50k tokens",
+            },
+            {
+                "id":            "pro",
+                "nome":          "Pro",
+                "artigos_mes":   QUOTA_MENSAL["pro"],
+                "tokens_limite": TOKENS_LIMITE["pro"],
+                "preco_brl":     PRECO_BRL["pro"],
+                "descricao":     "~12 artigos completos/mês · 300k tokens · CARE completo",
+            },
+            {
+                "id":            "institucional",
+                "nome":          "Institucional",
+                "artigos_mes":   QUOTA_MENSAL["institucional"],
+                "tokens_limite": TOKENS_LIMITE["institucional"],
+                "preco_brl":     PRECO_BRL["institucional"],
+                "descricao":     "~60 artigos/mês · 1,5M tokens · Multi-usuário · Suporte 24h",
+            },
         ]
     }
 

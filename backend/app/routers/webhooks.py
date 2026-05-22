@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.config import settings
-from app.models.database import get_db, Usuario, PLANO_FREE, PLANO_PRO, PLANO_INSTITUCIONAL
+from app.models.database import get_db, Usuario, PLANO_FREE, PLANO_PRO, PLANO_INSTITUCIONAL, TOKENS_LIMITE
 from app.services.email import enviar_boas_vindas_pro
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
@@ -24,6 +24,21 @@ def _plano_from_price(price_id: str) -> str:
     if price_id == settings.stripe_inst_price_id:
         return PLANO_INSTITUCIONAL
     return PLANO_FREE
+
+
+def _aplicar_plano(user: Usuario, novo_plano: str) -> None:
+    """Troca o plano e reseta contadores mensais. Chame antes de db.commit()."""
+    from datetime import datetime
+    mes_atual = datetime.utcnow().strftime("%Y-%m")
+    plano_anterior = user.plano
+
+    user.plano = novo_plano
+
+    # Reset de contadores apenas quando o plano MUDA (upgrade/downgrade)
+    if plano_anterior != novo_plano:
+        user.artigos_mes    = 0
+        user.tokens_mes     = 0
+        user.mes_referencia = mes_atual
 
 
 def _verificar_assinatura_stripe(payload: bytes, sig_header: str, secret: str):
@@ -83,10 +98,10 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         # Por ora, usamos o price_id do primeiro item via metadata ou fallback Pro
         plano = data.get("metadata", {}).get("plano", PLANO_PRO)
 
-        user.stripe_customer_id        = customer
-        user.stripe_subscription_id    = sub_id
+        user.stripe_customer_id         = customer
+        user.stripe_subscription_id     = sub_id
         user.stripe_subscription_status = "active"
-        user.plano                     = plano
+        _aplicar_plano(user, plano)   # troca plano + reseta contadores
         await db.commit()
 
         asyncio.create_task(enviar_boas_vindas_pro(user.email, user.nome))
@@ -107,9 +122,9 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         if user:
             user.stripe_subscription_status = sub_status
             if sub_status == "active":
-                user.plano = _plano_from_price(price_id)
+                _aplicar_plano(user, _plano_from_price(price_id))
             elif sub_status in ("past_due", "unpaid", "canceled", "paused"):
-                user.plano = PLANO_FREE
+                _aplicar_plano(user, PLANO_FREE)
             await db.commit()
 
     # ── customer.subscription.deleted → cancelamento / inadimplência ──────────
@@ -120,7 +135,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         )
         user = result.scalar_one_or_none()
         if user:
-            user.plano                      = PLANO_FREE
+            _aplicar_plano(user, PLANO_FREE)
             user.stripe_subscription_id     = None
             user.stripe_subscription_status = "canceled"
             await db.commit()

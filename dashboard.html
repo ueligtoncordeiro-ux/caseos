@@ -1810,6 +1810,28 @@ tbody td {
   font-family: var(--sans);
   letter-spacing: 0;
 }
+.plan-tokens {
+  font-size: 11.5px;
+  color: var(--t3);
+  background: var(--light2);
+  border-radius: 6px;
+  padding: 4px 10px;
+  margin: -4px 0 12px;
+  text-align: center;
+  font-family: var(--mono, monospace);
+}
+.plan-badge {
+  display: inline-block;
+  background: var(--acid);
+  color: var(--obsidian);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-bottom: 6px;
+}
 
 .plan-features {
   list-style: none;
@@ -2777,12 +2799,14 @@ tbody td {
         <div class="plan-card" id="planCardFree">
           <div class="plan-name">🆓 Gratuito</div>
           <div class="plan-price">R$0 <span>/mês</span></div>
+          <div class="plan-tokens">50.000 tokens · ~2 prévias</div>
           <ul class="plan-features">
-            <li>1 relato por mês</li>
+            <li>Prévias demo ilimitadas</li>
+            <li>1 artigo completo/mês</li>
             <li>Checklist CARE básico</li>
             <li>Download em DOCX</li>
             <li class="disabled">Score CARE avançado</li>
-            <li class="disabled">Sugestão de periódicos</li>
+            <li class="disabled">Upload de imagens clínicas</li>
             <li class="disabled">Suporte prioritário</li>
           </ul>
           <button class="btn-assinar secondary" disabled id="btnAssinarFree">Plano atual</button>
@@ -2790,15 +2814,18 @@ tbody td {
 
         <!-- Pro -->
         <div class="plan-card highlighted" id="planCardPro">
+          <div class="plan-badge">Mais popular</div>
           <div class="plan-name">⚡ Pro</div>
           <div class="plan-price">R$97 <span>/mês</span></div>
+          <div class="plan-tokens">300.000 tokens · ~12 artigos/mês</div>
           <ul class="plan-features">
-            <li>30 relatos por mês</li>
-            <li>Checklist CARE completo</li>
-            <li>Download em DOCX + PDF</li>
-            <li>Score CARE avançado</li>
-            <li>Sugestão de periódicos</li>
-            <li class="disabled">Suporte prioritário</li>
+            <li>~12 artigos completos/mês</li>
+            <li>Pesquisa PubMed · OpenAlex · S2</li>
+            <li>Score CARE 2013 completo</li>
+            <li>Upload de imagens clínicas</li>
+            <li>Download DOCX formatado</li>
+            <li>Validação MeSH automática</li>
+            <li class="disabled">Suporte prioritário 24h</li>
           </ul>
           <button class="btn-assinar primary" onclick="assinarPlano('pro')">Assinar Pro</button>
         </div>
@@ -2807,12 +2834,13 @@ tbody td {
         <div class="plan-card" id="planCardInst">
           <div class="plan-name">🏥 Institucional</div>
           <div class="plan-price">R$497 <span>/mês</span></div>
+          <div class="plan-tokens">1.500.000 tokens · ~60 artigos/mês</div>
           <ul class="plan-features">
-            <li>Tudo do Pro</li>
-            <li>Até 20 usuários</li>
+            <li>~60 artigos completos/mês</li>
+            <li>Tudo do Pro incluído</li>
+            <li>Multi-usuário (residentes, equipe)</li>
             <li>Painel administrativo</li>
-            <li>Score CARE avançado</li>
-            <li>Sugestão de periódicos</li>
+            <li>Relatório de uso por membro</li>
             <li>Suporte prioritário 24h</li>
           </ul>
           <button class="btn-assinar primary" onclick="assinarPlano('institucional')">Assinar Institucional</button>
