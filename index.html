@@ -34,6 +34,8 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
   --radius:      10px;
   --shadow-sm:   0 1px 3px rgba(0,0,0,0.08);
   --shadow-md:   0 4px 16px rgba(0,0,0,0.10);
+  --sidebar-w:   280px;
+  --sidebar-collapsed-w: 76px;
 }
 
 /* ── layout ── */
@@ -41,11 +43,12 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
 
 /* ── sidebar ── */
 .sidebar {
-  width: 280px; flex-shrink: 0;
+  width: var(--sidebar-w); flex-shrink: 0;
   background: var(--sidebar-bg);
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
   overflow-y: auto;
+  transition: width .22s ease;
 }
 .sidebar-head {
   padding: 20px 14px 18px;
@@ -66,6 +69,51 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
   height: auto;
   object-fit: contain;
   display: block;
+}
+.sidebar-collapse-btn {
+  margin-left: 8px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--card-bg);
+  color: var(--t2);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+.sidebar-collapse-btn:hover { border-color: var(--obsidian); color: var(--obsidian); }
+
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed-w);
+}
+.sidebar.collapsed .sidebar-head {
+  padding: 18px 10px;
+}
+.sidebar.collapsed .logo-link,
+.sidebar.collapsed .sidebar-label,
+.sidebar.collapsed .step-info,
+.sidebar.collapsed .prog-label {
+  display: none;
+}
+.sidebar.collapsed .step-list {
+  padding: 10px 10px 16px;
+}
+.sidebar.collapsed .step-item {
+  justify-content: center;
+  padding: 10px 0;
+  min-height: 52px;
+}
+.sidebar.collapsed .step-num {
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+}
+.sidebar.collapsed .sidebar-progress {
+  padding: 12px 10px 18px;
+}
+.sidebar.collapsed .prog-track {
+  height: 6px;
 }
 
 .sidebar-label {
@@ -549,11 +597,12 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 <div class="app-shell">
 
   <!-- ══ SIDEBAR ══ -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="caseSidebar">
     <div class="sidebar-head">
       <a href="dashboard.html" class="logo-link">
         <img src="assets/logo-caseos-light.png" alt="CaseOS">
       </a>
+      <button class="sidebar-collapse-btn" id="caseSidebarBtn" onclick="toggleCaseSidebar()" title="Recolher menu" aria-label="Recolher menu">‹</button>
     </div>
 
     <div class="sidebar-label">Etapas do relato</div>
@@ -580,7 +629,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
         <span class="topbar-step-badge" id="topbarBadge">Etapa 1 de 10</span>
       </div>
       <div class="topbar-right">
-        <button class="btn-back-dash" onclick="location.href=getToken()?'dashboard.html':'landing.html'">← Início</button>
+        <button class="btn-back-dash" onclick="location.href='dashboard.html'">← Início</button>
       </div>
     </header>
 
@@ -1670,6 +1719,28 @@ const STEPS = [
 let currentStep = 1;
 const completed = new Set();
 
+function toggleCaseSidebar(force) {
+  const sidebar = document.getElementById('caseSidebar');
+  const btn = document.getElementById('caseSidebarBtn');
+  if (!sidebar) return;
+  const shouldCollapse = typeof force === 'boolean' ? force : !sidebar.classList.contains('collapsed');
+  sidebar.classList.toggle('collapsed', shouldCollapse);
+  if (btn) {
+    btn.textContent = shouldCollapse ? '›' : '‹';
+    btn.title = shouldCollapse ? 'Expandir menu' : 'Recolher menu';
+    btn.setAttribute('aria-label', btn.title);
+  }
+  try { localStorage.setItem('caseos_case_sidebar_collapsed', shouldCollapse ? '1' : '0'); } catch {}
+}
+
+function restoreCaseSidebar() {
+  try {
+    if (localStorage.getItem('caseos_case_sidebar_collapsed') === '1') {
+      toggleCaseSidebar(true);
+    }
+  } catch {}
+}
+
 /* ── build sidebar step list ── */
 function buildSidebar() {
   const list = document.getElementById('stepList');
@@ -1727,6 +1798,7 @@ function navStep(dir) {
 }
 
 buildSidebar();
+restoreCaseSidebar();
 updateNavUI();
 updateProgress();
 

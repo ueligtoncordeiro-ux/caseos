@@ -55,6 +55,7 @@
 
   /* Layout */
   --sidebar-w:   220px;
+  --sidebar-collapsed-w: 72px;
   --chat-w:      340px;
   --topbar-h:    60px;
   --radius:      10px;
@@ -108,38 +109,37 @@ body {
 
 /* Collapsed state — icon only */
 .sidebar.collapsed {
-  width: 52px;
-  min-width: 52px;
+  width: var(--sidebar-collapsed-w);
+  min-width: var(--sidebar-collapsed-w);
 }
 
 .sidebar.collapsed .sidebar-logo img { display: none; }
-.sidebar.collapsed .sidebar-logo { padding: 18px 10px; }
+.sidebar.collapsed .sidebar-logo { padding: 18px 12px; min-height: 74px; }
 .sidebar.collapsed .nav-label { opacity: 0; height: 0; padding: 0; overflow: hidden; }
-.sidebar.collapsed .nav-divider { margin: 4px 6px; }
+.sidebar.collapsed .nav-divider { margin: 8px 12px; }
 .sidebar.collapsed .nav-item span.nav-text { opacity: 0; width: 0; overflow: hidden; white-space: nowrap; }
-.sidebar.collapsed .nav-item { justify-content: center; padding: 8px 14px; }
+.sidebar.collapsed .nav-item { justify-content: center; padding: 12px 0; min-height: 54px; }
+.sidebar.collapsed .nav-icon {
+  width: 42px;
+  height: 42px;
+  font-size: 24px;
+}
+.sidebar.collapsed .nav-icon svg {
+  width: 24px;
+  height: 24px;
+}
+.sidebar.collapsed .nav-logo-icon {
+  width: 32px;
+  height: 32px;
+}
 .sidebar.collapsed .sidebar-footer { padding: 8px 6px; }
 .sidebar.collapsed .usage-bar-wrap { display: none; }
 .sidebar.collapsed .plan-badge { display: none; }
 .sidebar.collapsed .btn-upgrade span { display: none; }
 .sidebar.collapsed .btn-upgrade { padding: 9px; justify-content: center; }
 
-/* Hover to expand when collapsed */
-.sidebar.collapsed:hover {
-  width: var(--sidebar-w);
-}
-.sidebar.collapsed:hover .sidebar-logo img { display: block; }
-.sidebar.collapsed:hover .nav-label { opacity: 1; height: auto; padding: 12px 10px 5px; }
-.sidebar.collapsed:hover .nav-item span.nav-text { opacity: 1; width: auto; }
-.sidebar.collapsed:hover .nav-item { justify-content: flex-start; padding: 8px 10px; }
-.sidebar.collapsed:hover .sidebar-footer { padding: 12px 10px; }
-.sidebar.collapsed:hover .usage-bar-wrap { display: block; }
-.sidebar.collapsed:hover .plan-badge { display: block; }
-.sidebar.collapsed:hover .btn-upgrade span { display: inline; }
-.sidebar.collapsed:hover .btn-upgrade { padding: 9px; justify-content: center; }
-
 /* Main wrapper adjusts for collapsed sidebar */
-.main-wrapper.sidebar-collapsed { margin-left: 52px; }
+.main-wrapper.sidebar-collapsed { margin-left: var(--sidebar-collapsed-w); }
 
 /* Logo area */
 .sidebar-logo {
@@ -295,6 +295,29 @@ body {
   width: 18px;
   text-align: center;
   flex-shrink: 0;
+}
+
+.nav-logo-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  object-fit: cover;
+  background: var(--obsidian);
+}
+
+.nav-item.external-link::after {
+  content: '↗';
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--t4);
+}
+
+.sidebar.collapsed .nav-item.external-link::after {
+  display: none;
+}
+
+.sidebar.collapsed:hover .nav-item.external-link::after {
+  display: inline;
 }
 
 /* Sidebar footer */
@@ -457,7 +480,7 @@ body {
   flex-direction: column;
   min-height: 100vh;
   min-width: 0;
-  transition: margin-right 0.3s ease;
+  transition: margin-left 0.22s ease, margin-right 0.3s ease;
   background: var(--bg);
 }
 
@@ -520,6 +543,35 @@ body {
   transition: opacity 0.18s, transform 0.18s;
 }
 .btn-topbar-novo:hover { opacity: 0.88; transform: translateY(-1px); }
+
+.btn-topbar-caseos {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  background: var(--card-bg);
+  color: var(--t1);
+  border: 1px solid var(--card-bdr);
+  border-radius: var(--radius-xs);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s, transform 0.18s;
+}
+.btn-topbar-caseos:hover {
+  background: var(--row-hover);
+  border-color: #D0D0CE;
+  transform: translateY(-1px);
+}
+.btn-topbar-caseos img {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  object-fit: cover;
+  background: var(--obsidian);
+}
 
 /* Notification bell */
 .notif-btn {
@@ -892,6 +944,88 @@ body {
 .btn-danger:hover { background: #FCA5A5; border-color: rgba(220,38,38,0.3); }
 
 .btn-sm { padding: 6px 12px; font-size: 12.5px; }
+
+/* Tools */
+.tools-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--card-bdr);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  margin-bottom: 32px;
+  box-shadow: var(--shadow-xs);
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 32px;
+}
+
+.tools-grid .tools-card {
+  grid-template-columns: 1fr;
+  align-items: stretch;
+  margin-bottom: 0;
+}
+
+.tools-copy {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.tools-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--obsidian);
+  border: 1px solid var(--card-bdr);
+  flex-shrink: 0;
+}
+
+.tools-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--acid-dim);
+  border: 1px solid var(--acid-mid);
+  color: #5A6600;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.tools-title {
+  font-family: var(--head);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--t1);
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+
+.tools-sub {
+  color: var(--t2);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 640px;
+}
+
+.tools-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
 /* ═══════════════════════════════════════════════════════════════
    TABLE CARD
@@ -1837,6 +1971,10 @@ tbody td {
   .chat-panel { width: 100%; }
   .chat-toggle-btn { bottom: 16px; right: 16px; }
   .btn-topbar-novo span { display: none; }
+  .btn-topbar-caseos span { display: none; }
+  .tools-card { grid-template-columns: 1fr; align-items: stretch; padding: 18px; }
+  .tools-grid { grid-template-columns: 1fr; }
+  .tools-card .btn { width: 100%; justify-content: center; }
   /* Fix notification dropdown on mobile */
   .notif-dropdown {
     right: 0;
@@ -2185,6 +2323,13 @@ tbody td {
       <span class="nav-icon">🔬</span>
       <span class="nav-text">Buscar PubMed</span>
     </button>
+
+    <a class="nav-item external-link" href="https://membros.voandonaia.com/dashboard" target="_blank" rel="noopener">
+      <span class="nav-icon">
+        <img class="nav-logo-icon" src="assets/logo-voando-na-ia.png" alt="">
+      </span>
+      <span class="nav-text">Área Voando na IA</span>
+    </a>
   </nav>
 
   <!-- Footer -->
@@ -2227,6 +2372,11 @@ tbody td {
       <!-- Novo Relato quick button -->
       <a href="index.html" class="btn-topbar-novo">
         <span>+</span><span>Novo Relato</span>
+      </a>
+
+      <a href="https://membros.voandonaia.com/dashboard" target="_blank" rel="noopener" class="btn-topbar-caseos" title="Abrir área do usuário Voando na IA">
+        <img src="assets/logo-voando-na-ia.png" alt="">
+        <span>Voando na IA</span>
       </a>
 
       <!-- Notification bell -->
@@ -2348,6 +2498,54 @@ tbody td {
       </button>
     </div>
 
+    <!-- Tools -->
+    <div class="section-header">
+      <span class="section-title">Ferramentas</span>
+    </div>
+    <div class="tools-grid">
+      <div class="tools-card">
+        <div class="tools-copy">
+          <img class="tools-logo" src="assets/logo-voando-na-ia.png" alt="">
+          <div>
+            <div class="tools-badge">EBOOK</div>
+            <div class="tools-title">+200 Prompts para Mestrado e Doutorado</div>
+            <div class="tools-sub">
+              Acesse o ebook com prompts para escrever projetos acadêmicos usando inteligência artificial.
+            </div>
+          </div>
+        </div>
+        <div class="tools-actions">
+          <a class="btn btn-primary" href="https://docs.google.com/document/d/1_oPKF0P3cDEGtg5h5nPHmTaAxuNcpV-js0nz8bwUzBk/edit" target="_blank" rel="noopener">
+            Abrir ebook
+          </a>
+          <a class="btn btn-secondary" href="https://membros.voandonaia.com/dashboard" target="_blank" rel="noopener">
+            Área do usuário
+          </a>
+        </div>
+      </div>
+
+      <div class="tools-card">
+        <div class="tools-copy">
+          <img class="tools-logo" src="assets/logo-voando-na-ia.png" alt="">
+          <div>
+            <div class="tools-badge">EBOOK</div>
+            <div class="tools-title">Meus 200 Prompts Secretos</div>
+            <div class="tools-sub">
+              Abra o material secreto de prompts para planejar, escrever e lapidar seu projeto de pesquisa.
+            </div>
+          </div>
+        </div>
+        <div class="tools-actions">
+          <a class="btn btn-primary" href="https://docs.google.com/document/d/1vyxkGeriv6JwAaW3w1lNZHDUZrqvQZSYXhD0qAo987I/edit" target="_blank" rel="noopener">
+            Abrir ebook
+          </a>
+          <a class="btn btn-secondary" href="https://membros.voandonaia.com/dashboard" target="_blank" rel="noopener">
+            Área do usuário
+          </a>
+        </div>
+      </div>
+    </div>
+
     <!-- Articles table -->
     <div id="tabelaSection">
       <div class="section-header">
@@ -2403,10 +2601,10 @@ tbody td {
       </div>
     </div>
 
-    <!-- PubMed Search Section (hidden by default) -->
+    <!-- Scientific Search Section (hidden by default) -->
     <div id="pubmedSection" style="display:none;">
       <div class="section-header" style="margin-top:32px;">
-        <span class="section-title">🔬 Buscar PubMed</span>
+        <span class="section-title">🔬 Busca científica</span>
       </div>
       <div class="table-card" style="margin-bottom:20px;">
         <div class="table-toolbar" style="flex-direction:column;align-items:stretch;gap:10px;">
@@ -2416,12 +2614,23 @@ tbody td {
               <input type="text" id="pubmedInput" placeholder="Ex: Síndrome de Brugada case report, fisioterapia neurológica..."
                 style="font-size:14px;" onkeydown="if(event.key==='Enter')buscarPubMed()">
             </div>
+            <select id="pubmedOperator" style="height:40px;border:1px solid var(--card-bdr);border-radius:8px;padding:0 10px;background:var(--card-bg);font-size:13px;color:var(--t2);">
+              <option value="AND">AND</option>
+              <option value="OR">OR</option>
+            </select>
             <button class="btn btn-primary" onclick="buscarPubMed()" id="pubmedBtn">
               Buscar
             </button>
           </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--t2);">
+            <label style="display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" class="search-source" value="pubmed" checked> PubMed</label>
+            <label style="display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" class="search-source" value="semantic" checked> Semantic Scholar</label>
+            <label style="display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" class="search-source" value="openalex" checked> OpenAlex</label>
+            <label style="display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" class="search-source" value="crossref"> Crossref</label>
+            <button class="btn btn-ghost" onclick="salvarBuscaAtual()" id="saveSearchBtn" style="margin-left:auto;display:none;">Salvar busca</button>
+          </div>
           <div style="font-size:12px;color:var(--t3);">
-            Busca em tempo real no PubMed (35M+ artigos). Os resultados incluem links diretos para o artigo completo.
+            Use AND para restringir termos e OR para ampliar. Busque em PubMed, Semantic Scholar, OpenAlex e Crossref.
           </div>
         </div>
 
@@ -3552,6 +3761,8 @@ async function enviarMensagemChat() {
 /* ═══════════════════════════════════════════════
    PUBMED SEARCH
 ═══════════════════════════════════════════════ */
+let _ultimaBuscaCientifica = null;
+
 function mostrarSecaoPubMed() {
   const sec = document.getElementById('pubmedSection');
   if (!sec) return;
@@ -3566,10 +3777,13 @@ function mostrarSecaoPubMed() {
 
 async function buscarPubMed() {
   const input   = document.getElementById('pubmedInput');
+  const operator = document.getElementById('pubmedOperator')?.value || 'AND';
+  const fontes = Array.from(document.querySelectorAll('.search-source:checked')).map(el => el.value);
   const list    = document.getElementById('pubmedList');
   const empty   = document.getElementById('pubmedEmpty');
   const loading = document.getElementById('pubmedLoading');
   const btn     = document.getElementById('pubmedBtn');
+  const saveBtn = document.getElementById('saveSearchBtn');
 
   const q = input?.value?.trim();
   if (!q || q.length < 3) {
@@ -3577,21 +3791,25 @@ async function buscarPubMed() {
     return;
   }
 
-  if (!getToken()) { mostrarToast('Faça login para usar a busca PubMed.', 'info', '🔒'); return; }
+  if (!getToken()) { mostrarToast('Faça login para usar a busca científica.', 'info', '🔒'); return; }
+  if (!fontes.length) { mostrarToast('Selecione pelo menos uma base de busca.', 'info', '🔬'); return; }
 
   // Show loading
   if (empty) empty.style.display = 'none';
   if (list) list.innerHTML = '';
   if (loading) loading.style.display = 'block';
+  if (saveBtn) saveBtn.style.display = 'none';
   if (btn) { btn.textContent = 'Buscando...'; btn.disabled = true; }
 
   try {
-    const res = await fetch(`${API}/artigo/pubmed/buscar?q=${encodeURIComponent(q)}&max=12`, {
+    const fonteParams = fontes.map(f => `fontes=${encodeURIComponent(f)}`).join('&');
+    const res = await fetch(`${API}/artigo/biblioteca/buscar?q=${encodeURIComponent(q)}&max=12&operador=${encodeURIComponent(operator)}&${fonteParams}`, {
       headers: authHeaders(),
     });
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    _ultimaBuscaCientifica = data;
 
     if (loading) loading.style.display = 'none';
 
@@ -3599,18 +3817,20 @@ async function buscarPubMed() {
       if (list) list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px;">Nenhum resultado encontrado para "' + _esc(q) + '"</div>';
       return;
     }
+    if (saveBtn) saveBtn.style.display = 'inline-flex';
 
     if (list) {
       list.innerHTML = `
         <div style="font-size:12px;color:var(--t3);margin:12px 0 4px;">
-          <strong>${data.total}</strong> resultado${data.total !== 1 ? 's' : ''} para "${_esc(q)}"
+          <strong>${data.total}</strong> resultado${data.total !== 1 ? 's' : ''} para "${_esc(q)}" · ${_esc(data.operador || operator)} · ${_esc((data.fontes || fontes).join(', '))}
         </div>
-      ` + data.artigos.map(art => `
+      ` + data.artigos.map((art, idx) => `
         <div class="pubmed-card">
-          <a class="pubmed-card-title" href="${_esc(art.url_pubmed || '#')}" target="_blank" rel="noopener noreferrer">
+          <a class="pubmed-card-title" href="${_esc(art.url || art.url_pubmed || '#')}" target="_blank" rel="noopener noreferrer">
             ${_esc(art.titulo)}
           </a>
           <div class="pubmed-card-meta">
+            ${art.fonte ? `<span>${_esc(art.fonte)}</span>` : ''}
             <span>${_esc(art.autores)}</span>
             ${art.periodico ? `<span>· ${_esc(art.periodico)}</span>` : ''}
             ${art.ano ? `<span>· ${_esc(art.ano)}</span>` : ''}
@@ -3620,6 +3840,8 @@ async function buscarPubMed() {
             ${art.pmid ? `<a class="pubmed-badge" href="https://pubmed.ncbi.nlm.nih.gov/${_esc(art.pmid)}" target="_blank" rel="noopener">PMID ${_esc(art.pmid)}</a>` : ''}
             ${art.doi ? `<a class="pubmed-badge doi" href="https://doi.org/${_esc(art.doi)}" target="_blank" rel="noopener">DOI</a>` : ''}
             ${art.citacoes ? `<span class="pubmed-badge citations">📊 ${art.citacoes} citações</span>` : ''}
+            <button class="pubmed-badge" style="cursor:pointer;" onclick="salvarArtigoBusca(${idx}, 'artigo')">Salvar</button>
+            <button class="pubmed-badge doi" style="cursor:pointer;" onclick="salvarArtigoBusca(${idx}, 'caso_clinico')">Adicionar a caso clínico</button>
           </div>
         </div>
       `).join('');
@@ -3629,9 +3851,53 @@ async function buscarPubMed() {
     console.error('[CaseOS] Erro busca PubMed:', err);
     if (loading) loading.style.display = 'none';
     if (list) list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--red);font-size:13px;">Erro ao buscar. Tente novamente.</div>';
-    mostrarToast('Erro na busca PubMed. Tente novamente.', 'error', '⚠️');
+    mostrarToast('Erro na busca científica. Tente novamente.', 'error', '⚠️');
   } finally {
     if (btn) { btn.textContent = 'Buscar'; btn.disabled = false; }
+  }
+}
+
+async function salvarBuscaAtual() {
+  if (!_ultimaBuscaCientifica || !_ultimaBuscaCientifica.artigos?.length) {
+    mostrarToast('Faça uma busca antes de salvar.', 'info', '🔬');
+    return;
+  }
+  await salvarBiblioteca({
+    tipo: 'busca',
+    query: _ultimaBuscaCientifica.query,
+    operador: _ultimaBuscaCientifica.operador || 'AND',
+    fontes: _ultimaBuscaCientifica.fontes || [],
+    artigos: _ultimaBuscaCientifica.artigos,
+    observacao: 'Busca salva no dashboard',
+  }, 'Busca salva na biblioteca.');
+}
+
+async function salvarArtigoBusca(idx, tipo) {
+  const art = _ultimaBuscaCientifica?.artigos?.[idx];
+  if (!art) return;
+  await salvarBiblioteca({
+    tipo,
+    query: _ultimaBuscaCientifica.query || art.titulo || 'Artigo salvo',
+    operador: _ultimaBuscaCientifica.operador || 'AND',
+    fontes: _ultimaBuscaCientifica.fontes || [],
+    artigos: [art],
+    observacao: tipo === 'caso_clinico' ? 'Artigo selecionado para uso em caso clínico' : 'Artigo salvo no dashboard',
+  }, tipo === 'caso_clinico' ? 'Artigo adicionado ao caso clínico.' : 'Artigo salvo.');
+}
+
+async function salvarBiblioteca(payload, mensagemSucesso) {
+  if (!getToken()) { mostrarToast('Faça login para salvar.', 'info', '🔒'); return; }
+  try {
+    const res = await fetch(`${API}/artigo/biblioteca/salvar`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    mostrarToast(mensagemSucesso, 'success', '✓');
+  } catch (err) {
+    console.error('[CaseOS] Erro ao salvar biblioteca:', err);
+    mostrarToast('Não foi possível salvar agora.', 'error', '⚠️');
   }
 }
 

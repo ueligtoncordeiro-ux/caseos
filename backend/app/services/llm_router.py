@@ -2,8 +2,8 @@
 LLM Router — roteamento por complexidade com fallback em cascata.
 
 Hierarquia definida (aplicada apenas se a chave estiver configurada):
-  ALTA complexidade  → Claude Sonnet 4.6  → GPT-4o         → Gemini 2.0 Flash
-  MÉDIA complexidade → GPT-4o mini        → Gemini 2.0 Flash → Claude Haiku
+  ALTA complexidade  → Claude Sonnet 4.6  → GPT-4o         → Gemini
+  MÉDIA complexidade → GPT-4o mini        → Gemini         → Claude Haiku
   BAIXA complexidade → Gemini apenas (chatbox e assistente acessíveis agora)
 
 Regra de disponibilidade:
@@ -15,7 +15,7 @@ Regra de disponibilidade:
 Custo estimado por artigo (quando todos disponíveis):
   Claude Sonnet 4.6  ~$0.35
   GPT-4o mini        ~$0.02
-  Gemini 2.0 Flash   ~$0.001
+  Gemini Flash       baixo custo
 """
 import json
 import logging
@@ -30,6 +30,24 @@ import google.generativeai as genai
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+class LLMQuotaError(RuntimeError):
+    """Erro de quota/billing do provedor de IA."""
+
+
+def mensagem_usuario_erro(exc: Exception) -> str:
+    texto = str(exc)
+    if "429" in texto or "quota" in texto.lower() or "rate" in texto.lower():
+        return (
+            "A IA está configurada, mas a cota do provedor foi atingida ou não está liberada "
+            "para a chave atual. Verifique billing/quota do Gemini no Render e tente novamente."
+        )
+    if "GEMINI_API_KEY" in texto:
+        return "A chave do Gemini não está configurada no ambiente de produção."
+    if "Nenhum provider" in texto:
+        return "Nenhum provedor de IA está configurado no ambiente de produção."
+    return "Assistente indisponível no momento. Tente novamente em instantes."
 
 
 class Complexidade(str, Enum):
@@ -87,7 +105,7 @@ def _openai_async() -> openai.AsyncOpenAI:
     return openai.AsyncOpenAI(api_key=settings.openai_api_key)
 
 
-def _gemini_model(model: str = "gemini-2.0-flash") -> genai.GenerativeModel:
+def _gemini_model(model: str = "gemini-2.5-flash") -> genai.GenerativeModel:
     if not _tem_chave("gemini"):
         raise RuntimeError("GEMINI_API_KEY não configurada.")
     genai.configure(api_key=settings.gemini_api_key)
@@ -130,7 +148,16 @@ async def _chamar_gemini(
     system: str, user: str, max_tokens: int, model: Optional[str] = None
 ) -> str:
     prompt = f"{system}\n\n{user}"
-    modelos = [model] if model else ["gemini-2.0-flash", "gemini-1.5-flash"]
+    if model:
+        modelos = [model]
+    else:
+        candidatos = [settings.gemini_model]
+        candidatos.extend(
+            m.strip()
+            for m in (settings.gemini_fallback_models or "").split(",")
+            if m.strip()
+        )
+        modelos = list(dict.fromkeys(candidatos))
     erros = []
     for nome_modelo in modelos:
         try:
@@ -142,6 +169,10 @@ async def _chamar_gemini(
             return resp.text.strip()
         except Exception as exc:
             erros.append(f"{nome_modelo}: {exc}")
+            texto = str(exc).lower()
+            if "quota" in texto or "429" in texto or "rate limit" in texto:
+                logger.warning("Gemini quota/rate-limit em %s: %s", nome_modelo, exc)
+                continue
     raise RuntimeError("Gemini falhou em todos os modelos: " + " | ".join(erros))
 
 
@@ -166,21 +197,21 @@ async def chamar(
              lambda: _chamar_claude(system, user, max_tokens)),
             ("GPT-4o",            "openai",
              lambda: _chamar_openai(system, user, max_tokens, json_mode, "gpt-4o")),
-            ("Gemini 2.0 Flash",  "gemini",
+            ("Gemini",            "gemini",
              lambda: _chamar_gemini(system, user, max_tokens)),
         ]
     elif complexidade == Complexidade.MEDIA:
         candidatos = [
             ("GPT-4o mini",       "openai",
              lambda: _chamar_openai(system, user, max_tokens, json_mode, "gpt-4o-mini")),
-            ("Gemini 2.0 Flash",  "gemini",
+            ("Gemini",            "gemini",
              lambda: _chamar_gemini(system, user, max_tokens)),
             ("Claude Haiku 4.5",  "claude",
              lambda: _chamar_claude(system, user, min(max_tokens, 4096))),
         ]
     else:  # BAIXA — Gemini somente para evitar Anthropic/OpenAI sem saldo.
         candidatos = [
-            ("Gemini 2.0 Flash",  "gemini",
+            ("Gemini",            "gemini",
              lambda: _chamar_gemini(system, user, max_tokens)),
         ]
 

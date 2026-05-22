@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openai_api_key: str = ""
     gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_fallback_models: str = "gemini-flash-latest,gemini-2.0-flash-lite,gemini-2.0-flash"
     pubmed_api_key: str = ""
     semantic_scholar_api_key: str = ""
     polite_email: str = "rccs@exemplo.com"

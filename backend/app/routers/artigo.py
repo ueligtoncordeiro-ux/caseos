@@ -1,17 +1,28 @@
 import os
+import asyncio
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
 
 from app.models.schemas import CKO, IniciarResponse, StatusResponse
-from app.models.database import Sessao, get_db, Usuario
+from app.models.database import PesquisaSalva, Sessao, get_db, Usuario
 from app.agents.orchestrator import executar_pipeline, executar_pipeline_demo
 from app.services.auth import get_verified_user, check_quota
 
 router = APIRouter(prefix="/artigo", tags=["artigo"])
+
+
+class SalvarPesquisaRequest(BaseModel):
+    query: str = Field(..., min_length=3, max_length=300)
+    operador: str = Field(default="AND", pattern="^(AND|OR)$")
+    fontes: list[str] = Field(default_factory=list)
+    artigos: list[dict[str, Any]] = Field(default_factory=list)
+    tipo: str = Field(default="busca", pattern="^(busca|artigo|caso_clinico)$")
+    observacao: Optional[str] = Field(default=None, max_length=500)
 
 
 @router.post("/demo", response_model=IniciarResponse)
@@ -298,3 +309,138 @@ async def buscar_pubmed(
         ],
     }
 
+
+def _query_booleana(q: str, operador: str) -> str:
+    operador = operador.upper() if operador else "AND"
+    if operador not in {"AND", "OR"}:
+        operador = "AND"
+    if " AND " in q.upper() or " OR " in q.upper():
+        return q
+    termos = [t.strip() for t in q.replace(",", " ").split() if len(t.strip()) > 1]
+    if len(termos) <= 1:
+        return q
+    return f" {operador} ".join(termos)
+
+
+def _url_artigo(art: dict) -> str:
+    if art.get("pmid"):
+        return f"https://pubmed.ncbi.nlm.nih.gov/{art['pmid']}"
+    if art.get("doi"):
+        return f"https://doi.org/{art['doi']}"
+    if art.get("open_access_url"):
+        return art["open_access_url"]
+    if art.get("s2_url"):
+        return art["s2_url"]
+    if art.get("openalex_id"):
+        return art["openalex_id"]
+    return ""
+
+
+def _normalizar_artigo(art: dict) -> dict:
+    return {
+        "pmid":       art.get("pmid", ""),
+        "doi":        art.get("doi", ""),
+        "titulo":     art.get("titulo", "Sem título"),
+        "autores":    art.get("autores", ""),
+        "periodico":  art.get("periodico", ""),
+        "ano":        art.get("ano", ""),
+        "abstract":   (art.get("abstract") or "")[:500],
+        "fonte":      art.get("fonte", "PubMed" if art.get("pmid") else ""),
+        "url":        _url_artigo(art),
+        "url_pubmed": _url_artigo(art),
+        "citacoes":   art.get("citation_count") or art.get("citacoes", 0),
+        "open_access_url": art.get("open_access_url", ""),
+    }
+
+
+def _deduplicar_artigos(artigos: list[dict]) -> list[dict]:
+    vistos: set[str] = set()
+    resultado: list[dict] = []
+    for art in artigos:
+        doi = (art.get("doi") or "").lower().strip()
+        pmid = (art.get("pmid") or "").strip()
+        titulo = (art.get("titulo") or "").lower().strip()
+        chave = doi or (f"pmid:{pmid}" if pmid else titulo)
+        if not chave or chave in vistos:
+            continue
+        vistos.add(chave)
+        resultado.append(art)
+    return resultado
+
+
+@router.get("/biblioteca/buscar")
+async def buscar_biblioteca(
+    q: str = Query(..., min_length=3, max_length=300),
+    max: int = Query(default=12, ge=1, le=30),
+    operador: str = Query(default="AND", pattern="^(AND|OR)$"),
+    fontes: list[str] = Query(default=["pubmed", "semantic", "openalex", "crossref"]),
+    user: Usuario = Depends(get_verified_user),
+):
+    """Busca literatura em múltiplas bases e retorna resultados deduplicados."""
+    from app.utils.pubmed import pesquisar_pubmed
+    from app.utils.semantic_scholar import buscar as buscar_s2
+    from app.utils.openalex import buscar as buscar_openalex
+    from app.utils.crossref import buscar as buscar_crossref
+
+    fontes_norm = {f.lower() for f in fontes}
+    query_busca = _query_booleana(q, operador)
+    tarefas = []
+
+    if "pubmed" in fontes_norm:
+        tarefas.append(pesquisar_pubmed([query_busca], max_por_query=max, max_total=max))
+    if "semantic" in fontes_norm or "semantic_scholar" in fontes_norm:
+        tarefas.append(buscar_s2(query_busca, max_results=max))
+    if "openalex" in fontes_norm:
+        tarefas.append(buscar_openalex(query_busca, max_results=max))
+    if "crossref" in fontes_norm:
+        tarefas.append(buscar_crossref(query_busca, max_results=max))
+
+    if not tarefas:
+        raise HTTPException(status_code=400, detail="Selecione pelo menos uma base de busca.")
+
+    resultados = await asyncio.gather(*tarefas, return_exceptions=True)
+    artigos: list[dict] = []
+    erros: list[str] = []
+    for item in resultados:
+        if isinstance(item, Exception):
+            erros.append(str(item)[:160])
+            continue
+        artigos.extend(item)
+
+    artigos = _deduplicar_artigos(artigos)
+    artigos = sorted(
+        artigos,
+        key=lambda a: (a.get("citation_count") or a.get("citacoes") or 0, a.get("ano") or ""),
+        reverse=True,
+    )[:max]
+
+    return {
+        "query": q,
+        "query_executada": query_busca,
+        "operador": operador,
+        "fontes": sorted(fontes_norm),
+        "total": len(artigos),
+        "erros": erros,
+        "artigos": [_normalizar_artigo(art) for art in artigos],
+    }
+
+
+@router.post("/biblioteca/salvar")
+async def salvar_pesquisa(
+    body: SalvarPesquisaRequest,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    """Salva uma busca ou artigo selecionado na biblioteca do usuário."""
+    item = PesquisaSalva(
+        user_id=user.id,
+        tipo=body.tipo,
+        query=body.query,
+        operador=body.operador,
+        fontes=body.fontes,
+        artigos=body.artigos[:50],
+        observacao=body.observacao,
+    )
+    db.add(item)
+    await db.commit()
+    return {"salvo": True, "id": item.id, "tipo": item.tipo}

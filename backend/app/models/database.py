@@ -67,6 +67,11 @@ class Usuario(Base):
 
     sessoes: Mapped[List["Sessao"]] = relationship("Sessao", back_populates="usuario",
                                                     lazy="noload")
+    pesquisas_salvas: Mapped[List["PesquisaSalva"]] = relationship(
+        "PesquisaSalva",
+        back_populates="usuario",
+        lazy="noload",
+    )
 
 
 class Sessao(Base):
@@ -93,6 +98,25 @@ class Sessao(Base):
     flags: Mapped[list] = mapped_column(JSON, default=list)
     docx_path: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     care_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+
+class PesquisaSalva(Base):
+    __tablename__ = "pesquisas_salvas"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True,
+                                    default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("usuarios.id"),
+                                         nullable=False, index=True)
+    usuario: Mapped["Usuario"] = relationship("Usuario", back_populates="pesquisas_salvas")
+
+    tipo: Mapped[str] = mapped_column(String, default="busca")
+    query: Mapped[str] = mapped_column(Text)
+    operador: Mapped[str] = mapped_column(String, default="AND")
+    fontes: Mapped[list] = mapped_column(JSON, default=list)
+    artigos: Mapped[list] = mapped_column(JSON, default=list)
+    observacao: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 # ── Engine & session factory ──────────────────────────────────────────────────

@@ -8,7 +8,7 @@ from typing import List, Optional
 
 from app.services.auth import get_verified_user
 from app.models.database import Usuario
-from app.services.llm_router import chamar, Complexidade
+from app.services.llm_router import chamar, Complexidade, mensagem_usuario_erro
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -94,7 +94,7 @@ async def chat(
     except Exception as exc:
         raise HTTPException(
             status_code=502,
-            detail=f"Assistente indisponível no momento: {exc}",
+            detail=mensagem_usuario_erro(exc),
         ) from exc
 
     return ChatResponse(resposta=resposta)
@@ -140,7 +140,7 @@ Retorne apenas o texto transformado, sem explicações ou comentários."""
     except Exception as exc:
         raise HTTPException(
             status_code=502,
-            detail=f"Assistente de texto indisponível no momento: {exc}",
+            detail=mensagem_usuario_erro(exc),
         ) from exc
 
     return ChatResponse(resposta=resposta)
