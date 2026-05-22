@@ -117,6 +117,8 @@ body {
 .sidebar.collapsed .nav-divider { margin: 6px 20px; }
 .sidebar.collapsed .nav-item span.nav-text { opacity: 0; width: 0; overflow: hidden; white-space: nowrap; }
 .sidebar.collapsed .nav-item { justify-content: center; padding: 5px 0; min-height: 40px; }
+.sidebar.collapsed .nav-item.active { background: transparent; }
+.sidebar.collapsed .nav-item.active::before { display: none; }
 .sidebar.collapsed .nav-icon {
   width: 28px;
   height: 28px;
@@ -332,6 +334,13 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--t3);
+  background: #EFEFED;
+  border-radius: 7px;
+}
+.nav-item:hover .nav-icon { color: var(--obsidian); }
+.nav-item.active .nav-icon {
+  background: var(--acid);
   color: var(--obsidian);
 }
 .nav-icon svg {
@@ -366,41 +375,33 @@ body {
 
 /* Sidebar footer */
 .sidebar-footer {
-  padding: 10px 10px 14px;
+  padding: 10px 12px 14px;
   border-top: 1px solid var(--sidebar-bdr);
 }
 
 .plan-summary {
-  background: var(--acid);
-  border: 1px solid rgba(10,10,11,0.08);
-  border-radius: 18px;
-  padding: 10px;
-  margin-bottom: 8px;
-  box-shadow: 0 10px 24px rgba(200,255,0,0.18);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  margin-bottom: 10px;
+  box-shadow: none;
 }
 .plan-usage {
-  margin: 10px 0 0;
-  padding: 10px;
-  border: 1px solid var(--card-bdr);
-  border-radius: 10px;
-  background: #FAFAFA;
-  box-shadow: var(--shadow-xs);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .plan-badge-label {
-  font-size: 10px;
-  color: #596400;
-  margin-bottom: 4px;
-  font-weight: 700;
-  letter-spacing: .04em;
-  text-transform: uppercase;
+  display: none;
 }
 
 .plan-badge-name {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--obsidian);
-  font-family: var(--head);
+  display: none;
 }
 
 /* PubMed article result card */
@@ -435,49 +436,44 @@ body {
 /* Usage bar */
 .usage-bar-wrap {
   margin-bottom: 10px;
-  padding: 10px 12px;
-  background: var(--card-bg);
-  border: 1px solid var(--card-bdr);
-  border-radius: var(--radius-xs);
-  box-shadow: var(--shadow-xs);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .plan-summary .plan-usage {
-  margin: 10px 0 0;
-  padding: 10px;
-  background: #FAFAFA;
-  border: 1px solid var(--card-bdr);
-  border-radius: 10px;
-  box-shadow: var(--shadow-xs);
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .usage-bar-header {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
   align-items: start;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 6px;
   margin-bottom: 6px;
 }
 
 .usage-bar-label {
-  font-size: 10px;
+  font-size: 10.5px;
   color: var(--t3);
   font-weight: 650;
-  letter-spacing: .02em;
+  letter-spacing: 0;
 }
 
 .usage-bar-count {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--t2);
-  text-align: right;
-  line-height: 1.1;
-  max-width: 86px;
+  display: none;
 }
 
 .usage-bar-track {
-  height: 6px;
-  background: #EDEDED;
+  height: 5px;
+  background: #E4E4E1;
   border-radius: 99px;
   overflow: hidden;
 }
@@ -513,11 +509,7 @@ body {
 }
 
 #sidebarUsageSub {
-  font-size: 10.5px !important;
-  line-height: 1.25;
-  font-weight: 650;
-  letter-spacing: .01em;
-  text-transform: uppercase;
+  display: none;
 }
 
 .btn-upgrade:hover { opacity: 0.88; transform: translateY(-1px); }
@@ -589,7 +581,7 @@ body {
   flex-shrink: 0;
 }
 .topbar-brand img {
-  width: 153px;
+  width: 122px;
   height: auto;
   display: block;
 }
@@ -1754,7 +1746,7 @@ tbody td {
   border: 1px solid var(--card-bdr);
   border-radius: var(--radius);
   width: 100%;
-  max-width: 840px;
+  max-width: 1080px;
   max-height: calc(100dvh - 32px);
   display: flex;
   flex-direction: column;
@@ -1799,7 +1791,7 @@ tbody td {
 
 .modal-close:hover { color: var(--t1); background: var(--row-hover); }
 
-.modal-body { padding: 24px; overflow-y: auto; }
+.modal-body { padding: 22px 24px; overflow-y: auto; }
 
 .modal-footer {
   padding: 16px 24px;
@@ -1820,10 +1812,10 @@ tbody td {
 .plan-card {
   border: 1px solid var(--card-bdr);
   border-radius: var(--radius);
-  padding: 16px 18px;
+  padding: 14px 16px;
   display: grid;
-  grid-template-columns: minmax(170px, 0.7fr) minmax(180px, 0.8fr) minmax(240px, 1.2fr) minmax(150px, auto);
-  gap: 16px;
+  grid-template-columns: minmax(170px, 0.75fr) minmax(150px, 0.55fr) minmax(320px, 1.2fr) minmax(150px, auto);
+  gap: 14px;
   align-items: center;
   position: relative;
   transition: border-color 0.18s, box-shadow 0.18s;
@@ -1907,12 +1899,12 @@ tbody td {
 }
 
 .plan-features li {
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--t2);
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  min-width: 180px;
+  min-width: 160px;
 }
 
 .plan-features li::before {
@@ -2137,7 +2129,7 @@ tbody td {
     flex: 1 1 auto;
     min-width: 0;
   }
-  .topbar-brand img { width: 96px; }
+  .topbar-brand img { width: 77px; }
   .topbar-page {
     padding-left: 10px;
     min-width: 0;
@@ -2560,7 +2552,7 @@ tbody td {
       <div class="plan-badge-name" id="sidebarPlanName">GRATUITO</div>
       <div class="usage-bar-wrap plan-usage" id="sidebarUsageWrap">
         <div class="usage-bar-header">
-          <span class="usage-bar-label">Tokens usados</span>
+          <span class="usage-bar-label" id="sidebarUsageLabel">Tokens usados - Plano gratuito</span>
           <span class="usage-bar-count" id="sidebarUsageText">—</span>
         </div>
         <div class="usage-bar-track">
@@ -3272,6 +3264,7 @@ async function _renderUsageBar(user) {
   const wrap = document.getElementById('sidebarUsageWrap');
   const fill = document.getElementById('sidebarUsageFill');
   const text = document.getElementById('sidebarUsageText');
+  const label = document.getElementById('sidebarUsageLabel');
   const sub  = document.getElementById('sidebarUsageSub');
   if (!wrap || !fill || !text) return;
 
@@ -3303,14 +3296,21 @@ async function _renderUsageBar(user) {
   }
 
   const pct = dados.pct_usado || 0;
+  const plano = (user.plano || 'free').toLowerCase();
+  const planoLabel = plano === 'free'
+    ? 'gratuito'
+    : plano === 'starter'
+      ? 'Starter'
+      : plano === 'pro'
+        ? 'Pro'
+        : 'Institucional';
+  if (label) label.textContent = `Tokens usados - Plano ${planoLabel}`;
   text.textContent = `${_fmtTok(dados.tokens_mes)} / ${_fmtTok(dados.tokens_limite)} tokens`;
   fill.style.width  = pct + '%';
   fill.className    = 'usage-bar-fill' + (pct >= 90 ? ' danger' : pct >= 70 ? ' warning' : '');
 
   if (sub) {
-    sub.textContent = dados.artigos_equiv_restantes > 0
-      ? `≈ ${dados.artigos_equiv_restantes} artigo${dados.artigos_equiv_restantes !== 1 ? 's' : ''} restante${dados.artigos_equiv_restantes !== 1 ? 's' : ''} · renova ${dados.reset_em}`
-      : `Limite atingido · renova ${dados.reset_em}`;
+    sub.textContent = '';
   }
 
   if (pct >= 100) {
