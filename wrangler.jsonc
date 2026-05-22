@@ -8,7 +8,8 @@
   "main": "_worker.js",
   "assets": {
     "directory": ".",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    "run_worker_first": ["/", "/landing"]
   },
   "compatibility_flags": [
     "nodejs_compat"
