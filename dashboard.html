@@ -54,8 +54,8 @@
   --head:        'Space Grotesk', system-ui, sans-serif;
 
   /* Layout */
-  --sidebar-w:   220px;
-  --sidebar-collapsed-w: 72px;
+  --sidebar-w:   260px;
+  --sidebar-collapsed-w: 64px;
   --chat-w:      340px;
   --topbar-h:    76px;
   --radius:      10px;
@@ -114,18 +114,18 @@ body {
 }
 
 .sidebar.collapsed .nav-label { opacity: 0; height: 0; padding: 0; overflow: hidden; }
-.sidebar.collapsed .nav-divider { margin: 10px 16px; }
+.sidebar.collapsed .nav-divider { margin: 8px 18px; }
 .sidebar.collapsed .nav-item span.nav-text { opacity: 0; width: 0; overflow: hidden; white-space: nowrap; }
-.sidebar.collapsed .nav-item { justify-content: center; padding: 11px 0; min-height: 52px; }
+.sidebar.collapsed .nav-item { justify-content: center; padding: 7px 0; min-height: 48px; }
 .sidebar.collapsed .nav-icon {
-  width: 40px;
-  height: 40px;
-  font-size: 24px;
-  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+  font-size: 18px;
+  border-radius: 10px;
 }
 .sidebar.collapsed .nav-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 19px;
+  height: 19px;
 }
 .sidebar.collapsed .nav-logo-icon {
   width: 32px;
@@ -135,7 +135,7 @@ body {
 .sidebar.collapsed .usage-bar-wrap { display: none; }
 .sidebar.collapsed .plan-badge { display: none; }
 .sidebar.collapsed .btn-upgrade span { display: none; }
-.sidebar.collapsed .btn-upgrade { padding: 9px; justify-content: center; }
+.sidebar.collapsed .btn-upgrade { padding: 10px; justify-content: center; border-radius: 12px; }
 .sidebar.collapsed:hover,
 .sidebar.collapsed:focus-within {
   width: var(--sidebar-w);
@@ -143,17 +143,17 @@ body {
   box-shadow: 18px 0 40px rgba(0,0,0,0.08);
 }
 .sidebar.collapsed:hover .nav-label,
-.sidebar.collapsed:focus-within .nav-label { opacity: 1; height: auto; padding: 18px 16px 8px; }
+.sidebar.collapsed:focus-within .nav-label { opacity: 1; height: auto; padding: 14px 16px 6px; }
 .sidebar.collapsed:hover .nav-divider,
 .sidebar.collapsed:focus-within .nav-divider { margin: 12px 16px; }
 .sidebar.collapsed:hover .nav-item,
-.sidebar.collapsed:focus-within .nav-item { justify-content: flex-start; padding: 11px 14px; min-height: auto; }
+.sidebar.collapsed:focus-within .nav-item { justify-content: flex-start; padding: 9px 12px; min-height: 42px; }
 .sidebar.collapsed:hover .nav-item span.nav-text,
 .sidebar.collapsed:focus-within .nav-item span.nav-text { opacity: 1; width: auto; }
 .sidebar.collapsed:hover .nav-icon,
-.sidebar.collapsed:focus-within .nav-icon { width: 28px; height: 28px; font-size: 14px; border-radius: 9px; }
+.sidebar.collapsed:focus-within .nav-icon { width: 26px; height: 26px; font-size: 13px; border-radius: 8px; }
 .sidebar.collapsed:hover .nav-icon svg,
-.sidebar.collapsed:focus-within .nav-icon svg { width: 16px; height: 16px; }
+.sidebar.collapsed:focus-within .nav-icon svg { width: 15px; height: 15px; }
 .sidebar.collapsed:hover .sidebar-footer,
 .sidebar.collapsed:focus-within .sidebar-footer { padding: 12px 10px; }
 .sidebar.collapsed:hover .usage-bar-wrap,
@@ -163,13 +163,13 @@ body {
 .sidebar.collapsed:hover .btn-upgrade span,
 .sidebar.collapsed:focus-within .btn-upgrade span { display: inline; }
 .sidebar.collapsed:hover .btn-upgrade,
-.sidebar.collapsed:focus-within .btn-upgrade { padding: 12px; justify-content: center; }
+.sidebar.collapsed:focus-within .btn-upgrade { padding: 10px; justify-content: center; }
 
 /* Content stays anchored; the sidebar expands as an overlay, without moving the page. */
 .main-wrapper.sidebar-collapsed { margin-left: var(--sidebar-collapsed-w); }
 
 .sidebar-control {
-  padding: 14px 14px 8px;
+  padding: 10px 12px 6px;
   display: flex;
   justify-content: flex-end;
 }
@@ -256,20 +256,20 @@ body {
 /* Nav */
 .sidebar-nav {
   flex: 1;
-  padding: 8px 10px 12px;
+  padding: 6px 10px 10px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   overflow-y: auto;
 }
 
 .nav-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
   color: var(--t3);
-  padding: 18px 16px 8px;
+  padding: 14px 16px 6px;
 }
 
 .nav-divider {
@@ -281,12 +281,12 @@ body {
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 11px 14px;
-  border-radius: 12px;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
   text-decoration: none;
   color: var(--t1);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   transition: all 0.15s ease;
   cursor: pointer;
@@ -295,6 +295,14 @@ body {
   width: 100%;
   text-align: left;
   position: relative;
+  min-height: 42px;
+}
+
+.nav-text {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-item:hover {
@@ -311,15 +319,15 @@ body {
 .nav-item.active::before {
   content: '';
   position: absolute;
-  left: 0; top: 10px; bottom: 10px;
+  left: 0; top: 9px; bottom: 9px;
   width: 3px;
   background: var(--acid);
   border-radius: 0 99px 99px 0;
 }
 
 .nav-icon {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -327,8 +335,8 @@ body {
   color: var(--obsidian);
 }
 .nav-icon svg {
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
   display: block;
   image-rendering: pixelated;
 }
@@ -358,38 +366,38 @@ body {
 
 /* Sidebar footer */
 .sidebar-footer {
-  padding: 14px 10px 16px;
+  padding: 10px 10px 14px;
   border-top: 1px solid var(--sidebar-bdr);
 }
 
 .plan-badge {
-  background: var(--card-bg);
-  border: 1px solid var(--card-bdr);
-  border-radius: 14px;
-  padding: 14px;
-  margin-bottom: 10px;
-  box-shadow: none;
+  background: var(--acid);
+  border: 1px solid rgba(10,10,11,0.08);
+  border-radius: 18px;
+  padding: 10px;
+  margin-bottom: 8px;
+  box-shadow: 0 10px 24px rgba(200,255,0,0.18);
 }
 .plan-usage {
-  margin: 12px 0 0;
-  padding: 12px;
+  margin: 10px 0 0;
+  padding: 10px;
   border: 1px solid var(--card-bdr);
-  border-radius: 12px;
+  border-radius: 10px;
   background: #FAFAFA;
   box-shadow: var(--shadow-xs);
 }
 
 .plan-badge-label {
-  font-size: 11px;
-  color: var(--t3);
+  font-size: 10px;
+  color: #596400;
   margin-bottom: 4px;
   font-weight: 700;
-  letter-spacing: .03em;
+  letter-spacing: .04em;
   text-transform: uppercase;
 }
 
 .plan-badge-name {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--obsidian);
   font-family: var(--head);
@@ -435,23 +443,24 @@ body {
 }
 
 .plan-badge .plan-usage {
-  margin: 12px 0 0;
-  padding: 12px;
+  margin: 10px 0 0;
+  padding: 10px;
   background: #FAFAFA;
   border: 1px solid var(--card-bdr);
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: var(--shadow-xs);
 }
 
 .usage-bar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 8px;
   margin-bottom: 6px;
 }
 
 .usage-bar-label {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--t3);
   font-weight: 650;
   letter-spacing: .02em;
@@ -461,10 +470,13 @@ body {
   font-size: 11px;
   font-weight: 700;
   color: var(--t2);
+  text-align: right;
+  line-height: 1.1;
+  max-width: 86px;
 }
 
 .usage-bar-track {
-  height: 7px;
+  height: 6px;
   background: #EDEDED;
   border-radius: 99px;
   overflow: hidden;
@@ -486,18 +498,26 @@ body {
   justify-content: center;
   gap: 6px;
   width: 100%;
-  padding: 12px;
+  padding: 10px;
   background: var(--acid);
   border: none;
   border-radius: 12px;
   color: var(--obsidian);
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.01em;
   cursor: pointer;
   transition: opacity 0.18s ease, transform 0.18s ease;
   text-align: center;
+}
+
+#sidebarUsageSub {
+  font-size: 10.5px !important;
+  line-height: 1.25;
+  font-weight: 650;
+  letter-spacing: .01em;
+  text-transform: uppercase;
 }
 
 .btn-upgrade:hover { opacity: 0.88; transform: translateY(-1px); }

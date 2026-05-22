@@ -34,8 +34,8 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
   --radius:      10px;
   --shadow-sm:   0 1px 3px rgba(0,0,0,0.08);
   --shadow-md:   0 4px 16px rgba(0,0,0,0.10);
-  --sidebar-w:   280px;
-  --sidebar-collapsed-w: 76px;
+  --sidebar-w:   260px;
+  --sidebar-collapsed-w: 64px;
 }
 
 /* ── layout ── */
@@ -105,7 +105,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
 /* ── sidebar ── */
 .sidebar {
   width: var(--sidebar-w); flex-shrink: 0;
-  background: var(--sidebar-bg);
+  background: #FFFFFF;
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
   overflow: visible;
@@ -127,7 +127,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
   transition: max-width .22s ease;
 }
 .sidebar-collapse-btn {
-  width: 32px;
+  width: 30px;
   height: 36px;
   border: 1px solid var(--border);
   border-radius: 0 9px 9px 0;
@@ -138,7 +138,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
   line-height: 1;
   position: absolute;
   top: 16px;
-  right: -16px;
+  right: -15px;
   z-index: 5;
   box-shadow: var(--shadow-sm);
 }
@@ -158,20 +158,20 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
   display: none;
 }
 .sidebar.collapsed .step-list {
-  padding: 12px 10px 16px;
+  padding: 10px 8px 14px;
 }
 .sidebar.collapsed .step-item {
   justify-content: center;
-  padding: 10px 0;
-  min-height: 52px;
+  padding: 7px 0;
+  min-height: 48px;
   border-bottom: 0;
   border-radius: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 .sidebar.collapsed .step-num {
-  width: 36px;
-  height: 36px;
-  font-size: 14px;
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
 }
 .sidebar.collapsed .sidebar-progress {
   padding: 12px 10px 18px;
@@ -186,20 +186,20 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
 .sidebar.collapsed:hover .prog-label,
 .sidebar.collapsed:focus-within .prog-label { display: flex; }
 .sidebar.collapsed:hover .step-list,
-.sidebar.collapsed:focus-within .step-list { padding: 0 12px 16px; }
+.sidebar.collapsed:focus-within .step-list { padding: 6px 10px 14px; }
 .sidebar.collapsed:hover .step-item,
 .sidebar.collapsed:focus-within .step-item {
   justify-content: flex-start;
-  padding: 10px 8px;
-  min-height: auto;
+  padding: 8px 10px;
+  min-height: 42px;
   border-bottom: 1px solid var(--border);
-  border-radius: 0;
+  border-radius: 10px;
   margin-bottom: 0;
 }
 .sidebar.collapsed:hover .step-num,
 .sidebar.collapsed:focus-within .step-num {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   font-size: 11px;
 }
 .step-num svg {
@@ -210,25 +210,27 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
 }
 
 .sidebar-label {
-  padding: 16px 20px 6px;
-  font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  padding: 14px 16px 6px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0; text-transform: none;
   color: var(--t3);
 }
 
 /* step list */
-.step-list { padding: 0 12px 16px; flex: 1; overflow-y: auto; }
+.step-list { padding: 6px 10px 14px; flex: 1; overflow-y: auto; }
 .step-item {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 8px; border-bottom: 1px solid var(--border); cursor: pointer;
+  padding: 8px 10px; border-bottom: 1px solid var(--border); cursor: pointer;
   transition: background .15s;
   margin-bottom: 0;
+  min-height: 42px;
+  border-radius: 10px;
 }
 .step-item:last-child { border-bottom: 0; }
-.step-item:hover { background: var(--light2); border-radius: 8px; }
+.step-item:hover { background: #F2F2F0; }
 .step-item.active { background: transparent; }
 .step-item.done .step-num { background: var(--obsidian); color: var(--acid); }
 .step-num {
-  width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%;
+  width: 26px; height: 26px; flex-shrink: 0; border-radius: 8px;
   background: var(--border); color: var(--t3);
   font-size: 11px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
@@ -237,7 +239,14 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
 .step-item.active .step-num { background: var(--acid); color: var(--obsidian); }
 .step-info { flex: 1; min-width: 0; }
 .step-title { font-size: 13px; font-weight: 600; color: var(--t1); line-height: 1.3; }
-.step-sub { font-size: 11px; color: var(--t3); margin-top: 2px; }
+.step-sub {
+  font-size: 11px;
+  color: var(--t3);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .step-item.active .step-title { color: var(--obsidian); }
 
 /* progress bar */
@@ -450,12 +459,12 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
   }
   .sidebar.collapsed:hover .step-list,
   .sidebar.collapsed:focus-within .step-list {
-    padding: 12px 10px 16px;
+    padding: 10px 8px 14px;
   }
   .sidebar.collapsed:hover .step-item,
   .sidebar.collapsed:focus-within .step-item {
     justify-content: center;
-    padding: 10px 0;
+    padding: 7px 0;
   }
   .sidebar:not(.collapsed) {
     position: fixed;
@@ -473,14 +482,14 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
   .sidebar:not(.collapsed) .prog-label {
     display: flex;
   }
-  .sidebar:not(.collapsed) .step-list { padding: 14px 14px 16px; }
+  .sidebar:not(.collapsed) .step-list { padding: 10px 10px 14px; }
   .sidebar:not(.collapsed) .step-item {
     justify-content: flex-start;
-    gap: 12px;
-    padding: 10px 6px;
-    min-height: 54px;
+    gap: 10px;
+    padding: 8px 10px;
+    min-height: 42px;
   }
-  .sidebar:not(.collapsed) .step-icon { width: 34px; height: 34px; }
+  .sidebar:not(.collapsed) .step-num { width: 26px; height: 26px; }
   .sidebar-collapse-btn {
     top: 12px;
     right: -15px;
