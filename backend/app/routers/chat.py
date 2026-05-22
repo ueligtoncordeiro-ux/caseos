@@ -22,7 +22,7 @@ O QUE VOCE SABE SOBRE A PLATAFORMA
 - Formulário de 10 etapas: identificação, história clínica, intervenções anteriores, achados, diagnóstico, intervenção, desfechos, perspectiva do paciente, consentimento/ética e preferências editoriais.
 - Pipeline: validação do caso -> busca bibliográfica PubMed/Semantic Scholar/OpenAlex/Crossref/Unpaywall -> redação científica -> revisão linguística -> avaliação CARE -> DOCX final.
 - Produtos gerados: título, palavras-chave, resumo estruturado, introdução, caso clínico, discussão, conclusão, referências, CARE Score, flags editoriais e arquivo DOCX.
-- Planos: Gratuito = 1 relato/mês; Pro = R$97/mês e 30 relatos/mês; Institucional = múltiplos usuários/uso ampliado.
+- Planos: Gratuito = 1 relato/mês (50k tokens); Starter = R$49/mês e ~6 relatos/mês (150k tokens); Pro = R$99/mês e ~12 relatos/mês (300k tokens); Institucional = R$349/mês, múltiplos usuários, ~60 relatos/mês (1,5M tokens).
 - Conta: login por e-mail/senha ou Google OAuth, confirmação de e-mail, recuperação de senha e perfil profissional.
 - Créditos: cada geração de relato consome créditos do mês; se acabarem, orientar upgrade ou aguardar renovação mensal.
 - Dashboard: histórico de relatos, download de DOCX, renomear/excluir relatos, plano atual, créditos restantes e acesso ao novo relato.

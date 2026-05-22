@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.config import settings
-from app.models.database import get_db, Usuario, PLANO_PRO, PLANO_INSTITUCIONAL
+from app.models.database import get_db, Usuario, PLANO_STARTER, PLANO_PRO, PLANO_INSTITUCIONAL
 from app.models.schemas import (
     RegisterRequest, LoginRequest, ForgotPasswordRequest,
     ResetPasswordRequest, UpdateProfileRequest,
@@ -369,6 +369,14 @@ async def listar_planos():
                 "descricao":     "Prévias demo ilimitadas · 1 artigo/mês · 50k tokens",
             },
             {
+                "id":            "starter",
+                "nome":          "Starter",
+                "artigos_mes":   QUOTA_MENSAL["starter"],
+                "tokens_limite": TOKENS_LIMITE["starter"],
+                "preco_brl":     PRECO_BRL["starter"],
+                "descricao":     "~6 artigos completos/mês · 150k tokens · CARE completo",
+            },
+            {
                 "id":            "pro",
                 "nome":          "Pro",
                 "artigos_mes":   QUOTA_MENSAL["pro"],
@@ -402,6 +410,7 @@ async def criar_checkout(
     stripe.api_key = settings.stripe_secret_key
 
     price_map = {
+        PLANO_STARTER:       settings.stripe_starter_price_id,
         PLANO_PRO:           settings.stripe_pro_price_id,
         PLANO_INSTITUCIONAL: settings.stripe_inst_price_id,
     }

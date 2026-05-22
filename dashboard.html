@@ -2068,19 +2068,89 @@ tbody td {
 }
 
 @media (max-width: 768px) {
+  :root { --topbar-h: 64px; }
   .hamburger { display: flex; align-items: center; }
   .sidebar { transform: translateX(-100%); }
   .sidebar.open { transform: translateX(0); }
   .sidebar-overlay.open { display: block; }
   .main-wrapper { margin-left: 0; }
   .main-wrapper.chat-open { margin-right: 0; }
-  .topbar { padding: 0 16px 0 56px; }
-  .topbar-brand img { width: 112px; }
-  .topbar-page { padding-left: 12px; }
+  .topbar {
+    height: 64px;
+    padding: 0 10px 0 12px;
+    gap: 8px;
+  }
+  .topbar-left {
+    gap: 10px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .topbar-brand img { width: 96px; }
+  .topbar-page {
+    padding-left: 10px;
+    min-width: 0;
+  }
+  .topbar-title {
+    max-width: 88px;
+    font-size: 14px;
+    line-height: 1.08;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .topbar-subtitle { display: none; }
+  .topbar-right {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .notif-btn,
+  .user-avatar {
+    width: 34px;
+    height: 34px;
+  }
+  .hamburger { display: none; }
   .page-content { padding: 20px 16px; }
   .bento-grid { grid-template-columns: repeat(2, 1fr); }
-  .chat-panel { width: 100%; }
+  .chat-panel {
+    width: 100vw;
+    max-width: 100vw;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    height: 100dvh;
+  }
+  .chat-header { height: 58px; padding: 0 12px; }
+  .chat-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 100vw;
+    padding: 10px 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .chip {
+    max-width: calc(100vw - 40px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chat-messages {
+    padding: 16px 12px;
+    max-width: 100vw;
+  }
+  .msg-wrap { max-width: 100%; }
+  .bubble {
+    max-width: calc(100vw - 78px);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+  .chat-input-area {
+    padding: 10px 12px calc(env(safe-area-inset-bottom) + 10px);
+  }
+  .chat-input-wrap {
+    max-width: calc(100vw - 24px);
+    padding: 7px 8px;
+  }
+  .chat-input { font-size: 16px; }
   .chat-toggle-btn { bottom: 16px; right: 16px; }
   .btn-topbar-novo span { display: none; }
   .btn-topbar-caseos span { display: none; }
@@ -2850,11 +2920,27 @@ tbody td {
           <button class="btn-assinar secondary" disabled id="btnAssinarFree">Plano atual</button>
         </div>
 
+        <!-- Starter -->
+        <div class="plan-card" id="planCardStarter">
+          <div class="plan-name">🚀 Starter</div>
+          <div class="plan-price">R$49 <span>/mês</span></div>
+          <div class="plan-tokens">150.000 tokens · ~6 artigos/mês</div>
+          <ul class="plan-features">
+            <li>~6 artigos completos/mês</li>
+            <li>CARE checklist completo</li>
+            <li>Upload de imagens clínicas</li>
+            <li>Download DOCX formatado</li>
+            <li class="disabled">Multi-usuário</li>
+            <li class="disabled">Suporte prioritário 24h</li>
+          </ul>
+          <button class="btn-assinar primary" onclick="assinarPlano('starter')">Assinar Starter</button>
+        </div>
+
         <!-- Pro -->
         <div class="plan-card highlighted" id="planCardPro">
           <div class="plan-badge">Mais popular</div>
           <div class="plan-name">⚡ Pro</div>
-          <div class="plan-price">R$97 <span>/mês</span></div>
+          <div class="plan-price">R$99 <span>/mês</span></div>
           <div class="plan-tokens">300.000 tokens · ~12 artigos/mês</div>
           <ul class="plan-features">
             <li>~12 artigos completos/mês</li>
@@ -2871,7 +2957,7 @@ tbody td {
         <!-- Institucional -->
         <div class="plan-card" id="planCardInst">
           <div class="plan-name">🏥 Institucional</div>
-          <div class="plan-price">R$497 <span>/mês</span></div>
+          <div class="plan-price">R$349 <span>/mês</span></div>
           <div class="plan-tokens">1.500.000 tokens · ~60 artigos/mês</div>
           <ul class="plan-features">
             <li>~60 artigos completos/mês</li>
@@ -3165,7 +3251,7 @@ async function _renderUsageBar(user) {
 }
 
 function _destacarPlanoAtual(plano) {
-  const mapa = { free: 'planCardFree', pro: 'planCardPro', institucional: 'planCardInst' };
+  const mapa = { free: 'planCardFree', starter: 'planCardStarter', pro: 'planCardPro', institucional: 'planCardInst' };
   Object.entries(mapa).forEach(([p, id]) => {
     const el = document.getElementById(id);
     if (!el) return;

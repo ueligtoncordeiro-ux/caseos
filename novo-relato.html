@@ -398,13 +398,159 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
 .form-grid-2 { grid-template-columns: 1fr 1fr; }
 .form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
 @media (max-width: 700px) {
-  .brand-header { padding: 0 14px; gap: 10px; }
-  .brand-header .logo-link img { width: 112px; max-width: 112px; }
-  .brand-page { padding-left: 12px; }
+  .app-shell { height: 100dvh; }
+  .brand-header {
+    height: 64px;
+    padding: 0 10px 0 12px;
+    gap: 8px;
+  }
+  .brand-left { gap: 10px; flex: 1 1 auto; }
+  .brand-header .logo-link img { width: 96px; max-width: 96px; }
+  .brand-page { padding-left: 10px; min-width: 0; }
+  .brand-title {
+    max-width: 74px;
+    font-size: 14px;
+    line-height: 1.08;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .brand-subtitle { display: none; }
-  .btn-back-dash { padding: 6px 10px; }
+  .brand-actions { gap: 6px; }
+  .btn-back-dash {
+    padding: 6px 8px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .notif-btn,
+  .user-avatar {
+    width: 34px;
+    height: 34px;
+  }
   .notif-dropdown { width: min(280px, calc(100vw - 16px)); }
+  .app-body { overflow: hidden; }
+  .main-area { min-width: 0; }
+  .sidebar,
+  .sidebar.collapsed {
+    width: 64px;
+    flex: 0 0 64px;
+  }
+  .sidebar.collapsed:hover,
+  .sidebar.collapsed:focus-within {
+    width: 64px;
+    box-shadow: none;
+  }
+  .sidebar.collapsed:hover .sidebar-label,
+  .sidebar.collapsed:focus-within .sidebar-label,
+  .sidebar.collapsed:hover .step-info,
+  .sidebar.collapsed:focus-within .step-info,
+  .sidebar.collapsed:hover .prog-label,
+  .sidebar.collapsed:focus-within .prog-label {
+    display: none;
+  }
+  .sidebar.collapsed:hover .step-list,
+  .sidebar.collapsed:focus-within .step-list {
+    padding: 12px 10px 16px;
+  }
+  .sidebar.collapsed:hover .step-item,
+  .sidebar.collapsed:focus-within .step-item {
+    justify-content: center;
+    padding: 10px 0;
+  }
+  .sidebar:not(.collapsed) {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    bottom: 0;
+    width: min(280px, 82vw);
+    z-index: 80;
+    box-shadow: 18px 0 44px rgba(0,0,0,0.14);
+  }
+  .sidebar:not(.collapsed) .sidebar-label,
+  .sidebar:not(.collapsed) .step-info {
+    display: block;
+  }
+  .sidebar:not(.collapsed) .prog-label {
+    display: flex;
+  }
+  .sidebar:not(.collapsed) .step-list { padding: 14px 14px 16px; }
+  .sidebar:not(.collapsed) .step-item {
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 10px 6px;
+    min-height: 54px;
+  }
+  .sidebar:not(.collapsed) .step-icon { width: 34px; height: 34px; }
+  .sidebar-collapse-btn {
+    top: 12px;
+    right: -15px;
+    width: 30px;
+    height: 36px;
+    z-index: 90;
+  }
+  .topbar {
+    height: 48px;
+    padding: 0 14px 0 28px;
+  }
+  .topbar-left { min-width: 0; }
+  .topbar-title {
+    max-width: calc(100vw - 184px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 15px;
+  }
+  .topbar-step-badge { white-space: nowrap; }
+  .content-scroll { padding: 20px 14px 96px; }
+  .step-header { margin-bottom: 18px; }
+  .step-header h1 {
+    font-size: 26px;
+    line-height: 1.12;
+  }
+  .step-header p {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .step-divider { margin-bottom: 20px; }
+  .section-card {
+    padding: 18px 16px;
+    border-radius: 10px;
+  }
+  .section-card-title {
+    font-size: 15px;
+    margin-bottom: 14px;
+  }
+  .form-grid { gap: 14px; }
   .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+  .form-group label { font-size: 13px; }
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px;
+    line-height: 1.35;
+    padding: 10px 12px;
+  }
+  textarea {
+    min-height: 82px;
+    line-height: 1.4;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    font-size: 15px;
+    line-height: 1.35;
+  }
+  .assist-wrap textarea { padding-right: 48px; }
+  .assist-btn {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 380px) {
+  .brand-title { display: none; }
+  .brand-page { padding-left: 8px; }
 }
 
 .form-group { display: flex; flex-direction: column; gap: 6px; }
@@ -2107,6 +2253,9 @@ function goToStep(n) {
   document.getElementById('contentScroll').scrollTo(0, 0);
   buildSidebar();
   updateNavUI();
+  if (window.matchMedia && window.matchMedia('(max-width: 700px)').matches) {
+    toggleCaseSidebar(true);
+  }
 }
 
 function updateNavUI() {

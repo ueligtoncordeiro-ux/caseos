@@ -12,13 +12,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.config import settings
-from app.models.database import get_db, Usuario, PLANO_FREE, PLANO_PRO, PLANO_INSTITUCIONAL, TOKENS_LIMITE
+from app.models.database import get_db, Usuario, PLANO_FREE, PLANO_STARTER, PLANO_PRO, PLANO_INSTITUCIONAL, TOKENS_LIMITE
 from app.services.email import enviar_boas_vindas_pro
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 # Mapeamento Stripe price_id → plano interno
 def _plano_from_price(price_id: str) -> str:
+    if price_id == settings.stripe_starter_price_id:
+        return PLANO_STARTER
     if price_id == settings.stripe_pro_price_id:
         return PLANO_PRO
     if price_id == settings.stripe_inst_price_id:

@@ -14,28 +14,32 @@ class Base(DeclarativeBase):
 
 # ── Planos disponíveis ────────────────────────────────────────────────────────
 PLANO_FREE          = "free"
+PLANO_STARTER       = "starter"
 PLANO_PRO           = "pro"
 PLANO_INSTITUCIONAL = "institucional"
 
 QUOTA_MENSAL = {
     PLANO_FREE:          1,
-    PLANO_PRO:           30,
+    PLANO_STARTER:       6,
+    PLANO_PRO:           12,
     PLANO_INSTITUCIONAL: None,   # ilimitado
 }
 
 # ── Limites de tokens por plano (mensais) ─────────────────────────────────────
-# Alinhados com os price_ids do Stripe — apenas 3 planos ativos
+# Alinhados com os price_ids do Stripe — 4 planos ativos
 TOKENS_LIMITE = {
-    PLANO_FREE:           50_000,   # só demos (~2 prévias)
-    PLANO_PRO:           300_000,   # ~12 artigos completos
-    PLANO_INSTITUCIONAL: 1_500_000, # ~60 artigos
+    PLANO_FREE:            50_000,   # só demos (~2 prévias)
+    PLANO_STARTER:        150_000,   # ~6 artigos completos
+    PLANO_PRO:            300_000,   # ~12 artigos completos
+    PLANO_INSTITUCIONAL: 1_500_000,  # ~60 artigos
 }
 
 # ── Preços BRL (centavos) — sincronizados com Stripe ─────────────────────────
 PRECO_BRL = {
-    PLANO_FREE:          0,
-    PLANO_PRO:        9_700,  # R$97/mês
-    PLANO_INSTITUCIONAL: 49_700,  # R$497/mês
+    PLANO_FREE:              0,
+    PLANO_STARTER:       4_900,  # R$49/mês
+    PLANO_PRO:           9_900,  # R$99/mês
+    PLANO_INSTITUCIONAL: 34_900, # R$349/mês
 }
 
 

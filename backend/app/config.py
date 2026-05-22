@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     # ── Stripe ────────────────────────────────────────────────────────────────
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
+    stripe_starter_price_id: str = ""
     stripe_pro_price_id: str = ""
     stripe_inst_price_id: str = ""
 
