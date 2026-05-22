@@ -102,6 +102,7 @@ async def executar_pipeline(sessao_id: str, cko: CKO):
             relatorio=relatorio.model_dump(),
             flags=relatorio.flags,
             docx_path=docx_path,
+            care_score=relatorio.care_score,
         )
 
         resultado_ws = {

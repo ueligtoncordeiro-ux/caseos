@@ -124,7 +124,7 @@ async def _avaliar_care(artigo: ArtigoGerado, cko: CKO) -> RelatorioGerado:
         perspectiva="Sim" if cko.perspectiva_paciente else "Não",
     )
 
-    resp = await chamar(_SYS_B, prompt, complexidade=Complexidade.ALTA, max_tokens=2048)
+    resp = await chamar(_SYS_B, prompt, complexidade=Complexidade.ALTA, max_tokens=4096)
     data = extrair_json(resp)
 
     return RelatorioGerado(

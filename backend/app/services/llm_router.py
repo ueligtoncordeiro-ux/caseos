@@ -226,11 +226,22 @@ async def chamar(
             "Configure pelo menos GEMINI_API_KEY no .env."
         )
 
+    # Timeout por complexidade: artigo completo pode levar 3-4 min no Claude
+    timeouts = {
+        Complexidade.ALTA:  360,  # 6 min — geração de artigo completo
+        Complexidade.MEDIA: 120,  # 2 min — revisão, assist-texto
+        Complexidade.BAIXA:  60,  # 1 min — chatbox
+    }
+    timeout = timeouts[complexidade]
+
     erros = []
     for nome, fn in cadeia:
         try:
-            logger.info(f"LLM → {nome} (complexidade={complexidade})")
-            return await asyncio.wait_for(fn(), timeout=45)
+            logger.info(f"LLM → {nome} (complexidade={complexidade}, timeout={timeout}s)")
+            return await asyncio.wait_for(fn(), timeout=timeout)
+        except asyncio.TimeoutError:
+            logger.warning(f"  ✗ {nome} timeout após {timeout}s")
+            erros.append(f"{nome}: timeout")
         except Exception as e:
             logger.warning(f"  ✗ {nome} falhou: {e}")
             erros.append(f"{nome}: {e}")
@@ -242,6 +253,51 @@ async def chamar(
 
 def extrair_json(texto: str) -> dict:
     raw = texto.strip()
+    # Remove blocos markdown ```json ... ```
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-    return json.loads(raw)
+
+    # Tenta parse direto
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        pass
+
+    # JSON truncado — tenta reparar fechando chaves/colchetes abertos
+    try:
+        import re
+        # Encontra o último { ou [ aberto sem fechar
+        depth_curly = depth_square = 0
+        in_string = escaped = False
+        for ch in raw:
+            if escaped:
+                escaped = False
+                continue
+            if ch == "\\" and in_string:
+                escaped = True
+                continue
+            if ch == '"' and not escaped:
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if ch == '{':
+                depth_curly += 1
+            elif ch == '}':
+                depth_curly -= 1
+            elif ch == '[':
+                depth_square += 1
+            elif ch == ']':
+                depth_square -= 1
+
+        # Fecha string aberta se necessário
+        if in_string:
+            raw += '"'
+        # Fecha estruturas abertas
+        raw += ']' * max(0, depth_square) + '}' * max(0, depth_curly)
+
+        result = json.loads(raw)
+        logger.warning("extrair_json: JSON truncado reparado automaticamente")
+        return result
+    except Exception as e:
+        raise ValueError(f"Não foi possível extrair JSON válido da resposta LLM: {e}\nResposta (primeiros 300 chars): {texto[:300]}")

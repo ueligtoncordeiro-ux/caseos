@@ -138,7 +138,8 @@ async def executar(cko: CKO, artigos: list[dict]) -> ArtigoGerado:
             numero=art["numero"], autores=art.get("autores", ""),
             titulo=art.get("titulo", ""), periodico=art.get("periodico", ""),
             ano=art.get("ano", ""), volume=art.get("volume"),
-            numero_edicao=art.get("numero"), paginas=art.get("paginas"),
+            numero_edicao=str(art["numero_edicao"]) if art.get("numero_edicao") is not None else None,
+            paginas=art.get("paginas"),
             doi=art.get("doi"), pmid=art.get("pmid"),
             formatada=art.get("formatada", ""),
         )
