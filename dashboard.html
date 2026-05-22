@@ -1519,6 +1519,16 @@ tbody td {
   background: var(--acid-dim);
   border: 1px solid var(--acid-mid);
   font-size: 14px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.msg-avatar.ai img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .msg-avatar.user-av {
@@ -2719,7 +2729,7 @@ tbody td {
         ← <span style="font-size:12px;font-weight:500;">Voltar</span>
       </button>
       <div class="chat-header-title">
-        <img src="assets/pixel-char-lupa.png" alt="" style="width:24px;height:auto;image-rendering:pixelated;">
+        <img src="assets/pixel-researcher.png" alt="" style="width:24px;height:auto;image-rendering:pixelated;">
         IA Assistente
         <span class="chat-ai-badge">● CaseOS AI</span>
       </div>
@@ -2740,8 +2750,8 @@ tbody td {
   <div class="chat-messages" id="chatMessages">
     <!-- Welcome message -->
     <div class="msg-wrap">
-      <div class="msg-avatar ai" style="overflow:hidden;padding:0">
-        <img src="assets/pixel-char-lupa.png" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">
+      <div class="msg-avatar ai">
+        <img src="assets/pixel-researcher.png" alt="">
       </div>
       <div class="bubble ai">
         Olá! Sou o assistente do CaseOS. Como posso ajudar?
@@ -2751,7 +2761,7 @@ tbody td {
 
   <!-- Typing indicator -->
   <div class="typing-indicator" id="typingIndicator">
-    <div class="msg-avatar ai">🤖</div>
+    <div class="msg-avatar ai"><img src="assets/pixel-researcher.png" alt=""></div>
     <div class="typing-bubble">
       <span class="typing-dot"></span>
       <span class="typing-dot"></span>
@@ -3774,7 +3784,7 @@ function _appendMensagem(role, content) {
   const wrap = document.createElement('div');
   wrap.className = `msg-wrap ${isUser ? 'user' : ''}`;
   wrap.innerHTML = `
-    <div class="msg-avatar ${isUser ? 'user-av' : 'ai'}">${isUser ? initial : '🤖'}</div>
+    <div class="msg-avatar ${isUser ? 'user-av' : 'ai'}">${isUser ? initial : '<img src="assets/pixel-researcher.png" alt="">'}</div>
     <div class="bubble ${isUser ? 'user' : 'ai'}">${_sanitize(content)}</div>
   `;
   msgs.appendChild(wrap);

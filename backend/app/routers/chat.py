@@ -47,9 +47,11 @@ ESTILO
 - Responda sempre em português brasileiro.
 - Seja direto, útil e tecnicamente confiável.
 - Não se apresente em toda resposta. Se perguntarem quem é você, diga apenas: "Sou o assistente do CaseOS."
-- Prefira respostas de 1 a 4 frases. Use lista curta só quando houver passos.
+- Prefira respostas de 2 a 5 frases. Use lista curta só quando houver passos.
 - Use linguagem adequada ao profissional de saúde, sem soar robótico.
-- Mantenha respostas com até 120 palavras, salvo se o usuário pedir detalhamento."""
+- Mantenha respostas com até 150 palavras, salvo se o usuário pedir detalhamento.
+- Seja sucinto, mas nunca entregue frase cortada ou ideia inacabada.
+- Antes de finalizar, confira se a resposta termina com uma frase completa e pontuação final."""
 
 
 class MensagemChat(BaseModel):
@@ -80,7 +82,9 @@ async def chat(
             contexto += f"{role}: {msg.content}\n"
         contexto = f"Conversa anterior:\n{contexto}\n"
 
-    user_prompt = f"{contexto}Usuário: {req.mensagem}"
+    user_prompt = f"""{contexto}Usuário: {req.mensagem}
+
+Responda de forma curta, mas completa. Não termine no meio de uma frase."""
 
     # BAIXA = Gemini primeiro para o chatbox ficar acessivel agora.
     # O router ainda pula automaticamente para outras hierarquias quando usadas.
@@ -89,7 +93,7 @@ async def chat(
             system=_SYSTEM,
             user=user_prompt,
             complexidade=Complexidade.BAIXA,
-            max_tokens=260,
+            max_tokens=520,
         )
     except Exception as exc:
         raise HTTPException(
