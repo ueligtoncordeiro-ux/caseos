@@ -123,6 +123,10 @@ class Sessao(Base):
     care_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     tokens_usados: Mapped[int] = mapped_column(Integer, default=0)
 
+    # Diagnóstico de falha — preenchidos apenas quando status="erro"
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    error_stage:   Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
 
 class PesquisaSalva(Base):
     __tablename__ = "pesquisas_salvas"
@@ -175,9 +179,11 @@ async def init_db():
         is_sqlite = "sqlite" in str(engine.url)
         migrations = [
             # (tabela, coluna, tipo_sqlite, tipo_pg)
-            ("usuarios", "tokens_mes",   "INTEGER DEFAULT 0",       "INTEGER DEFAULT 0"),
-            ("sessoes",  "tokens_usados","INTEGER DEFAULT 0",       "INTEGER DEFAULT 0"),
-            ("usuarios", "is_admin",     "BOOLEAN DEFAULT 0",       "BOOLEAN DEFAULT FALSE"),
+            ("usuarios", "tokens_mes",    "INTEGER DEFAULT 0",       "INTEGER DEFAULT 0"),
+            ("sessoes",  "tokens_usados", "INTEGER DEFAULT 0",       "INTEGER DEFAULT 0"),
+            ("usuarios", "is_admin",      "BOOLEAN DEFAULT 0",       "BOOLEAN DEFAULT FALSE"),
+            ("sessoes",  "error_message", "TEXT",                    "TEXT"),
+            ("sessoes",  "error_stage",   "VARCHAR",                 "VARCHAR(100)"),
         ]
         for tabela, coluna, tipo_sqlite, tipo_pg in migrations:
             try:

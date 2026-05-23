@@ -41,17 +41,21 @@ async def executar_pipeline(
     nome_display = nome_usuario or (email_usuario.split("@")[0].capitalize() if email_usuario else "Pesquisador")
     iniciar_contagem_tokens()  # zera contador para este pipeline
 
+    _etapa_atual = "inicialização"   # rastreia etapa para log de erro
     try:
         # ── Etapa 1: Validação ──────────────────────────────────────────────
+        _etapa_atual = "validacao"
         await manager.send(sessao_id, {"tipo": "etapa", "etapa": 1, "nome": "Validação", "agente": "Verificador de dados clínicos", "detalhe": "Validando estrutura do formulário..."})
         await _atualizar_sessao(sessao_id, status="validando")
         await asyncio.sleep(0.8)
 
         # ── Etapa 2: Anti-duplicação ────────────────────────────────────────
+        _etapa_atual = "anti_duplicacao"
         await manager.send(sessao_id, {"tipo": "etapa", "etapa": 2, "nome": "Anti-duplicação", "agente": "Agente de originalidade", "detalhe": "Verificando originalidade do caso..."})
         await asyncio.sleep(1.0)
 
         # ── Etapa 3: Pesquisa bibliográfica (5 fontes) ──────────────────────
+        _etapa_atual = "bibliografico"
         await manager.send(sessao_id, {"tipo": "etapa", "etapa": 3, "nome": "Pesquisa bibliográfica", "agente": "PubMed · OpenAlex · Crossref", "detalhe": "Buscando literatura relevante..."})
         await _atualizar_sessao(sessao_id, status="buscando_referencias")
 
@@ -64,12 +68,14 @@ async def executar_pipeline(
         })
 
         # ── Etapa 4: Redação ────────────────────────────────────────────────
+        _etapa_atual = "redator"
         await manager.send(sessao_id, {"tipo": "etapa", "etapa": 4, "nome": "Redação", "agente": "Claude Sonnet 4.6 · GPT-4o", "detalhe": "Redigindo o relato de caso..."})
         await _atualizar_sessao(sessao_id, status="redigindo")
 
         artigo = await redator.executar(cko, artigos)
 
         # ── Etapa 5: Revisão + validação MeSH ──────────────────────────────
+        _etapa_atual = "revisor"
         await manager.send(sessao_id, {"tipo": "etapa", "etapa": 5, "nome": "Revisão CARE", "agente": "GPT-4o · CARE 2013", "detalhe": "Verificando conformidade CARE 2013..."})
         await _atualizar_sessao(sessao_id, status="revisando")
 
@@ -94,6 +100,7 @@ async def executar_pipeline(
             logger.warning(f"Validação MeSH falhou (não crítico): {e}")
 
         # ── Etapa 6: Finalização DOCX ───────────────────────────────────────
+        _etapa_atual = "docx"
         await manager.send(sessao_id, {"tipo": "etapa", "etapa": 6, "nome": "Finalização", "agente": "DOCX Generator · ABNT", "detalhe": "Gerando documento final..."})
         await _atualizar_sessao(sessao_id, status="finalizando")
 
@@ -146,10 +153,22 @@ async def executar_pipeline(
             ))
 
     except Exception as exc:
-        await _atualizar_sessao(sessao_id, status="erro")
+        import traceback
+        _msg = str(exc)[:1000] or type(exc).__name__
+        _tb  = traceback.format_exc()[-2000:]  # últimos 2000 chars do traceback
+        await _atualizar_sessao(
+            sessao_id,
+            status="erro",
+            error_message=f"{_msg}\n\n---\n{_tb}",
+            error_stage=_etapa_atual,
+        )
+        logger.error(
+            "Pipeline ERRO sessao=%s etapa=%s exc=%s",
+            sessao_id, _etapa_atual, _msg,
+        )
         await manager.send(sessao_id, {
             "tipo": "erro",
-            "mensagem": f"Erro no pipeline: {str(exc)[:300]}",
+            "mensagem": f"Erro no pipeline ({_etapa_atual}): {str(exc)[:300]}",
         })
 
         # Devolver artigo ao saldo: falha de sistema não deve consumir quota do usuário

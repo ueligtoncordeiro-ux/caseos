@@ -579,6 +579,10 @@ tbody td.mono { font-family: ui-monospace, monospace; font-size: 11px; }
         <span class="nav-icon">📄</span>
         Relatos
       </div>
+      <div class="nav-item" data-tab="errors" onclick="switchTab('errors', this)">
+        <span class="nav-icon">⚠️</span>
+        Erros
+      </div>
     </div>
     <div class="nav-section" style="margin-top: auto; border-top: 1px solid var(--sidebar-bdr); padding-top: 16px;">
       <a href="dashboard.html" class="nav-item">
@@ -819,7 +823,105 @@ tbody td.mono { font-family: ui-monospace, monospace; font-size: 11px; }
       </div>
     </div>
 
+    <!-- ── Tab: Erros ──────────────────────────────────────────────────── -->
+    <div class="tab-pane" id="tab-errors">
+      <div class="page-header">
+        <h1>Log de Erros</h1>
+        <p>Pipelines com falha — diagnóstico e retry manual</p>
+      </div>
+
+      <!-- Stats de erros -->
+      <div class="stats-grid" id="error-stats-grid">
+        <div class="stat-card" style="border-top:2px solid var(--red);">
+          <div class="stat-label">Total de Erros</div>
+          <div class="stat-value" id="err-total">—</div>
+          <div class="stat-sub">todas as sessões</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Taxa de Erro</div>
+          <div class="stat-value" id="err-taxa">—</div>
+          <div class="stat-sub">% do total de relatos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Erros (24h)</div>
+          <div class="stat-value" id="err-24h">—</div>
+          <div class="stat-sub">últimas 24 horas</div>
+        </div>
+      </div>
+
+      <!-- Breakdown por etapa -->
+      <div class="section-header">
+        <h2>Falhas por Etapa do Pipeline</h2>
+        <button class="btn btn-ghost btn-sm" onclick="loadErrorStats()">↺ Atualizar</button>
+      </div>
+      <div id="err-stage-grid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;">
+        <span style="color:var(--t3);font-size:13px;">Carregando...</span>
+      </div>
+
+      <!-- Tabela de erros -->
+      <div class="section-header">
+        <h2>Sessões com Erro</h2>
+        <div class="filter-bar">
+          <select id="err-stage-filter" onchange="loadErrors(1)" style="min-width:160px;">
+            <option value="">Todas as etapas</option>
+            <option value="inicialização">inicialização</option>
+            <option value="validacao">validacao</option>
+            <option value="anti_duplicacao">anti_duplicacao</option>
+            <option value="bibliografico">bibliografico</option>
+            <option value="redator">redator</option>
+            <option value="revisor">revisor</option>
+            <option value="docx">docx</option>
+          </select>
+          <input type="search" id="err-user-filter" placeholder="Filtrar por user_id…"
+                 style="width:220px;" oninput="debounceErrors()">
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID Externo</th>
+              <th>Usuário</th>
+              <th>Etapa</th>
+              <th>Erro (resumo)</th>
+              <th>Data</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="errors-tbody">
+            <tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="errors-pagination">
+        <button id="errors-prev" onclick="loadErrors(errorsPage - 1)" disabled>← Anterior</button>
+        <span id="errors-page-info">Página 1</span>
+        <button id="errors-next" onclick="loadErrors(errorsPage + 1)">Próxima →</button>
+      </div>
+    </div>
+
   </main>
+</div>
+
+<!-- ── Modal: Detalhe de Erro ──────────────────────────────────────────────── -->
+<div class="modal-overlay" id="error-detail-modal">
+  <div class="modal" style="max-width:680px;">
+    <div class="modal-header">
+      <h3>📋 Detalhe do Erro</h3>
+      <button class="modal-close" onclick="closeModal('error-detail-modal')">✕</button>
+    </div>
+    <div style="margin-bottom:10px;">
+      <span class="badge badge-gray" id="err-detail-id" style="font-family:monospace;"></span>
+      &nbsp;
+      <span id="err-detail-stage-badge"></span>
+    </div>
+    <pre id="err-detail-text" style="background:var(--input-bg);border:1px solid var(--card-bdr);border-radius:8px;padding:14px 16px;font-size:11.5px;color:var(--t2);overflow:auto;max-height:380px;white-space:pre-wrap;word-break:break-all;font-family:ui-monospace,monospace;"></pre>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('error-detail-modal')">Fechar</button>
+      <button class="btn btn-warning" id="err-detail-retry-btn" onclick="">↺ Retry</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── Modal: Editar Usuário ───────────────────────────────────────────────── -->
@@ -990,6 +1092,7 @@ function switchTab(name, el) {
   if (name === 'overview')  loadOverview();
   if (name === 'users')     loadUsers(1);
   if (name === 'sessions')  loadSessions(1);
+  if (name === 'errors')    { loadErrorStats(); loadErrors(1); }
 }
 
 /* ── Overview ─────────────────────────────────────────────────────────────── */
@@ -1402,6 +1505,139 @@ function fmtDateTs(ts) {
 function fmtBRL(value) {
   if (value === null || value === undefined) return '—';
   return 'R$ ' + Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/* ── Errors ───────────────────────────────────────────────────────────────── */
+let errorsPage = 1;
+let _errorsDebounce;
+
+function debounceErrors() {
+  clearTimeout(_errorsDebounce);
+  _errorsDebounce = setTimeout(() => loadErrors(1), 350);
+}
+
+const STAGE_LABELS = {
+  'inicialização':    { label: 'Inicialização',  color: 'badge-gray'   },
+  'validacao':        { label: 'Validação',       color: 'badge-blue'   },
+  'anti_duplicacao':  { label: 'Anti-dup.',       color: 'badge-blue'   },
+  'bibliografico':    { label: 'Bibliográfico',   color: 'badge-purple' },
+  'redator':          { label: 'Redação',         color: 'badge-acid'   },
+  'revisor':          { label: 'Revisão',         color: 'badge-amber'  },
+  'docx':             { label: 'DOCX',            color: 'badge-green'  },
+};
+
+function stageBadge(stage) {
+  if (!stage) return '<span class="badge badge-gray">—</span>';
+  const info = STAGE_LABELS[stage] || { label: stage, color: 'badge-gray' };
+  return `<span class="badge ${info.color}">${escHtml(info.label)}</span>`;
+}
+
+async function loadErrorStats() {
+  const data = await apiJSON('/admin/errors/stats');
+  if (!data) return;
+
+  document.getElementById('err-total').textContent = data.total_erros;
+  document.getElementById('err-taxa').textContent  = `${data.taxa_erro_pct.toFixed(1)}%`;
+  document.getElementById('err-24h').textContent   = data.erros_24h;
+
+  // Color the rate card
+  const taxa = data.taxa_erro_pct;
+  const rateCard = document.getElementById('err-taxa').closest('.stat-card');
+  if (taxa > 10)  rateCard.style.borderTop = '2px solid var(--red)';
+  else if (taxa > 3) rateCard.style.borderTop = '2px solid var(--amber)';
+  else rateCard.style.borderTop = '2px solid var(--green)';
+
+  // Stage breakdown pills
+  const grid = document.getElementById('err-stage-grid');
+  if (!data.por_etapa || !Object.keys(data.por_etapa).length) {
+    grid.innerHTML = '<span class="badge badge-green">✅ Nenhum erro registrado</span>';
+    return;
+  }
+  grid.innerHTML = Object.entries(data.por_etapa)
+    .sort(([,a],[,b]) => b - a)
+    .map(([stage, count]) => {
+      const info = STAGE_LABELS[stage] || { label: stage, color: 'badge-gray' };
+      return `<span class="badge ${info.color}" style="font-size:12px;padding:5px 12px;gap:6px;">
+        ${escHtml(info.label)} <strong style="opacity:0.8;">${count}</strong>
+      </span>`;
+    }).join('');
+}
+
+async function loadErrors(page = 1) {
+  errorsPage = page;
+  const stage  = document.getElementById('err-stage-filter').value;
+  const userId = document.getElementById('err-user-filter').value.trim();
+  const skip   = (page - 1) * PAGE_SIZE;
+
+  const tbody = document.getElementById('errors-tbody');
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr>';
+
+  let url = `/admin/errors?skip=${skip}&limit=${PAGE_SIZE}`;
+  if (stage)  url += `&stage=${encodeURIComponent(stage)}`;
+  if (userId) url += `&user_id=${encodeURIComponent(userId)}`;
+
+  const data = await apiJSON(url);
+  if (!data) return;
+
+  if (!data.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">✅ Nenhum erro encontrado.</td></tr>';
+  } else {
+    tbody.innerHTML = data.map(renderErrorRow).join('');
+  }
+
+  document.getElementById('errors-page-info').textContent = `Página ${page}`;
+  document.getElementById('errors-prev').disabled = page <= 1;
+  document.getElementById('errors-next').disabled = data.length < PAGE_SIZE;
+}
+
+function renderErrorRow(e) {
+  // Mostra apenas primeira linha do erro (antes do traceback)
+  const snippet = (e.error_message || '').split('\n')[0].slice(0, 120);
+  const safeId  = escHtml(e.external_id || e.sessao_id);
+  return `
+    <tr>
+      <td class="mono" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">${safeId}</td>
+      <td class="mono" style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;">
+        ${e.user_id ? escHtml(e.user_id) : '<span style="color:var(--t4)">—</span>'}
+      </td>
+      <td>${stageBadge(e.error_stage)}</td>
+      <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--red);">
+        ${escHtml(snippet) || '<span style="color:var(--t4)">sem mensagem</span>'}
+      </td>
+      <td style="font-size:12px;">${fmtDate(e.created_at)}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" onclick='openErrorDetail(${JSON.stringify(e)})'>🔍 Ver</button>
+        <button class="btn btn-warning btn-sm" id="retry-btn-${escHtml(e.sessao_id)}" onclick="retrySession('${escHtml(e.sessao_id)}')">↺ Retry</button>
+      </td>
+    </tr>`;
+}
+
+function openErrorDetail(e) {
+  document.getElementById('err-detail-id').textContent = e.external_id || e.sessao_id;
+  document.getElementById('err-detail-stage-badge').innerHTML = stageBadge(e.error_stage);
+  document.getElementById('err-detail-text').textContent = e.error_message || '(sem mensagem)';
+
+  const retryBtn = document.getElementById('err-detail-retry-btn');
+  retryBtn.onclick = () => {
+    closeModal('error-detail-modal');
+    retrySession(e.sessao_id);
+  };
+
+  openModal('error-detail-modal');
+}
+
+async function retrySession(sessaoId) {
+  const btn = document.getElementById(`retry-btn-${sessaoId}`);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Enviando...'; }
+
+  const data = await apiJSON(`/admin/sessions/${sessaoId}/retry`, { method: 'POST' });
+
+  if (btn) { btn.disabled = false; btn.textContent = '↺ Retry'; }
+  if (!data) return;
+
+  toast(`↺ Pipeline reiniciado para ${data.external_id}`, 'success');
+  // Recarrega a lista após breve delay (pipeline muda status para processando)
+  setTimeout(() => loadErrors(errorsPage), 1500);
 }
 
 /* ── Init ─────────────────────────────────────────────────────────────────── */

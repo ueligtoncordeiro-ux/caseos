@@ -521,3 +521,141 @@ async def stripe_user_detail(
         }
 
     return await asyncio.to_thread(_fetch_user)
+
+
+# ── Log de erros + retry ──────────────────────────────────────────────────────
+
+class ErroView(BaseModel):
+    id: str
+    external_id: str
+    user_id: Optional[str] = None
+    titulo: Optional[str] = None
+    error_stage: Optional[str] = None
+    error_message: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+@router.get("/errors", response_model=list[ErroView])
+async def listar_erros(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    user_id: Optional[str] = Query(None),
+    stage: Optional[str] = Query(None, description="Filtrar por etapa (bibliografico, redator, revisor, docx...)"),
+    admin: Usuario = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Lista sessões com status=erro, ordenadas da mais recente para a mais antiga."""
+    stmt = (
+        select(Sessao)
+        .where(Sessao.status == "erro")
+        .order_by(Sessao.updated_at.desc())
+    )
+    if user_id:
+        stmt = stmt.where(Sessao.user_id == user_id)
+    if stage:
+        stmt = stmt.where(Sessao.error_stage == stage)
+
+    stmt = stmt.offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.get("/errors/stats")
+async def stats_erros(
+    admin: Usuario = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Taxa de erros global e breakdown por etapa."""
+    total = (await db.execute(func.count(Sessao.id))).scalar() or 0
+    total_erros = (await db.execute(
+        select(func.count(Sessao.id)).where(Sessao.status == "erro")
+    )).scalar() or 0
+
+    # Breakdown por etapa
+    stage_rows = await db.execute(
+        select(Sessao.error_stage, func.count(Sessao.id))
+        .where(Sessao.status == "erro")
+        .group_by(Sessao.error_stage)
+        .order_by(func.count(Sessao.id).desc())
+    )
+    por_etapa = {row[0] or "desconhecida": row[1] for row in stage_rows}
+
+    # Últimas 24h
+    from datetime import timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    erros_24h = (await db.execute(
+        select(func.count(Sessao.id)).where(
+            Sessao.status == "erro",
+            Sessao.updated_at >= cutoff,
+        )
+    )).scalar() or 0
+
+    taxa = round((total_erros / total * 100), 1) if total else 0.0
+    return {
+        "total_sessoes": total,
+        "total_erros": total_erros,
+        "taxa_erro_pct": taxa,
+        "erros_24h": erros_24h,
+        "por_etapa": por_etapa,
+    }
+
+
+@router.post("/sessions/{sessao_id}/retry")
+async def retry_sessao(
+    sessao_id: str,
+    admin: Usuario = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Reprocessa uma sessão com erro usando o CKO original armazenado.
+    Não consome quota do usuário (falha de sistema = retry gratuito).
+    """
+    result = await db.execute(select(Sessao).where(Sessao.id == sessao_id))
+    sessao = result.scalar_one_or_none()
+    if not sessao:
+        raise HTTPException(404, "Sessão não encontrada.")
+    if sessao.status not in ("erro", "rascunho"):
+        raise HTTPException(400, f"Só é possível reprocessar sessões com erro. Status atual: {sessao.status}")
+    if not sessao.cko:
+        raise HTTPException(400, "CKO não encontrado — sessão não pode ser reprocessada.")
+
+    # Busca nome do usuário para o pipeline
+    nome_usuario = None
+    if sessao.user_id:
+        res_u = await db.execute(select(Usuario).where(Usuario.id == sessao.user_id))
+        u = res_u.scalar_one_or_none()
+        if u:
+            nome_usuario = u.nome
+
+    # Reseta estado e limpa erro anterior
+    sessao.status = "processando"
+    sessao.error_message = None
+    sessao.error_stage = None
+    await db.commit()
+
+    # Reconstrói CKO e lança pipeline em background (sem incrementar quota)
+    from app.models.schemas import CKO as CKOSchema
+    from app.agents.orchestrator import executar_pipeline
+
+    try:
+        cko = CKOSchema(**sessao.cko)
+    except Exception as e:
+        raise HTTPException(400, f"CKO inválido — não foi possível reconstruir: {e}")
+
+    asyncio.create_task(
+        executar_pipeline(
+            sessao_id=sessao.external_id,
+            cko=cko,
+            user_id=sessao.user_id,
+            nome_usuario=nome_usuario,
+        )
+    )
+
+    logger.warning(
+        "ADMIN RETRY sessao=%s (external=%s) by admin=%s",
+        sessao_id, sessao.external_id, admin.id,
+    )
+    return {"ok": True, "sessao_id": sessao_id, "external_id": sessao.external_id, "status": "processando"}
