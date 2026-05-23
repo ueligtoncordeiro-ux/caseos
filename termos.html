@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Termos de Uso — CaseOS · neuraxIA</title>
+  <meta name="description" content="Termos de Uso da plataforma CaseOS, desenvolvida pela neuraxIA. Leia antes de utilizar nossos serviços." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green:    #C8FF00;
+      --obsidian: #0A0A0B;
+      --slate:    #1C1C1E;
+      --white:    #FFFFFF;
+      --light:    #F7F7F5;
+      --border:   #E9E9E7;
+      --gray400:  #787774;
+      --gray600:  #555553;
+      --radius:   12px;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--white);
+      color: var(--obsidian);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--obsidian); text-decoration: underline; text-underline-offset: 3px; }
+    a:hover { opacity: 0.7; }
+
+    /* ── NAV ── */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(255,255,255,0.96);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      height: 60px;
+      display: flex; align-items: center;
+    }
+    .nav-inner {
+      max-width: 900px; margin: 0 auto; padding: 0 24px;
+      width: 100%;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-brand {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
+      text-decoration: none; color: var(--obsidian);
+    }
+    .nav-brand span { color: var(--green); background: var(--obsidian); padding: 0 3px; border-radius: 3px; }
+    .nav-back {
+      font-size: 13px; font-weight: 500; color: var(--gray600);
+      text-decoration: none;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .nav-back:hover { color: var(--obsidian); opacity: 1; }
+
+    /* ── HERO ── */
+    .hero {
+      background: var(--obsidian);
+      padding: 120px 24px 64px;
+      text-align: center;
+    }
+    .hero-tag {
+      display: inline-block;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--green); background: rgba(200,255,0,0.12);
+      border: 1px solid rgba(200,255,0,0.25);
+      padding: 4px 14px; border-radius: 100px;
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 800; letter-spacing: -0.02em;
+      color: var(--white);
+      margin-bottom: 16px;
+    }
+    .hero-meta {
+      font-size: 13px; color: rgba(255,255,255,0.4);
+      display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;
+    }
+    .hero-meta span::before { content: "—"; margin-right: 8px; opacity: 0.4; }
+
+    /* ── LAYOUT ── */
+    .wrap {
+      max-width: 760px; margin: 0 auto;
+      padding: 64px 24px 100px;
+    }
+
+    /* ── TOC ── */
+    .toc {
+      background: var(--light);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 56px;
+    }
+    .toc-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--gray400); margin-bottom: 16px;
+    }
+    .toc ol { padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+    .toc ol li a {
+      font-size: 14px; font-weight: 500; color: var(--gray600);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .toc ol li a:hover { color: var(--obsidian); }
+
+    /* ── SECTIONS ── */
+    .section { margin-bottom: 52px; scroll-margin-top: 80px; }
+    .section-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--gray400); margin-bottom: 8px;
+    }
+    .section h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 22px; font-weight: 700; letter-spacing: -0.01em;
+      color: var(--obsidian);
+      border-bottom: 2px solid var(--green);
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+      display: inline-block;
+    }
+    .section p { font-size: 15px; color: #333; margin-bottom: 14px; }
+    .section p:last-child { margin-bottom: 0; }
+    .section ul, .section ol {
+      padding-left: 22px; margin-bottom: 14px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .section ul li, .section ol li { font-size: 15px; color: #333; }
+    .section ul { list-style: disc; }
+    .section ol { list-style: decimal; }
+    .section strong { color: var(--obsidian); }
+
+    /* ── CALLOUT ── */
+    .callout {
+      border-left: 3px solid var(--green);
+      background: rgba(200,255,0,0.06);
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      margin: 20px 0;
+    }
+    .callout p { font-size: 14px; color: #444; margin: 0; }
+    .callout-warn {
+      border-left-color: #F59E0B;
+      background: rgba(245,158,11,0.06);
+    }
+    .callout-info {
+      border-left-color: #3B82F6;
+      background: rgba(59,130,246,0.06);
+    }
+
+    /* ── FOOTER ── */
+    .page-footer {
+      background: var(--obsidian);
+      padding: 40px 24px;
+      text-align: center;
+    }
+    .page-footer p { font-size: 13px; color: rgba(255,255,255,0.35); margin-bottom: 12px; }
+    .page-footer a { color: rgba(255,255,255,0.5); }
+    .page-footer-links { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; }
+    .page-footer-links a {
+      font-size: 13px; color: rgba(255,255,255,0.4);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .page-footer-links a:hover { color: var(--green); }
+
+    @media (max-width: 640px) {
+      .hero { padding: 100px 20px 48px; }
+      .wrap { padding: 40px 20px 80px; }
+      .toc { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="landing.html" class="nav-brand">Case<span>OS</span></a>
+    <a href="landing.html" class="nav-back">← Voltar ao início</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">Documento legal</div>
+  <h1>Termos de Uso</h1>
+  <div class="hero-meta">
+    <span>Versão 1.0</span>
+    <span>Vigência: 22 de maio de 2026</span>
+    <span>neuraxIA · CaseOS</span>
+  </div>
+</div>
+
+<!-- CONTEÚDO -->
+<div class="wrap">
+
+  <div class="callout callout-info">
+    <p><strong>Resumo rápido:</strong> Ao usar o CaseOS, você concorda com estes Termos. Nosso serviço ajuda profissionais de saúde a redigir relatos de caso clínico — nunca substituímos avaliação médica e não garantimos aceitação em periódicos. Os dados clínicos inseridos devem ser anonimizados conforme a LGPD.</p>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <div class="toc-title">Índice</div>
+    <ol>
+      <li><a href="#s1">Identificação das partes e aceite</a></li>
+      <li><a href="#s2">Objeto e descrição do serviço</a></li>
+      <li><a href="#s3">Cadastro, conta e acesso</a></li>
+      <li><a href="#s4">Planos, pagamentos e assinaturas</a></li>
+      <li><a href="#s5">Obrigações e responsabilidades do usuário</a></li>
+      <li><a href="#s6">Uso não autorizado e conduta proibida</a></li>
+      <li><a href="#s7">Propriedade intelectual</a></li>
+      <li><a href="#s8">Isenção de responsabilidade médica</a></li>
+      <li><a href="#s9">Limitação de responsabilidade</a></li>
+      <li><a href="#s10">Suspensão e rescisão</a></li>
+      <li><a href="#s11">Alterações nos Termos</a></li>
+      <li><a href="#s12">Legislação aplicável e foro</a></li>
+      <li><a href="#s13">Contato</a></li>
+    </ol>
+  </div>
+
+  <!-- 1 -->
+  <div class="section" id="s1">
+    <div class="section-num">Cláusula 1</div>
+    <h2>Identificação das partes e aceite</h2>
+    <p>Estes Termos de Uso ("Termos") regulam a relação entre a <strong>neuraxIA</strong> ("neuraxIA", "nós", "nos" ou "nosso"), responsável pela plataforma <strong>CaseOS</strong> (acessível em caseos.voandonaia.com e domínios associados), e o <strong>Usuário</strong> — qualquer pessoa física que se cadastre e utilize a plataforma.</p>
+    <p>Ao clicar em "Criar conta", "Continuar com Google", "Assinar" ou ao usar qualquer funcionalidade do CaseOS, o Usuário <strong>declara ter lido, compreendido e concordado</strong> integralmente com estes Termos e com nossa <a href="privacidade.html">Política de Privacidade</a>.</p>
+    <p>Se você não concorda com qualquer disposição destes Termos, não utilize o CaseOS.</p>
+    <div class="callout callout-warn">
+      <p><strong>Menores de 18 anos:</strong> O CaseOS é destinado exclusivamente a profissionais e estudantes maiores de 18 anos. O cadastro por menores de idade não é permitido.</p>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="section" id="s2">
+    <div class="section-num">Cláusula 2</div>
+    <h2>Objeto e descrição do serviço</h2>
+    <p>O CaseOS é uma plataforma de software como serviço (<em>SaaS</em>) que auxilia profissionais de saúde — médicos, enfermeiros, fisioterapeutas, dentistas, farmacêuticos, psicólogos, nutricionistas, biomédicos, estudantes e pesquisadores — na redação de relatos de caso clínico (case reports) científicos.</p>
+    <p>O serviço compreende:</p>
+    <ul>
+      <li>Formulário estruturado de coleta de dados clínicos em 10 etapas;</li>
+      <li>Pipeline de geração automática de texto com modelos de linguagem (LLM) de terceiros (Anthropic Claude, OpenAI GPT, Google Gemini);</li>
+      <li>Busca e organização bibliográfica em bases como PubMed, Semantic Scholar, OpenAlex e Crossref;</li>
+      <li>Avaliação automática de conformidade com o <em>CARE 2013 Checklist</em> (Case Report guidelines);</li>
+      <li>Exportação do documento final em formato DOCX (Microsoft Word);</li>
+      <li>Histórico de relatos e painel de uso.</li>
+    </ul>
+    <p>A neuraxIA reserva-se o direito de modificar, suspender ou descontinuar funcionalidades do serviço a qualquer momento, com aviso prévio razoável aos usuários de planos pagos.</p>
+  </div>
+
+  <!-- 3 -->
+  <div class="section" id="s3">
+    <div class="section-num">Cláusula 3</div>
+    <h2>Cadastro, conta e acesso</h2>
+    <p><strong>3.1 Criação de conta.</strong> Para acessar os recursos do CaseOS, o Usuário deve criar uma conta fornecendo nome completo, endereço de e-mail e senha — ou autenticando-se via Google OAuth. Dados de registro devem ser verdadeiros, precisos e atualizados.</p>
+    <p><strong>3.2 Verificação de e-mail.</strong> Após o cadastro, o Usuário receberá um e-mail de confirmação. O acesso completo à plataforma requer a verificação do endereço de e-mail fornecido.</p>
+    <p><strong>3.3 Segurança da conta.</strong> O Usuário é inteiramente responsável por:</p>
+    <ul>
+      <li>Manter a confidencialidade de suas credenciais de acesso;</li>
+      <li>Todas as atividades realizadas em sua conta;</li>
+      <li>Comunicar imediatamente a neuraxIA em caso de acesso não autorizado.</li>
+    </ul>
+    <p><strong>3.4 Conta única.</strong> É permitida apenas uma conta por pessoa. O compartilhamento de conta é proibido, exceto em planos Institucionais com multi-usuário contratado.</p>
+    <p><strong>3.5 CRM/CRO.</strong> O campo de registro profissional (CRM, CRO, COREN, CFF etc.) é opcional, mas o Usuário declara que as informações fornecidas são verídicas. A neuraxIA não tem obrigação de verificar vínculos profissionais.</p>
+  </div>
+
+  <!-- 4 -->
+  <div class="section" id="s4">
+    <div class="section-num">Cláusula 4</div>
+    <h2>Planos, pagamentos e assinaturas</h2>
+    <p><strong>4.1 Planos disponíveis.</strong> O CaseOS oferece planos gratuito e pagos, com limites de uso mensais (tokens de LLM e artigos gerados). As condições atuais de cada plano estão descritas na página de preços e podem ser atualizadas com aviso prévio de 30 dias.</p>
+    <p><strong>4.2 Processamento de pagamentos.</strong> Pagamentos são processados exclusivamente pela <strong>Stripe, Inc.</strong>, empresa terceira contratada pela neuraxIA. A neuraxIA não armazena dados de cartão de crédito ou débito. Ao assinar, o Usuário concorda também com os Termos de Serviço da Stripe (<a href="https://stripe.com/br/legal" target="_blank" rel="noopener">stripe.com/br/legal</a>).</p>
+    <p><strong>4.3 Renovação automática.</strong> Planos pagos são renovados automaticamente ao fim de cada período (mensal), mediante cobrança do cartão cadastrado. O Usuário pode cancelar a renovação automática a qualquer momento pelo painel da plataforma ou entrando em contato com o suporte.</p>
+    <p><strong>4.4 Política de reembolso.</strong> Solicitações de reembolso serão analisadas caso a caso. Reembolso integral é garantido em caso de cobrança indevida comprovada. Para cancelamentos em até 7 (sete) dias após a primeira assinatura de um plano, aplicamos o direito de arrependimento previsto no art. 49 do Código de Defesa do Consumidor (Lei 8.078/1990), com reembolso proporcional ao período não utilizado.</p>
+    <p><strong>4.5 Inadimplência.</strong> Em caso de falha no pagamento, o acesso ao plano pago será suspenso automaticamente após tentativas sem êxito. O Usuário poderá regularizar a situação atualizando o método de pagamento.</p>
+    <p><strong>4.6 Preços.</strong> Os preços são expressos em Reais (BRL) e incluem os impostos aplicáveis. A neuraxIA poderá reajustar preços com aviso de 30 dias por e-mail. O reajuste não se aplica ao período de assinatura já pago.</p>
+  </div>
+
+  <!-- 5 -->
+  <div class="section" id="s5">
+    <div class="section-num">Cláusula 5</div>
+    <h2>Obrigações e responsabilidades do usuário</h2>
+    <p>O Usuário compromete-se a:</p>
+    <ol>
+      <li><strong>Anonimizar dados clínicos:</strong> Nunca inserir no CaseOS dados que permitam a identificação de pacientes (nome, CPF, RG, endereço, foto com rosto, número de prontuário etc.), em cumprimento à LGPD (Lei 13.709/2018) e ao Código de Ética Médica/Profissional;</li>
+      <li><strong>Obter consentimento:</strong> Garantir que possui o Termo de Consentimento Livre e Esclarecido (TCLE) do paciente — ou de seu representante legal — antes de usar o caso clínico como base para publicação científica;</li>
+      <li><strong>Verificar o conteúdo gerado:</strong> Revisar criticamente todo o texto produzido pela IA antes de qualquer uso, submissão ou publicação. O Usuário é o autor responsável pelo conteúdo final;</li>
+      <li><strong>Não plagiar:</strong> Garantir que o relato produzido não infringe direitos autorais de terceiros;</li>
+      <li><strong>Uso pessoal e profissional:</strong> Utilizar o serviço exclusivamente para fins legítimos de pesquisa, educação e publicação científica na área da saúde.</li>
+    </ol>
+  </div>
+
+  <!-- 6 -->
+  <div class="section" id="s6">
+    <div class="section-num">Cláusula 6</div>
+    <h2>Uso não autorizado e conduta proibida</h2>
+    <p>É expressamente vedado ao Usuário:</p>
+    <ul>
+      <li>Inserir dados pessoais identificáveis de pacientes na plataforma;</li>
+      <li>Usar o serviço para geração de conteúdo falso, fraudulento ou enganoso;</li>
+      <li>Tentar acessar contas de outros usuários ou sistemas internos da neuraxIA;</li>
+      <li>Realizar engenharia reversa, descompilar ou extrair o código-fonte da plataforma;</li>
+      <li>Automatizar requisições de forma abusiva (scraping, bots) sem autorização prévia;</li>
+      <li>Revender, licenciar ou sublicenciar o acesso à plataforma a terceiros sem autorização expressa;</li>
+      <li>Usar o CaseOS para qualquer finalidade ilegal ou que viole direitos de terceiros.</li>
+    </ul>
+    <p>A violação destas proibições pode resultar no encerramento imediato da conta, sem direito a reembolso, e pode ensejar responsabilidade civil e criminal nos termos da legislação brasileira.</p>
+  </div>
+
+  <!-- 7 -->
+  <div class="section" id="s7">
+    <div class="section-num">Cláusula 7</div>
+    <h2>Propriedade intelectual</h2>
+    <p><strong>7.1 Plataforma.</strong> O CaseOS, incluindo seu código-fonte, design, marca, metodologia de pipeline e documentação, são de titularidade exclusiva da neuraxIA e protegidos pelas leis de propriedade intelectual vigentes no Brasil (Lei 9.279/1996 e Lei 9.610/1998).</p>
+    <p><strong>7.2 Conteúdo gerado.</strong> Os textos, relatos e documentos produzidos a partir dos dados fornecidos pelo Usuário são de titularidade do próprio Usuário. A neuraxIA não reivindica propriedade sobre o conteúdo clínico gerado.</p>
+    <p><strong>7.3 Licença de uso.</strong> A neuraxIA concede ao Usuário uma licença pessoal, intransferível, não exclusiva e revogável para usar a plataforma de acordo com estes Termos.</p>
+    <p><strong>7.4 Dados para melhoria do serviço.</strong> A neuraxIA pode utilizar dados de uso agregados e anonimizados (métricas de interação, padrões de uso, taxas de erro) para aprimorar o serviço, sem que isso implique acesso ao conteúdo clínico dos relatos.</p>
+  </div>
+
+  <!-- 8 -->
+  <div class="section" id="s8">
+    <div class="section-num">Cláusula 8</div>
+    <h2>Isenção de responsabilidade médica</h2>
+    <div class="callout callout-warn">
+      <p><strong>Atenção:</strong> O CaseOS é uma ferramenta de suporte à redação científica — não é um sistema de apoio à decisão clínica, diagnóstico médico ou prescrição terapêutica.</p>
+    </div>
+    <p>O conteúdo gerado pelo CaseOS:</p>
+    <ul>
+      <li>É produzido por modelos de linguagem (IA) e pode conter imprecisões, omissões ou erros;</li>
+      <li><strong>Não substitui</strong> o julgamento clínico de profissional habilitado;</li>
+      <li><strong>Não constitui</strong> conselho médico, diagnóstico, prognóstico ou prescrição de qualquer natureza;</li>
+      <li><strong>Não garante</strong> aceitação, aprovação ou publicação em qualquer periódico científico;</li>
+      <li>Deve ser revisado e validado pelo Usuário antes de qualquer uso.</li>
+    </ul>
+    <p>O Usuário é exclusivamente responsável pelas decisões tomadas com base no conteúdo gerado pela plataforma. A neuraxIA não se responsabiliza por quaisquer danos à saúde de pacientes ou terceiros decorrentes do uso indevido do serviço.</p>
+  </div>
+
+  <!-- 9 -->
+  <div class="section" id="s9">
+    <div class="section-num">Cláusula 9</div>
+    <h2>Limitação de responsabilidade</h2>
+    <p>Na máxima extensão permitida pela legislação aplicável:</p>
+    <ul>
+      <li>O CaseOS é fornecido "no estado em que se encontra" (<em>as is</em>), sem garantias de disponibilidade ininterrupta, adequação a propósito específico ou ausência de erros;</li>
+      <li>A neuraxIA não se responsabiliza por danos indiretos, incidentais, especiais ou punitivos decorrentes do uso ou incapacidade de uso do serviço;</li>
+      <li>A responsabilidade total da neuraxIA, em qualquer hipótese, limita-se ao valor pago pelo Usuário nos últimos 3 (três) meses de assinatura.</li>
+    </ul>
+    <p>Estas limitações não se aplicam em casos de dolo ou culpa grave da neuraxIA, nem excluem direitos do consumidor garantidos pelo Código de Defesa do Consumidor (Lei 8.078/1990).</p>
+  </div>
+
+  <!-- 10 -->
+  <div class="section" id="s10">
+    <div class="section-num">Cláusula 10</div>
+    <h2>Suspensão e rescisão</h2>
+    <p><strong>10.1 Pelo Usuário.</strong> O Usuário pode encerrar sua conta a qualquer momento acessando "Configurações → Excluir conta" no dashboard. O encerramento da conta é irreversível. Dados pessoais serão anonimizados conforme nossa <a href="privacidade.html">Política de Privacidade</a>.</p>
+    <p><strong>10.2 Pela neuraxIA.</strong> A neuraxIA pode suspender ou encerrar o acesso do Usuário, com ou sem aviso prévio, em caso de:</p>
+    <ul>
+      <li>Violação destes Termos;</li>
+      <li>Uso fraudulento ou abusivo da plataforma;</li>
+      <li>Inserção de dados identificáveis de pacientes;</li>
+      <li>Inadimplência.</li>
+    </ul>
+    <p><strong>10.3 Efeitos.</strong> Após a rescisão, o acesso à plataforma é encerrado e os dados do usuário são tratados conforme nossa <a href="privacidade.html">Política de Privacidade</a>.</p>
+  </div>
+
+  <!-- 11 -->
+  <div class="section" id="s11">
+    <div class="section-num">Cláusula 11</div>
+    <h2>Alterações nos Termos</h2>
+    <p>A neuraxIA pode modificar estes Termos a qualquer momento. Alterações substanciais serão comunicadas com <strong>pelo menos 15 (quinze) dias de antecedência</strong> por e-mail ou aviso na plataforma.</p>
+    <p>O uso continuado do CaseOS após a entrada em vigor das alterações implica a aceitação dos novos Termos. Caso o Usuário discorde das modificações, deve encerrar sua conta antes da data de vigência.</p>
+  </div>
+
+  <!-- 12 -->
+  <div class="section" id="s12">
+    <div class="section-num">Cláusula 12</div>
+    <h2>Legislação aplicável e foro</h2>
+    <p>Estes Termos são regidos pelas leis da República Federativa do Brasil, em especial pelo Código Civil (Lei 10.406/2002), Código de Defesa do Consumidor (Lei 8.078/1990), Marco Civil da Internet (Lei 12.965/2014) e Lei Geral de Proteção de Dados Pessoais — LGPD (Lei 13.709/2018).</p>
+    <p>Para dirimir eventuais controvérsias decorrentes destes Termos, as partes elegem o foro da comarca de <strong>Tangará da Serra, Estado de Mato Grosso</strong>, com renúncia expressa a qualquer outro, por mais privilegiado que seja.</p>
+  </div>
+
+  <!-- 13 -->
+  <div class="section" id="s13">
+    <div class="section-num">Cláusula 13</div>
+    <h2>Contato</h2>
+    <p>Em caso de dúvidas sobre estes Termos, o Usuário pode entrar em contato com a neuraxIA pelos seguintes canais:</p>
+    <ul>
+      <li><strong>E-mail:</strong> <a href="mailto:suporte@caseos.com.br">suporte@caseos.com.br</a></li>
+      <li><strong>Encarregado de Proteção de Dados (DPO):</strong> <a href="mailto:privacidade@caseos.com.br">privacidade@caseos.com.br</a></li>
+    </ul>
+    <div class="callout">
+      <p>Para exercer direitos relacionados aos seus dados pessoais (acesso, correção, exclusão, portabilidade), acesse nossa <a href="privacidade.html">Política de Privacidade</a> ou entre em contato com nosso DPO.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+  <p>&copy; 2026 neuraxIA · CaseOS. Todos os direitos reservados.</p>
+  <div class="page-footer-links">
+    <a href="landing.html">Início</a>
+    <a href="termos.html">Termos de Uso</a>
+    <a href="privacidade.html">Política de Privacidade</a>
+    <a href="login.html">Entrar</a>
+  </div>
+</footer>
+
+</body>
+</html>
