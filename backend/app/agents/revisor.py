@@ -1,8 +1,9 @@
 """
 Agente Revisor — duas camadas:
-  Nível A (seções):  GPT-4o mini — correção linguística, mais barato
+  Nível A (seções):  GPT-4o mini — correção linguística, mais barato (paralelo)
   Nível B (global):  Claude Sonnet 4.6 — CARE Score, flags, revisão científica profunda
 """
+import asyncio
 from app.models.schemas import CKO, ArtigoGerado, Resumo, RelatorioGerado
 from app.services.llm_router import chamar, extrair_json, Complexidade
 
@@ -127,10 +128,13 @@ async def _avaliar_care(artigo: ArtigoGerado, cko: CKO) -> RelatorioGerado:
     resp = await chamar(_SYS_B, prompt, complexidade=Complexidade.ALTA, max_tokens=4096)
     data = extrair_json(resp)
 
+    _CARE_MAX = len(_CARE_ITENS)  # 26 itens no checklist CARE 2013
+
     return RelatorioGerado(
-        care_score=data.get("care_score", 0),
-        care_itens_atendidos=data.get("care_itens_atendidos", []),
-        care_itens_faltantes=data.get("care_itens_faltantes", []),
+        # Clamp: LLM pode alucinar valor fora do range válido
+        care_score=min(_CARE_MAX, max(0, int(data.get("care_score", 0)))),
+        care_itens_atendidos=data.get("care_itens_atendidos", [])[:_CARE_MAX],
+        care_itens_faltantes=data.get("care_itens_faltantes", [])[:_CARE_MAX],
         flags=data.get("flags", []),
         bases_consultadas=4,
         total_referencias=len(artigo.referencias),
@@ -141,11 +145,14 @@ async def _avaliar_care(artigo: ArtigoGerado, cko: CKO) -> RelatorioGerado:
 # ── Executor principal ────────────────────────────────────────────────────────
 
 async def executar(cko: CKO, artigo: ArtigoGerado) -> tuple[ArtigoGerado, RelatorioGerado]:
-    # Nível A: GPT-4o mini revisa linguisticamente cada seção
-    intro_rev, caso_rev, disc_rev, conc_rev = await _revisar_secao("Introdução", artigo.introducao), \
-        await _revisar_secao("Caso Clínico", artigo.caso_clinico), \
-        await _revisar_secao("Discussão", artigo.discussao), \
-        await _revisar_secao("Conclusão", artigo.conclusao)
+    # Nível A: GPT-4o mini revisa as 4 seções EM PARALELO (asyncio.gather)
+    # Antes eram 4 awaits sequenciais — adicionava 2-4 min desnecessários ao pipeline
+    intro_rev, caso_rev, disc_rev, conc_rev = await asyncio.gather(
+        _revisar_secao("Introdução",   artigo.introducao),
+        _revisar_secao("Caso Clínico", artigo.caso_clinico),
+        _revisar_secao("Discussão",    artigo.discussao),
+        _revisar_secao("Conclusão",    artigo.conclusao),
+    )
 
     artigo_revisado = ArtigoGerado(
         titulo=artigo.titulo,

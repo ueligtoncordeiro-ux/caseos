@@ -153,13 +153,18 @@ async def executar_pipeline(
         })
 
         # Devolver artigo ao saldo: falha de sistema não deve consumir quota do usuário
+        # Tenta até 3 vezes com backoff — falha transitória de DB não deve penalizar o user
         if user_id:
             from app.services.auth import devolver_artigo
-            try:
-                await devolver_artigo(user_id)
-                logger.info("Artigo devolvido ao saldo de user=%s após erro no pipeline", user_id)
-            except Exception as e:
-                logger.error("Falha ao devolver artigo ao saldo: %s", e)
+            for tentativa in range(1, 4):
+                try:
+                    await devolver_artigo(user_id)
+                    logger.info("Artigo devolvido ao saldo de user=%s (tentativa %d)", user_id, tentativa)
+                    break
+                except Exception as e:
+                    logger.error("Falha ao devolver artigo (tentativa %d/3): %s", tentativa, e)
+                    if tentativa < 3:
+                        await asyncio.sleep(2 ** tentativa)  # 2s, 4s
 
         if email_usuario:
             asyncio.create_task(enviar_erro_pipeline(

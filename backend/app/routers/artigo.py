@@ -272,11 +272,22 @@ async def download_resultado(
     if sessao.status != "concluido":
         raise HTTPException(status_code=425,
                             detail=f"Artigo ainda não concluído. Status: {sessao.status}")
-    if not sessao.docx_path or not Path(sessao.docx_path).exists():
+    if not sessao.docx_path:
         raise HTTPException(status_code=404, detail="Arquivo DOCX não encontrado.")
 
+    # Defesa-em-profundidade: valida que o path está dentro do diretório permitido
+    # Evita path traversal caso o campo docx_path no BD seja comprometido
+    from app.config import settings
+    docx_base = Path(settings.docx_output_dir).resolve()
+    docx_path = Path(sessao.docx_path).resolve()
+    if not str(docx_path).startswith(str(docx_base)):
+        raise HTTPException(status_code=400, detail="Caminho de arquivo inválido.")
+
+    if not docx_path.exists():
+        raise HTTPException(status_code=404, detail="Arquivo DOCX não encontrado no servidor.")
+
     return FileResponse(
-        path=sessao.docx_path,
+        path=str(docx_path),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         filename=f"RCCS_{sessao_id}.docx",
     )

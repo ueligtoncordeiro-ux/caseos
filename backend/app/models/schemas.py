@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator, EmailStr, field_validator
+from pydantic import BaseModel, Field, field_validator, EmailStr
 from typing import Optional
 from datetime import datetime
 
@@ -16,12 +16,12 @@ class Identificacao(BaseModel):
 
 
 class Historia(BaseModel):
-    queixa_principal: str
-    duracao_sintomas: Optional[str] = None
-    hda: str
-    historico_previo: Optional[str] = None
-    historia_familiar: Optional[str] = None
-    historia_psicossocial: Optional[str] = None
+    queixa_principal: str = Field(..., max_length=500)
+    duracao_sintomas: Optional[str] = Field(None, max_length=200)
+    hda: str = Field(..., max_length=5000)
+    historico_previo: Optional[str] = Field(None, max_length=3000)
+    historia_familiar: Optional[str] = Field(None, max_length=2000)
+    historia_psicossocial: Optional[str] = Field(None, max_length=2000)
 
 
 class IntervencoesAnteriores(BaseModel):
@@ -31,9 +31,9 @@ class IntervencoesAnteriores(BaseModel):
 
 
 class Achados(BaseModel):
-    exame_geral: str
-    achados_especificos: str
-    sinais_vitais: Optional[str] = None
+    exame_geral: str = Field(..., max_length=3000)
+    achados_especificos: str = Field(..., max_length=3000)
+    sinais_vitais: Optional[str] = Field(None, max_length=500)
 
 
 class EventoTimeline(BaseModel):
@@ -49,49 +49,49 @@ class Timeline(BaseModel):
 
 
 class Diagnostico(BaseModel):
-    exames_lab: Optional[str] = None
-    exames_imagem: Optional[str] = None
-    outros_exames: Optional[str] = None
-    diagnostico_definitivo: str
-    diferenciais: Optional[str] = None
-    desafios: Optional[str] = None
-    prognostico: Optional[str] = None
+    exames_lab: Optional[str] = Field(None, max_length=2000)
+    exames_imagem: Optional[str] = Field(None, max_length=2000)
+    outros_exames: Optional[str] = Field(None, max_length=2000)
+    diagnostico_definitivo: str = Field(..., max_length=500)
+    diferenciais: Optional[str] = Field(None, max_length=1000)
+    desafios: Optional[str] = Field(None, max_length=1000)
+    prognostico: Optional[str] = Field(None, max_length=500)
 
 
 class Intervencao(BaseModel):
-    tipo: str
-    descricao: str
+    tipo: str = Field(..., max_length=200)
+    descricao: str = Field(..., max_length=3000)
     houve_mudanca: bool = False
-    desc_mudanca: Optional[str] = None
-    just_mudanca: Optional[str] = None
+    desc_mudanca: Optional[str] = Field(None, max_length=2000)
+    just_mudanca: Optional[str] = Field(None, max_length=1000)
 
 
 class Desfechos(BaseModel):
-    desfecho_clinico: str
-    exames_seguimento: Optional[str] = None
-    adesao: Optional[str] = None
-    tempo_acompanhamento: Optional[str] = None
-    eventos_adversos: Optional[str] = None
+    desfecho_clinico: str = Field(..., max_length=3000)
+    exames_seguimento: Optional[str] = Field(None, max_length=2000)
+    adesao: Optional[str] = Field(None, max_length=500)
+    tempo_acompanhamento: Optional[str] = Field(None, max_length=200)
+    eventos_adversos: Optional[str] = Field(None, max_length=2000)
 
 
 class Editorial(BaseModel):
-    problemas_clinicos: str
-    diferencial_caso: str
-    tipo_desfecho: Optional[str] = None
+    problemas_clinicos: str = Field(..., max_length=2000)
+    diferencial_caso: str = Field(..., max_length=2000)
+    tipo_desfecho: Optional[str] = Field(None, max_length=200)
     consentimento: bool = False
-    area_atuacao: Optional[str] = None
-    especialidade: Optional[str] = None
-    periodico: Optional[str] = None
-    formato_ref: str = "vancouver"
-    tipo_produto: str = "Artigo para Periódico"
-    email_usuario: Optional[str] = None
+    area_atuacao: Optional[str] = Field(None, max_length=200)
+    especialidade: Optional[str] = Field(None, max_length=200)
+    periodico: Optional[str] = Field(None, max_length=300)
+    formato_ref: str = Field("vancouver", max_length=50)
+    tipo_produto: str = Field("Artigo para Periódico", max_length=100)
+    email_usuario: Optional[str] = Field(None, max_length=254)  # RFC 5321 max email length
 
 
 class ImagemCaso(BaseModel):
-    numero_figura: int          # 1, 2, 3...
-    legenda: str                # full CARE caption text
-    titulo_abrev: Optional[str] = None   # short title for figure list
-    filename: Optional[str] = None       # stored server filename
+    numero_figura: int = Field(..., ge=1, le=20)  # máximo 20 figuras por artigo
+    legenda: str = Field(..., max_length=1000)
+    titulo_abrev: Optional[str] = Field(None, max_length=200)
+    filename: Optional[str] = Field(None, max_length=255)
 
 
 class CKO(BaseModel):
@@ -106,7 +106,7 @@ class CKO(BaseModel):
     desfechos: Desfechos
     perspectiva_paciente: Optional[str] = None
     editorial: Editorial
-    imagens: list[ImagemCaso] = []
+    imagens: list[ImagemCaso] = Field(default=[], max_length=20)
 
     @field_validator("sessao_id")
     @classmethod
