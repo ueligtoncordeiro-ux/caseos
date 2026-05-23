@@ -6,6 +6,8 @@ Endpoints: register, verify-email, login, refresh, logout,
 """
 import asyncio
 import secrets
+import time
+from collections import defaultdict
 from datetime import datetime
 from typing import Optional
 
@@ -37,7 +39,42 @@ from app.services.email import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# Price IDs hardcoded como fallback — evita NameError caso env vars não estejam configuradas.
+# ── Rate limiting para /auth/login (brute-force guard) ────────────────────────
+# Instância única do Render: in-memory é suficiente. Em multi-instância usar Redis.
+_LOGIN_MAX        = 10   # tentativas por IP na janela
+_LOGIN_JANELA_SEG = 900  # 15 minutos
+
+_login_hits: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_login_rate_limit(request: Request) -> None:
+    """
+    Bloqueia IPs que excedem _LOGIN_MAX tentativas de login em _LOGIN_JANELA_SEG segundos.
+    Conta todas as tentativas (válidas e inválidas) — um usuário legítimo raramente faz
+    mais de 2-3 logins por sessão, então 10/15 min é seguro sem falsos positivos.
+    Adiciona header Retry-After para conformidade com RFC 6585.
+    """
+    ip = request.client.host if request.client else "unknown"
+    agora = time.time()
+    janela_inicio = agora - _LOGIN_JANELA_SEG
+
+    # Remove timestamps fora da janela
+    _login_hits[ip] = [t for t in _login_hits[ip] if t > janela_inicio]
+
+    if len(_login_hits[ip]) >= _LOGIN_MAX:
+        retry_after = int(_login_hits[ip][0] + _LOGIN_JANELA_SEG - agora) + 1
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                f"Muitas tentativas de login neste IP. "
+                f"Aguarde {max(1, retry_after // 60)} min e tente novamente."
+            ),
+            headers={"Retry-After": str(retry_after)},
+        )
+    _login_hits[ip].append(agora)
+
+
+# ── Price IDs hardcoded como fallback — evita NameError caso env vars não estejam configuradas.
 # Os valores de settings.stripe_*_price_id têm precedência quando definidos.
 def _get_price_ids() -> dict:
     return {
@@ -124,7 +161,15 @@ async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
 # ── Login ─────────────────────────────────────────────────────────────────────
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
+async def login(
+    request: Request,
+    body: LoginRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    # Rate limit primeiro — antes de qualquer consulta ao banco
+    _check_login_rate_limit(request)
+
     result = await db.execute(select(Usuario).where(Usuario.email == body.email.lower()))
     user   = result.scalar_one_or_none()
 
@@ -155,8 +200,27 @@ async def logout(response: Response):
 
 # ── Recuperação de senha ──────────────────────────────────────────────────────
 
+_forgot_hits: dict[str, list[float]] = defaultdict(list)
+_FORGOT_MAX        = 5
+_FORGOT_JANELA_SEG = 3600  # 1 hora
+
+
+def _check_forgot_rate_limit(request: Request) -> None:
+    ip = request.client.host if request.client else "unknown"
+    agora = time.time()
+    _forgot_hits[ip] = [t for t in _forgot_hits[ip] if t > agora - _FORGOT_JANELA_SEG]
+    if len(_forgot_hits[ip]) >= _FORGOT_MAX:
+        raise HTTPException(
+            status_code=429,
+            detail="Muitas solicitações de recuperação de senha. Aguarde 1 hora.",
+            headers={"Retry-After": "3600"},
+        )
+    _forgot_hits[ip].append(agora)
+
+
 @router.post("/forgot-password", status_code=200)
-async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def forgot_password(request: Request, body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    _check_forgot_rate_limit(request)
     result = await db.execute(select(Usuario).where(Usuario.email == body.email.lower()))
     user   = result.scalar_one_or_none()
     # Resposta genérica — não revelar se e-mail existe (segurança)
