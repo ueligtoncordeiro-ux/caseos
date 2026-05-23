@@ -171,8 +171,12 @@ async def enviar_verificacao_email(destinatario: str, nome: str, token: str) -> 
 
 
 def _backend_url() -> str:
+    """Retorna a URL pública do backend. Usa BACKEND_URL (explícita) ou deriva de GOOGLE_REDIRECT_URI."""
+    if settings.backend_url and settings.backend_url != "http://localhost:8000":
+        return settings.backend_url.rstrip("/")
+    # Fallback para dev: extrai de google_redirect_uri
     uri = settings.google_redirect_uri
-    return uri.split("/auth/")[0]
+    return uri.split("/auth/")[0] if "/auth/" in uri else "http://localhost:8000"
 
 
 # ── Boas-vindas (novo usuário) ───────────────────────────────────────────────
@@ -302,7 +306,7 @@ async def enviar_reset_senha(destinatario: str, nome: str, token: str) -> bool:
     if not settings.resend_api_key:
         return False
 
-    url = f"{settings.frontend_url}/login?reset={token}"
+    url = f"{settings.frontend_url}/login.html?reset={token}"
 
     html = _base(
         char_url=f"{_ASSETS}/pixel-char-lupa.png",

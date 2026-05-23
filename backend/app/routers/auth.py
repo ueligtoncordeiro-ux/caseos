@@ -17,11 +17,17 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.models.database import get_db, Usuario, PLANO_STARTER, PLANO_PRO, PLANO_INSTITUCIONAL
+from pydantic import BaseModel, Field
 from app.models.schemas import (
     RegisterRequest, LoginRequest, ForgotPasswordRequest,
     ResetPasswordRequest, UpdateProfileRequest,
     TokenResponse, UsuarioPublico, CheckoutRequest,
 )
+
+
+class TrocarSenhaRequest(BaseModel):
+    senha_atual: str
+    senha_nova: str = Field(..., min_length=8, description="Mínimo 8 caracteres")
 from app.services.auth import (
     hash_password, verify_password,
     create_access_token, create_refresh_token,
@@ -29,6 +35,7 @@ from app.services.auth import (
     decode_token, get_current_user, get_verified_user,
     get_user_from_refresh,
 )
+from app.services.email import enviar_verificacao_email
 from app.services.email import (
     enviar_verificacao_email, enviar_reset_senha,
     enviar_boas_vindas, enviar_boas_vindas_pro, enviar_aviso_login_google,
@@ -80,16 +87,17 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         hashed_pw=hash_password(body.senha),
         crm_cro=body.crm_cro,
         lgpd_aceito_em=datetime.utcnow(),
-        is_verified=True,  # verificação por e-mail temporariamente desativada
+        is_verified=False,  # aguarda confirmação por e-mail
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
 
-    # Boas-vindas por e-mail (fire-and-forget)
-    asyncio.create_task(enviar_boas_vindas(user.email, user.nome, via_google=False))
+    # Envia e-mail de verificação (fire-and-forget)
+    token_verificacao = create_verification_token(user.email)
+    asyncio.create_task(enviar_verificacao_email(user.email, user.nome, token_verificacao))
 
-    return {"mensagem": "Conta criada com sucesso. Faça login para continuar."}
+    return {"mensagem": "Conta criada! Verifique seu e-mail para ativar o acesso."}
 
 
 # ── Verificação de e-mail ─────────────────────────────────────────────────────
@@ -244,6 +252,29 @@ async def delete_me(
     await db.commit()
     _clear_refresh_cookie(response)
     return Response(status_code=204)
+
+
+# ── Troca de senha autenticada ────────────────────────────────────────────────
+
+@router.post("/senha", status_code=200)
+async def trocar_senha(
+    body: TrocarSenhaRequest,
+    user: Usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Troca senha com confirmação da senha atual. Exige estar autenticado."""
+    if not user.hashed_pw:
+        raise HTTPException(
+            status_code=400,
+            detail="Conta criada via Google não possui senha local. "
+                   "Use 'Esqueci minha senha' para definir uma.",
+        )
+    if not verify_password(body.senha_atual, user.hashed_pw):
+        raise HTTPException(status_code=400, detail="Senha atual incorreta.")
+
+    user.hashed_pw = hash_password(body.senha_nova)
+    await db.commit()
+    return {"mensagem": "Senha alterada com sucesso."}
 
 
 # ── Google OAuth ──────────────────────────────────────────────────────────────

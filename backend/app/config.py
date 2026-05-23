@@ -29,6 +29,7 @@ class Settings(BaseSettings):
 
     environment: str = "development"
     frontend_url: str = "http://localhost:5500"
+    backend_url: str = "http://localhost:8000"   # URL pública do backend (Render em prod)
     log_level: str = "INFO"
 
     max_pipeline_timeout: int = 900

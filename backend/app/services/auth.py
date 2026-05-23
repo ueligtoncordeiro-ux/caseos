@@ -146,9 +146,23 @@ async def check_quota(
             ),
         )
 
+    # Reserva o slot: incrementa ANTES de iniciar o pipeline.
+    # Se o pipeline falhar, `devolver_artigo` decrementa de volta.
     user.artigos_mes += 1
     await db.commit()
     return user
+
+
+async def devolver_artigo(user_id: str) -> None:
+    """Devolve 1 artigo ao saldo do usuário quando o pipeline falha.
+    Garante que falhas de sistema não consumam cotas do usuário."""
+    from app.models.database import AsyncSessionLocal
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Usuario).where(Usuario.id == user_id))
+        user = result.scalar_one_or_none()
+        if user and user.artigos_mes > 0:
+            user.artigos_mes -= 1
+            await db.commit()
 
 
 async def debitar_tokens(user_id: str, tokens: int) -> None:

@@ -3240,7 +3240,7 @@ async function _renderUsageBar(user) {
   // Tenta buscar dados frescos do endpoint /me/tokens
   let dados = null;
   try {
-    const token = localStorage.getItem('rccs_token');
+    const token = getToken();   // fix: era localStorage.getItem (bug) — tokens estão em sessionStorage
     if (token) {
       const r = await fetch(API + '/auth/me/tokens', {
         headers: { Authorization: 'Bearer ' + token }
@@ -3763,7 +3763,9 @@ async function excluirConta() {
     });
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    sessionStorage.clear();
+    // Remove apenas os tokens da sessão (não limpar outros dados da aba)
+    sessionStorage.removeItem('rccs_token');
+    sessionStorage.removeItem('rccs_user');
     alert('Conta excluída. Você será redirecionado.');
     location.href = 'login.html';
   } catch (err) {

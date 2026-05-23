@@ -1,9 +1,11 @@
 import os
 import asyncio
 import re
+import time
+from collections import defaultdict
 from pathlib import Path
 from typing import Optional, Any
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +17,28 @@ from app.agents.orchestrator import executar_pipeline, executar_pipeline_demo
 from app.services.auth import get_verified_user, check_quota
 
 router = APIRouter(prefix="/artigo", tags=["artigo"])
+
+# ── Rate limiting simples para /demo (sem dependência externa) ────────────────
+_DEMO_MAX_POR_HORA = 3          # máximo de demos por IP por hora
+_DEMO_JANELA_SEG   = 3600       # janela de 1 hora
+_demo_hits: dict[str, list[float]] = defaultdict(list)   # ip → [timestamps]
+
+
+def _check_demo_rate_limit(request: Request) -> None:
+    ip = request.client.host if request.client else "unknown"
+    agora = time.time()
+    janela_inicio = agora - _DEMO_JANELA_SEG
+
+    # Remove timestamps fora da janela
+    _demo_hits[ip] = [t for t in _demo_hits[ip] if t > janela_inicio]
+
+    if len(_demo_hits[ip]) >= _DEMO_MAX_POR_HORA:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Limite de {_DEMO_MAX_POR_HORA} demos por hora atingido. "
+                   "Crie uma conta gratuita para continuar.",
+        )
+    _demo_hits[ip].append(agora)
 
 
 class SalvarPesquisaRequest(BaseModel):
@@ -29,9 +53,12 @@ class SalvarPesquisaRequest(BaseModel):
 @router.post("/demo", response_model=IniciarResponse)
 async def iniciar_demo(
     cko: CKO,
+    request: Request,
     background_tasks: BackgroundTasks,
 ):
-    """Pipeline de demonstração — sem autenticação. Gera apenas Introdução + Caso Clínico."""
+    """Pipeline de demonstração — sem autenticação. Gera apenas Introdução + Caso Clínico.
+    Limitado a 3 demos/hora por IP para evitar abuso de LLM."""
+    _check_demo_rate_limit(request)
     background_tasks.add_task(executar_pipeline_demo, cko.sessao_id, cko)
 
     return IniciarResponse(
@@ -79,7 +106,7 @@ async def iniciar_geracao(
         db.add(sessao)
         await db.commit()
 
-    background_tasks.add_task(executar_pipeline, cko.sessao_id, cko, user.id)
+    background_tasks.add_task(executar_pipeline, cko.sessao_id, cko, user.id, user.nome)
 
     return IniciarResponse(
         sessao_id=cko.sessao_id,

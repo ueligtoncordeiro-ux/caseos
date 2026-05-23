@@ -30,9 +30,15 @@ async def _atualizar_sessao(external_id: str, **kwargs):
             await db.commit()
 
 
-async def executar_pipeline(sessao_id: str, cko: CKO, user_id: Optional[str] = None):
+async def executar_pipeline(
+    sessao_id: str,
+    cko: CKO,
+    user_id: Optional[str] = None,
+    nome_usuario: Optional[str] = None,
+):
     """Pipeline principal. Executado como BackgroundTask."""
     email_usuario = cko.editorial.__dict__.get("email_usuario", "")
+    nome_display = nome_usuario or (email_usuario.split("@")[0].capitalize() if email_usuario else "Pesquisador")
     iniciar_contagem_tokens()  # zera contador para este pipeline
 
     try:
@@ -112,10 +118,10 @@ async def executar_pipeline(sessao_id: str, cko: CKO, user_id: Optional[str] = N
             tokens_usados=tokens_pipeline,
         )
 
-        # Debitar tokens do saldo mensal do usuário
+        # Debitar tokens do saldo mensal do usuário (await — dado financeiro)
         if user_id and tokens_pipeline > 0:
             from app.services.auth import debitar_tokens
-            asyncio.create_task(debitar_tokens(user_id, tokens_pipeline))
+            await debitar_tokens(user_id, tokens_pipeline)
 
         logger.info("Pipeline concluído sessao=%s tokens=%d", sessao_id, tokens_pipeline)
 
@@ -132,7 +138,7 @@ async def executar_pipeline(sessao_id: str, cko: CKO, user_id: Optional[str] = N
         if email_usuario:
             asyncio.create_task(enviar_artigo_pronto(
                 destinatario=email_usuario,
-                nome=email_usuario.split("@")[0].capitalize(),
+                nome=nome_display,
                 sessao_id=sessao_id,
                 care_score=relatorio.care_score,
                 total_refs=relatorio.total_referencias,
@@ -145,10 +151,20 @@ async def executar_pipeline(sessao_id: str, cko: CKO, user_id: Optional[str] = N
             "tipo": "erro",
             "mensagem": f"Erro no pipeline: {str(exc)[:300]}",
         })
+
+        # Devolver artigo ao saldo: falha de sistema não deve consumir quota do usuário
+        if user_id:
+            from app.services.auth import devolver_artigo
+            try:
+                await devolver_artigo(user_id)
+                logger.info("Artigo devolvido ao saldo de user=%s após erro no pipeline", user_id)
+            except Exception as e:
+                logger.error("Falha ao devolver artigo ao saldo: %s", e)
+
         if email_usuario:
             asyncio.create_task(enviar_erro_pipeline(
                 destinatario=email_usuario,
-                nome=email_usuario.split("@")[0].capitalize(),
+                nome=nome_display,
                 sessao_id=sessao_id,
             ))
         raise

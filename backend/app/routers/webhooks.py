@@ -5,7 +5,9 @@ Stripe: verifica assinatura HMAC, atualiza plano do usuário e envia e-mail de b
 import asyncio
 import hashlib
 import hmac
+import logging
 import time
+from functools import lru_cache
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +18,12 @@ from app.models.database import get_db, Usuario, PLANO_FREE, PLANO_STARTER, PLAN
 from app.services.email import enviar_boas_vindas_pro
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+logger = logging.getLogger(__name__)
+
+# ── Idempotência simples: set em memória dos event IDs já processados ─────────
+# Em produção multi-instância usar Redis/BD; para instância única do Render serve.
+_eventos_processados: set[str] = set()
+_MAX_EVENTOS_CACHE = 10_000   # evita crescimento ilimitado
 
 STRIPE_PRICE_TO_PLAN = {
     "price_1TZxQv3oJrMmxd1m332GRzl2": PLANO_STARTER,       # Starter R$49
@@ -87,9 +95,19 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     _verificar_assinatura_stripe(body, sig_header, settings.stripe_webhook_secret)
 
     import json
-    event = json.loads(body)
-    etype = event.get("type", "")
-    data  = event.get("data", {}).get("object", {})
+    event  = json.loads(body)
+    etype  = event.get("type", "")
+    data   = event.get("data", {}).get("object", {})
+
+    # ── Idempotência: ignorar eventos já processados ──────────────────────────
+    event_id = event.get("id", "")
+    if event_id in _eventos_processados:
+        logger.info("Evento Stripe duplicado ignorado: %s (%s)", event_id, etype)
+        return {"received": True}
+    if len(_eventos_processados) >= _MAX_EVENTOS_CACHE:
+        _eventos_processados.clear()   # reset simples para evitar vazamento de memória
+    _eventos_processados.add(event_id)
+    logger.info("Processando evento Stripe: %s (%s)", event_id, etype)
 
     # ── checkout.session.completed → primeira assinatura ──────────────────────
     if etype == "checkout.session.completed":
@@ -105,15 +123,24 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         if not user:
             return {"received": True}
 
-        # Plano via metadata da session (definido no checkout) ou fallback pelo price_id
-        plano = (
-            data.get("metadata", {}).get("plano")
-            or _plano_from_price(
-                # tenta extrair price_id do subscription expandido (se disponível)
-                data.get("subscription_data", {}).get("metadata", {}).get("plano", "")
+        # Plano via metadata da session (definido no checkout)
+        plano = data.get("metadata", {}).get("plano")
+
+        # Fallback: tenta pelo price_id da subscription (se session expandida)
+        if not plano:
+            price_id_sub = (data.get("subscription_data", {})
+                               .get("metadata", {}).get("plano", ""))
+            plano = _plano_from_price(price_id_sub) if price_id_sub else None
+
+        # Se não foi possível identificar o plano, loga e rejeita
+        # (NÃO conceder plano pago em caso de erro de metadata)
+        if not plano or plano == PLANO_FREE:
+            logger.error(
+                "checkout.session.completed sem metadata.plano válido: "
+                "session_id=%s customer=%s — evento rejeitado para revisão manual.",
+                data.get("id"), data.get("customer"),
             )
-            or PLANO_PRO  # fallback seguro
-        )
+            return {"received": True, "aviso": "plano_nao_identificado"}
 
         user.stripe_customer_id         = customer
         user.stripe_subscription_id     = sub_id
