@@ -15,19 +15,14 @@ from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from pydantic import BaseModel, Field
 from app.config import settings
 from app.models.database import get_db, Usuario, PLANO_STARTER, PLANO_PRO, PLANO_INSTITUCIONAL
-from pydantic import BaseModel, Field
 from app.models.schemas import (
     RegisterRequest, LoginRequest, ForgotPasswordRequest,
     ResetPasswordRequest, UpdateProfileRequest,
     TokenResponse, UsuarioPublico, CheckoutRequest,
 )
-
-
-class TrocarSenhaRequest(BaseModel):
-    senha_atual: str
-    senha_nova: str = Field(..., min_length=8, description="Mínimo 8 caracteres")
 from app.services.auth import (
     hash_password, verify_password,
     create_access_token, create_refresh_token,
@@ -35,7 +30,6 @@ from app.services.auth import (
     decode_token, get_current_user, get_verified_user,
     get_user_from_refresh,
 )
-from app.services.email import enviar_verificacao_email
 from app.services.email import (
     enviar_verificacao_email, enviar_reset_senha,
     enviar_boas_vindas, enviar_boas_vindas_pro, enviar_aviso_login_google,
@@ -43,11 +37,10 @@ from app.services.email import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-STRIPE_CURRENT_PRICE_IDS = {
-    PLANO_STARTER:       "price_1TZxQv3oJrMmxd1m332GRzl2",  # R$49
-    PLANO_PRO:           "price_1TZxR43oJrMmxd1m0BsTg21X",  # R$99
-    PLANO_INSTITUCIONAL: "price_1TZxR73oJrMmxd1m1ZVKBsDS",  # R$349
-}
+
+class TrocarSenhaRequest(BaseModel):
+    senha_atual: str
+    senha_nova: str = Field(..., min_length=8, description="Mínimo 8 caracteres")
 
 _GOOGLE_AUTH_URL   = "https://accounts.google.com/o/oauth2/v2/auth"
 _GOOGLE_TOKEN_URL  = "https://oauth2.googleapis.com/token"
