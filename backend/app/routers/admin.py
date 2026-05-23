@@ -7,6 +7,7 @@ Segurança:
   • Endpoints destrutivos (DELETE) exigem confirmação explícita via query param.
   • Logs de auditoria em cada ação sensível.
 """
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Optional
@@ -333,3 +334,190 @@ async def deletar_sessao(
     await db.commit()
     logger.warning("ADMIN DELETE session=%s by admin=%s", sessao_id, admin.id)
     return {"ok": True, "excluido": sessao_id}
+
+
+# ── Stripe ────────────────────────────────────────────────────────────────────
+
+# Preços mensais BRL por plano (sincronizados com Stripe)
+_PRECO_MENSAL = {"starter": 49.0, "pro": 99.0, "institucional": 349.0}
+
+
+def _stripe_client():
+    """Retorna o módulo stripe configurado. Levanta 400 se chave ausente."""
+    from app.config import settings as _s
+    if not _s.stripe_secret_key:
+        raise HTTPException(400, "Stripe não configurado neste ambiente.")
+    import stripe as _stripe
+    _stripe.api_key = _s.stripe_secret_key
+    return _stripe
+
+
+@router.get("/stripe/overview")
+async def stripe_overview(
+    admin: Usuario = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    MRR estimado via banco (por plano × preço) +
+    dados em tempo real da Stripe API (past_due, novos assinantes, ARR).
+    """
+    # ── 1. MRR via banco (sempre rápido) ──────────────────────────────────────
+    mrr = 0.0
+    breakdown: dict = {}
+    for plano, preco in _PRECO_MENSAL.items():
+        cnt = (await db.execute(
+            select(func.count(Usuario.id)).where(
+                Usuario.plano == plano,
+                Usuario.is_active == True,         # noqa: E712
+            )
+        )).scalar() or 0
+        breakdown[plano] = {"count": cnt, "revenue": round(cnt * preco, 2)}
+        mrr += cnt * preco
+
+    # ── 2. Stripe API (opcional — falha graciosamente) ────────────────────────
+    stripe_live: dict = {"ok": False, "error": None,
+                         "past_due": 0, "new_this_month": 0,
+                         "canceled_this_month": 0, "arr": 0.0}
+    try:
+        stripe = _stripe_client()
+
+        def _fetch_stripe() -> dict:
+            now = datetime.now(timezone.utc)
+            month_start_ts = int(
+                now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp()
+            )
+
+            # Past due
+            pd_page = stripe.Subscription.list(status="past_due", limit=100)
+            past_due = len(pd_page.data)
+
+            # Novos assinantes (ativos criados neste mês)
+            new_page = stripe.Subscription.list(
+                created={"gte": month_start_ts}, status="active", limit=100
+            )
+            new_this_month = len(new_page.data)
+
+            # Cancelados neste mês
+            canc_page = stripe.Subscription.list(
+                status="canceled", limit=100,
+                # canceled_at não aceita filtro direto na list; usamos created como proxy
+            )
+            canceled_this_month = sum(
+                1 for s in canc_page.data
+                if (s.canceled_at or 0) >= month_start_ts
+            )
+
+            # ARR: MRR × 12 (usando os dados do banco já calculados)
+            return {
+                "ok": True,
+                "past_due": past_due,
+                "new_this_month": new_this_month,
+                "canceled_this_month": canceled_this_month,
+            }
+
+        stripe_live.update(await asyncio.to_thread(_fetch_stripe))
+
+    except HTTPException as e:
+        stripe_live["error"] = e.detail
+    except Exception as e:
+        stripe_live["error"] = str(e)[:150]
+
+    mrr_rounded = round(mrr, 2)
+    return {
+        "mrr": mrr_rounded,
+        "arr": round(mrr_rounded * 12, 2),
+        "breakdown": breakdown,
+        "stripe": stripe_live,
+    }
+
+
+@router.get("/stripe/user/{user_id}")
+async def stripe_user_detail(
+    user_id: str,
+    admin: Usuario = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Detalhes Stripe de um usuário: assinatura ativa, faturas recentes,
+    método de pagamento e link direto para o dashboard Stripe.
+    """
+    user = await _get_usuario_ou_404(user_id, db)
+
+    if not user.stripe_customer_id:
+        return {"has_stripe": False, "message": "Usuário sem conta Stripe."}
+
+    stripe = _stripe_client()
+
+    def _fetch_user() -> dict:
+        # Assinatura mais recente (qualquer status)
+        subs = stripe.Subscription.list(
+            customer=user.stripe_customer_id,
+            limit=1,
+            status="all",
+            expand=["data.default_payment_method"],
+        )
+        sub = subs.data[0] if subs.data else None
+        sub_data = None
+        pm_data = None
+
+        if sub:
+            sub_data = {
+                "id": sub.id,
+                "status": sub.status,
+                "current_period_start": sub.current_period_start,
+                "current_period_end": sub.current_period_end,
+                "cancel_at_period_end": sub.cancel_at_period_end,
+                "canceled_at": sub.canceled_at,
+            }
+            # Cartão da assinatura
+            pm = sub.get("default_payment_method")
+            if pm and hasattr(pm, "card"):
+                pm_data = {
+                    "brand": pm.card.brand,
+                    "last4": pm.card.last4,
+                    "exp_month": pm.card.exp_month,
+                    "exp_year": pm.card.exp_year,
+                }
+
+        # Faturas recentes (até 5)
+        invs = stripe.Invoice.list(customer=user.stripe_customer_id, limit=5)
+        inv_data = [
+            {
+                "id": inv.id,
+                "number": getattr(inv, "number", None),
+                "amount_paid": (inv.amount_paid or 0) / 100,
+                "amount_due": (inv.amount_due or 0) / 100,
+                "status": inv.status,
+                "created": inv.created,
+                "hosted_invoice_url": getattr(inv, "hosted_invoice_url", None),
+            }
+            for inv in invs.data
+        ]
+
+        # Cartão via PaymentMethod se não veio da assinatura
+        if not pm_data:
+            try:
+                pms = stripe.PaymentMethod.list(
+                    customer=user.stripe_customer_id, type="card"
+                )
+                if pms.data:
+                    pm = pms.data[0]
+                    pm_data = {
+                        "brand": pm.card.brand,
+                        "last4": pm.card.last4,
+                        "exp_month": pm.card.exp_month,
+                        "exp_year": pm.card.exp_year,
+                    }
+            except Exception:
+                pass
+
+        return {
+            "has_stripe": True,
+            "customer_id": user.stripe_customer_id,
+            "stripe_url": f"https://dashboard.stripe.com/customers/{user.stripe_customer_id}",
+            "subscription": sub_data,
+            "invoices": inv_data,
+            "payment_method": pm_data,
+        }
+
+    return await asyncio.to_thread(_fetch_user)

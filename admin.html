@@ -671,6 +671,60 @@ tbody td.mono { font-family: ui-monospace, monospace; font-size: 11px; }
           <span class="plano-count" style="color:var(--red)" id="status-erro">—</span>
         </div>
       </div>
+
+      <!-- ── Stripe Revenue ─────────────────────────────────────── -->
+      <div class="section-header" style="margin-top: 8px;">
+        <h2>💳 Receita (Stripe)</h2>
+        <button class="btn btn-ghost btn-sm" id="stripe-load-btn" onclick="loadStripeOverview()">↺ Carregar dados</button>
+      </div>
+
+      <!-- MRR + ARR cards (calculados via banco, sempre disponíveis) -->
+      <div class="stats-grid" id="stripe-mrr-grid" style="display:none; margin-bottom:12px;">
+        <div class="stat-card stat-accent">
+          <div class="stat-label">MRR Estimado</div>
+          <div class="stat-value" id="stripe-mrr">—</div>
+          <div class="stat-sub">Receita mensal recorrente</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">ARR Estimado</div>
+          <div class="stat-value" id="stripe-arr">—</div>
+          <div class="stat-sub">MRR × 12</div>
+        </div>
+        <div class="stat-card" id="stripe-pastdue-card">
+          <div class="stat-label">Past Due</div>
+          <div class="stat-value" id="stripe-past-due">—</div>
+          <div class="stat-sub">Pagamento pendente</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Novos / mês</div>
+          <div class="stat-value" id="stripe-new">—</div>
+          <div class="stat-sub">Assinaturas criadas</div>
+        </div>
+      </div>
+
+      <!-- Breakdown por plano -->
+      <div id="stripe-breakdown" style="display:none; margin-bottom: 20px;">
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--t3); margin-bottom:8px;">Receita por Plano</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Plano</th>
+                <th>Usuários ativos</th>
+                <th>Preço/mês</th>
+                <th>Receita</th>
+                <th>% do MRR</th>
+              </tr>
+            </thead>
+            <tbody id="stripe-breakdown-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Estado inicial / erro -->
+      <div id="stripe-placeholder" style="text-align:center; padding:20px 0; color:var(--t3); font-size:13px;">
+        Clique em <strong>Carregar dados</strong> para buscar métricas do Stripe em tempo real.
+      </div>
     </div>
 
     <!-- ── Tab: Usuários ───────────────────────────────────────────────── -->
@@ -818,6 +872,17 @@ tbody td.mono { font-family: ui-monospace, monospace; font-size: 11px; }
       <div class="field-check">
         <input type="checkbox" id="edit-is-admin">
         <label for="edit-is-admin">⚠️ Administrador</label>
+      </div>
+    </div>
+
+    <!-- ── Stripe por usuário ─────────────────────────── -->
+    <div id="stripe-user-section" style="border-top:1px solid var(--card-bdr); margin-top:16px; padding-top:16px; display:none;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+        <span style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--t3);">💳 Stripe</span>
+        <span id="stripe-user-link"></span>
+      </div>
+      <div id="stripe-user-content" style="font-size:13px; color:var(--t2);">
+        <div style="display:flex;align-items:center;gap:8px;color:var(--t3);"><div class="spinner"></div> Carregando...</div>
       </div>
     </div>
 
@@ -1032,13 +1097,22 @@ function renderUserRow(u) {
 
 /* ── Edit user modal ─────────────────────────────────────────────────────── */
 function openEditUser(u) {
-  document.getElementById('edit-user-id').value      = u.id;
-  document.getElementById('edit-nome').value         = u.nome;
-  document.getElementById('edit-plano').value        = u.plano;
-  document.getElementById('edit-artigos').value      = u.artigos_mes;
-  document.getElementById('edit-is-active').checked  = u.is_active;
+  document.getElementById('edit-user-id').value       = u.id;
+  document.getElementById('edit-nome').value          = u.nome;
+  document.getElementById('edit-plano').value         = u.plano;
+  document.getElementById('edit-artigos').value       = u.artigos_mes;
+  document.getElementById('edit-is-active').checked   = u.is_active;
   document.getElementById('edit-is-verified').checked = u.is_verified;
-  document.getElementById('edit-is-admin').checked   = u.is_admin;
+  document.getElementById('edit-is-admin').checked    = u.is_admin;
+
+  // Seção Stripe — só carrega se usuário tem customer_id
+  const stripeSection = document.getElementById('stripe-user-section');
+  if (u.stripe_customer_id) {
+    loadStripeUser(u.id);
+  } else {
+    stripeSection.style.display = 'none';
+  }
+
   openModal('edit-modal');
 }
 
@@ -1151,6 +1225,156 @@ async function deleteSession(sessaoId) {
   loadSessions(sessionsPage);
 }
 
+/* ── Stripe Overview ──────────────────────────────────────────────────────── */
+async function loadStripeOverview() {
+  const btn = document.getElementById('stripe-load-btn');
+  const placeholder = document.getElementById('stripe-placeholder');
+  btn.disabled = true;
+  btn.textContent = '⏳ Carregando...';
+  placeholder.textContent = 'Buscando dados do Stripe...';
+
+  const data = await apiJSON('/admin/stripe/overview');
+  btn.disabled = false;
+  btn.textContent = '↺ Atualizar';
+
+  if (!data) { placeholder.textContent = 'Erro ao carregar dados do Stripe.'; return; }
+
+  // MRR / ARR
+  document.getElementById('stripe-mrr').textContent = fmtBRL(data.mrr);
+  document.getElementById('stripe-arr').textContent  = fmtBRL(data.arr);
+
+  // Stripe live (pode estar sem dados se chave não configurada)
+  const s = data.stripe;
+  if (s.ok) {
+    document.getElementById('stripe-past-due').textContent = s.past_due;
+    document.getElementById('stripe-new').textContent      = s.new_this_month;
+    // Alerta visual se past_due > 0
+    const pdCard = document.getElementById('stripe-pastdue-card');
+    if (s.past_due > 0) pdCard.style.borderTop = '2px solid var(--red)';
+  } else {
+    document.getElementById('stripe-past-due').textContent = '—';
+    document.getElementById('stripe-new').textContent      = '—';
+    if (s.error) toast(`Stripe API: ${s.error}`, 'info');
+  }
+
+  // Breakdown por plano
+  const tbody = document.getElementById('stripe-breakdown-tbody');
+  const planos = { starter: { label: 'Starter', preco: 49 }, pro: { label: 'Pro', preco: 99 }, institucional: { label: 'Institucional', preco: 349 } };
+  tbody.innerHTML = Object.entries(data.breakdown).map(([plano, d]) => {
+    const pct = data.mrr > 0 ? ((d.revenue / data.mrr) * 100).toFixed(1) : '0.0';
+    const info = planos[plano] || { label: plano, preco: '—' };
+    return `<tr>
+      <td>${planoBadge(plano)}</td>
+      <td>${d.count}</td>
+      <td>R$ ${info.preco}/mês</td>
+      <td style="font-weight:600; color:var(--t1);">${fmtBRL(d.revenue)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="flex:1;height:4px;background:var(--card-bdr);border-radius:99px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:var(--acid);border-radius:99px;"></div>
+          </div>
+          <span style="font-size:11px;color:var(--t3);width:36px;text-align:right;">${pct}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Mostrar seções
+  placeholder.style.display = 'none';
+  document.getElementById('stripe-mrr-grid').style.display = '';
+  document.getElementById('stripe-breakdown').style.display = '';
+}
+
+/* ── Stripe por usuário ───────────────────────────────────────────────────── */
+async function loadStripeUser(userId) {
+  const section = document.getElementById('stripe-user-section');
+  const content = document.getElementById('stripe-user-content');
+  const linkEl  = document.getElementById('stripe-user-link');
+
+  section.style.display = '';
+  content.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--t3);"><div class="spinner"></div> Carregando Stripe...</div>';
+  linkEl.innerHTML = '';
+
+  const data = await apiJSON(`/admin/stripe/user/${userId}`);
+  if (!data) { content.textContent = 'Erro ao buscar dados.'; return; }
+
+  if (!data.has_stripe) {
+    content.innerHTML = '<span style="color:var(--t3)">Sem conta Stripe (plano Free ou cadastro não concluído).</span>';
+    return;
+  }
+
+  // Link para o Stripe Dashboard
+  linkEl.innerHTML = `<a href="${data.stripe_url}" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);text-decoration:none;">Abrir no Stripe ↗</a>`;
+
+  // Assinatura
+  let subHtml = '<span style="color:var(--t3)">Sem assinatura ativa.</span>';
+  if (data.subscription) {
+    const sub = data.subscription;
+    const statusMap = {
+      active:            '<span class="badge badge-green">Ativa</span>',
+      past_due:          '<span class="badge badge-red">Past Due</span>',
+      canceled:          '<span class="badge badge-gray">Cancelada</span>',
+      unpaid:            '<span class="badge badge-red">Não paga</span>',
+      trialing:          '<span class="badge badge-blue">Trial</span>',
+      incomplete:        '<span class="badge badge-amber">Incompleta</span>',
+      incomplete_expired:'<span class="badge badge-gray">Expirada</span>',
+    };
+    const badge = statusMap[sub.status] || `<span class="badge badge-gray">${sub.status}</span>`;
+    const periodoFim = sub.current_period_end ? fmtDateTs(sub.current_period_end) : '—';
+    const cancelInfo = sub.cancel_at_period_end
+      ? `<span style="color:var(--amber)"> · Cancela em ${periodoFim}</span>` : '';
+    const canceledAt = sub.canceled_at ? `<div style="color:var(--red);margin-top:4px;">Cancelada em: ${fmtDateTs(sub.canceled_at)}</div>` : '';
+
+    subHtml = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        ${badge} ${cancelInfo}
+      </div>
+      <div style="color:var(--t3);font-size:12px;">
+        Período: ${fmtDateTs(sub.current_period_start)} → ${periodoFim}
+        ${canceledAt}
+      </div>`;
+  }
+
+  // Cartão
+  let pmHtml = '';
+  if (data.payment_method) {
+    const pm = data.payment_method;
+    const brandIcons = { visa:'💳', mastercard:'💳', amex:'💳', elo:'💳' };
+    const icon = brandIcons[pm.brand] || '💳';
+    pmHtml = `<div style="margin-top:10px;font-size:12px;color:var(--t2);">${icon} <strong>${pm.brand.toUpperCase()}</strong> ****${pm.last4} &nbsp;·&nbsp; exp ${pm.exp_month}/${pm.exp_year}</div>`;
+  }
+
+  // Faturas
+  let invHtml = '';
+  if (data.invoices && data.invoices.length) {
+    const rows = data.invoices.map(inv => {
+      const statusBadge = inv.status === 'paid'
+        ? '<span class="badge badge-green">Pago</span>'
+        : inv.status === 'open'
+          ? '<span class="badge badge-amber">Aberto</span>'
+          : `<span class="badge badge-gray">${inv.status}</span>`;
+      const link = inv.hosted_invoice_url
+        ? `<a href="${inv.hosted_invoice_url}" target="_blank" rel="noopener" style="color:var(--blue);font-size:11px;">Ver fatura ↗</a>` : '';
+      return `<tr>
+        <td style="font-size:12px;">${fmtDateTs(inv.created)}</td>
+        <td style="font-size:12px;">${fmtBRL(inv.amount_paid)}</td>
+        <td>${statusBadge}</td>
+        <td>${link}</td>
+      </tr>`;
+    }).join('');
+    invHtml = `
+      <div style="margin-top:12px;font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--t3);margin-bottom:6px;">Faturas recentes</div>
+      <div class="table-wrap" style="margin-bottom:0;">
+        <table>
+          <thead><tr><th>Data</th><th>Valor</th><th>Status</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  content.innerHTML = subHtml + pmHtml + invHtml;
+}
+
 /* ── Modal helpers ────────────────────────────────────────────────────────── */
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -1169,6 +1393,15 @@ function fmtNum(n) {
 function fmtDate(iso) {
   if (!iso) return '—';
   return new Date(iso).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+function fmtDateTs(ts) {
+  // Unix timestamp (segundos) → data formatada
+  if (!ts) return '—';
+  return new Date(ts * 1000).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+function fmtBRL(value) {
+  if (value === null || value === undefined) return '—';
+  return 'R$ ' + Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /* ── Init ─────────────────────────────────────────────────────────────────── */
