@@ -62,6 +62,7 @@ class Usuario(Base):
     # Status
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Plano e quota
     plano: Mapped[str] = mapped_column(String, default=PLANO_FREE)
@@ -174,8 +175,9 @@ async def init_db():
         is_sqlite = "sqlite" in str(engine.url)
         migrations = [
             # (tabela, coluna, tipo_sqlite, tipo_pg)
-            ("usuarios", "tokens_mes",   "INTEGER DEFAULT 0",  "INTEGER DEFAULT 0"),
-            ("sessoes",  "tokens_usados","INTEGER DEFAULT 0",  "INTEGER DEFAULT 0"),
+            ("usuarios", "tokens_mes",   "INTEGER DEFAULT 0",       "INTEGER DEFAULT 0"),
+            ("sessoes",  "tokens_usados","INTEGER DEFAULT 0",       "INTEGER DEFAULT 0"),
+            ("usuarios", "is_admin",     "BOOLEAN DEFAULT 0",       "BOOLEAN DEFAULT FALSE"),
         ]
         for tabela, coluna, tipo_sqlite, tipo_pg in migrations:
             try:

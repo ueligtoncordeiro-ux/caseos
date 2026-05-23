@@ -229,6 +229,7 @@ class UsuarioPublico(BaseModel):
     nome: str
     plano: str
     is_verified: bool
+    is_admin: bool = False
     google_picture: Optional[str] = None
     crm_cro: Optional[str] = None
     artigos_mes: int

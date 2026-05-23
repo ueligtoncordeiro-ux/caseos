@@ -129,6 +129,16 @@ async def get_verified_user(user: Usuario = Depends(get_current_user)) -> Usuari
     return user
 
 
+async def get_admin_user(user: Usuario = Depends(get_current_user)) -> Usuario:
+    """Dependência exclusiva de rotas admin. Exige is_admin=True no banco."""
+    if not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso restrito a administradores.",
+        )
+    return user
+
+
 async def check_quota(
     user: Usuario = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),

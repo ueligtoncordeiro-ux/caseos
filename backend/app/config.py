@@ -49,6 +49,11 @@ class Settings(BaseSettings):
     stripe_pro_price_id: str = "price_1TZxR43oJrMmxd1m0BsTg21X"
     stripe_inst_price_id: str = "price_1TZxR73oJrMmxd1m1ZVKBsDS"
 
+    # ── Admin ─────────────────────────────────────────────────────────────────
+    # E-mail do administrador — promovido automaticamente a is_admin=True no startup.
+    # Defina ADMIN_EMAIL no .env (Render). Nunca exponha em código-fonte.
+    admin_email: str = ""
+
     # ── Token TTL ─────────────────────────────────────────────────────────────
     refresh_token_expire_days: int = 30
 

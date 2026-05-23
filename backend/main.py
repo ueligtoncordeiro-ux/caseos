@@ -8,7 +8,7 @@ from app.config import settings
 from app.models.database import init_db
 from app.services.websocket_manager import manager
 from app.services.auth import decode_token
-from app.routers import artigo, auth, webhooks, chat, imagens
+from app.routers import artigo, auth, webhooks, chat, imagens, admin
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,34 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Validações de startup (production) OK")
 
     await init_db()
+
+    # ── Auto-promoção do admin ────────────────────────────────────────────────
+    # Se ADMIN_EMAIL estiver configurado, garante is_admin=True no BD.
+    # Funciona no primeiro boot e após resets manuais.
+    if settings.admin_email:
+        try:
+            from app.models.database import AsyncSessionLocal, Usuario
+            from sqlalchemy import select as _select
+            async with AsyncSessionLocal() as _db:
+                _res = await _db.execute(
+                    _select(Usuario).where(Usuario.email == settings.admin_email)
+                )
+                _admin_user = _res.scalar_one_or_none()
+                if _admin_user and not _admin_user.is_admin:
+                    _admin_user.is_admin = True
+                    await _db.commit()
+                    logger.info("✅ Admin promovido: %s", settings.admin_email)
+                elif _admin_user:
+                    logger.info("✅ Admin já configurado: %s", settings.admin_email)
+                else:
+                    logger.warning(
+                        "⚠️  ADMIN_EMAIL=%s não encontrado no banco ainda. "
+                        "Crie a conta e reinicie para promover.",
+                        settings.admin_email,
+                    )
+        except Exception as e:
+            logger.error("Erro ao promover admin: %s", e)
+
     yield
 
 
@@ -65,6 +93,7 @@ app.include_router(auth.router)
 app.include_router(webhooks.router)
 app.include_router(chat.router)
 app.include_router(imagens.router)
+app.include_router(admin.router)
 
 
 @app.websocket("/ws/{sessao_id}")
