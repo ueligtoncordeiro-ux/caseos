@@ -4,8 +4,10 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
-from app.models.database import Usuario
+from app.models.database import Usuario, Sessao, get_db
 from app.services.auth import get_verified_user
 
 logger = logging.getLogger(__name__)
@@ -23,6 +25,21 @@ def _safe_path(base: Path, *parts: str) -> Path:
     return resolved
 
 
+async def _verificar_dono(sessao_id: str, user_id: str, db: AsyncSession) -> Sessao:
+    """
+    Busca a sessão e garante que pertence ao usuário autenticado.
+    Lança 404 se não existir, 403 se o dono for outro.
+    Chamada obrigatória em todo endpoint que lê/grava/deleta imagens de uma sessão.
+    """
+    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
+    sessao = result.scalar_one_or_none()
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    if sessao.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+    return sessao
+
+
 @router.post("/{sessao_id}")
 async def upload_imagem(
     sessao_id: str,
@@ -30,8 +47,11 @@ async def upload_imagem(
     numero_figura: int = Form(...),
     legenda: str = Form(...),
     titulo_abrev: str = Form(""),
-    _user: Usuario = Depends(get_verified_user),   # ← autenticação obrigatória
+    user: Usuario = Depends(get_verified_user),
+    db: AsyncSession = Depends(get_db),
 ):
+    await _verificar_dono(sessao_id, user.id, db)
+
     ext = Path(arquivo.filename or "img.jpg").suffix.lower()
     if ext not in ALLOWED:
         raise HTTPException(400, f"Tipo não suportado: {ext}")
@@ -44,7 +64,7 @@ async def upload_imagem(
 
     content = await arquivo.read()
     filepath.write_bytes(content)
-    logger.info("Imagem salva: %s (user=%s)", filepath, _user.id)
+    logger.info("Imagem salva: %s (user=%s)", filepath, user.id)
 
     return {
         "sessao_id": sessao_id,
@@ -60,8 +80,11 @@ async def upload_imagem(
 async def get_imagem(
     sessao_id: str,
     filename: str,
-    _user: Usuario = Depends(get_verified_user),   # ← imagens clínicas são privadas
+    user: Usuario = Depends(get_verified_user),
+    db: AsyncSession = Depends(get_db),
 ):
+    await _verificar_dono(sessao_id, user.id, db)
+
     filepath = _safe_path(IMAGES_DIR, sessao_id, filename)
     if not filepath.exists():
         raise HTTPException(404, "Imagem não encontrada")
@@ -72,8 +95,11 @@ async def get_imagem(
 async def delete_imagem(
     sessao_id: str,
     filename: str,
-    _user: Usuario = Depends(get_verified_user),   # ← autenticação obrigatória
+    user: Usuario = Depends(get_verified_user),
+    db: AsyncSession = Depends(get_db),
 ):
+    await _verificar_dono(sessao_id, user.id, db)
+
     filepath = _safe_path(IMAGES_DIR, sessao_id, filename)
     if filepath.exists():
         filepath.unlink()

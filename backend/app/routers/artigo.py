@@ -81,7 +81,10 @@ async def iniciar_geracao(
     existing = result.scalar_one_or_none()
 
     if existing:
-        if existing.user_id and existing.user_id != user.id:
+        # Permite apenas se a sessão ainda não tem dono (prévia demo → upgrade para relato)
+        # ou se o dono é o próprio usuário.
+        # O `and` intencional: NULL significa sessão anônima de demo, que pode ser reivindicada.
+        if existing.user_id is not None and existing.user_id != user.id:
             raise HTTPException(status_code=403, detail="Sessão pertence a outro usuário.")
         if existing.status in ("gerando", "redigindo", "revisando", "finalizando"):
             raise HTTPException(status_code=409, detail="Sessão já está sendo processada.")
@@ -246,7 +249,9 @@ async def status_sessao(
     sessao = result.scalar_one_or_none()
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada.")
-    if sessao.user_id and sessao.user_id != user.id:
+    # Verificação estrita: sessão sem dono (demo não reivindicada) também é negada.
+    # Só o dono pode consultar o status de um relato.
+    if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
 
     return StatusResponse(
@@ -267,7 +272,7 @@ async def download_resultado(
 
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada.")
-    if sessao.user_id and sessao.user_id != user.id:
+    if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
     if sessao.status != "concluido":
         raise HTTPException(status_code=425,
@@ -303,7 +308,7 @@ async def confirmar_flags(
     sessao = result.scalar_one_or_none()
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada.")
-    if sessao.user_id and sessao.user_id != user.id:
+    if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
     return {"sessao_id": sessao_id, "confirmado": True}
 
