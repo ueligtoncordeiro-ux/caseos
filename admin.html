@@ -847,7 +847,23 @@ const API = window.location.hostname === 'localhost'
   : 'https://caseos-api-bhdx.onrender.com';
 
 /* ── Auth helpers ─────────────────────────────────────────────────────────── */
-function getToken() { return localStorage.getItem('access_token') || ''; }
+function getToken() { return sessionStorage.getItem('rccs_token') || ''; }
+
+function getCachedUser() {
+  try { return JSON.parse(sessionStorage.getItem('rccs_user') || 'null'); }
+  catch { return null; }
+}
+
+async function refreshToken() {
+  try {
+    const res = await fetch(`${API}/auth/refresh`, { method: 'POST', credentials: 'include' });
+    if (!res.ok) return false;
+    const data = await res.json();
+    sessionStorage.setItem('rccs_token', data.access_token);
+    sessionStorage.setItem('rccs_user',  JSON.stringify(data.usuario));
+    return true;
+  } catch { return false; }
+}
 
 async function apiFetch(path, opts = {}) {
   const res = await fetch(API + path, {
@@ -859,7 +875,13 @@ async function apiFetch(path, opts = {}) {
       ...(opts.headers || {}),
     },
   });
-  if (res.status === 401) { logout(); return null; }
+  if (res.status === 401) {
+    // Tenta renovar via cookie httpOnly antes de deslogar
+    const ok = await refreshToken();
+    if (ok) return apiFetch(path, opts); // retry
+    logout();
+    return null;
+  }
   if (res.status === 403) {
     toast('Acesso negado. Você não tem permissão de administrador.', 'error');
     setTimeout(() => window.location.href = 'dashboard.html', 2000);
@@ -880,7 +902,7 @@ async function apiJSON(path, opts = {}) {
 }
 
 function logout() {
-  localStorage.clear();
+  sessionStorage.clear();
   window.location.href = 'login.html';
 }
 
@@ -1151,21 +1173,30 @@ function fmtDate(iso) {
 
 /* ── Init ─────────────────────────────────────────────────────────────────── */
 async function init() {
-  const token = getToken();
-  if (!token) { window.location.href = 'login.html'; return; }
+  // 1. Sem token na sessionStorage? Tenta renovar via cookie httpOnly (nova aba)
+  if (!getToken()) {
+    const ok = await refreshToken();
+    if (!ok) { window.location.href = 'login.html'; return; }
+  }
 
-  // Verifica se é admin
-  const res = await apiFetch('/auth/me');
-  if (!res) return;
-  if (!res.ok) { window.location.href = 'login.html'; return; }
-  const me = await res.json();
+  // 2. Usa dados em cache do sessionStorage para verificação rápida
+  let me = getCachedUser();
+
+  // 3. Se não há cache ou is_admin não está definido, busca do servidor
+  if (!me || me.is_admin === undefined) {
+    const res = await apiFetch('/auth/me');
+    if (!res || !res.ok) { window.location.href = 'login.html'; return; }
+    me = await res.json();
+    sessionStorage.setItem('rccs_user', JSON.stringify(me));
+  }
+
   if (!me.is_admin) {
     alert('Acesso restrito ao administrador.');
     window.location.href = 'dashboard.html';
     return;
   }
-  document.getElementById('admin-name').textContent = me.nome;
 
+  document.getElementById('admin-name').textContent = me.nome;
   await loadOverview();
 }
 
