@@ -3291,16 +3291,31 @@ async function _renderUsageBar(user) {
 
 function _destacarPlanoAtual(plano) {
   const mapa = { free: 'planCardFree', starter: 'planCardStarter', pro: 'planCardPro', institucional: 'planCardInst' };
+  const pagos = new Set(['starter', 'pro', 'institucional']);
+
   Object.entries(mapa).forEach(([p, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.classList.toggle('current-plan', p === plano);
     const btn = el.querySelector('.btn-assinar');
     if (!btn) return;
+
     if (p === plano) {
       btn.textContent = 'Plano atual';
       btn.disabled = true;
       btn.className = 'btn-assinar secondary';
+
+      // Para planos pagos: injeta botão de gerenciar assinatura (evita duplicar)
+      const planAction = el.querySelector('.plan-action');
+      if (planAction && pagos.has(plano) && !planAction.querySelector('#btnGerenciarAssinatura')) {
+        const portalBtn = document.createElement('button');
+        portalBtn.id = 'btnGerenciarAssinatura';
+        portalBtn.className = 'btn-assinar secondary';
+        portalBtn.style.cssText = 'margin-top:8px;font-size:12px;opacity:0.75';
+        portalBtn.textContent = '⚙ Gerenciar Assinatura';
+        portalBtn.onclick = gerenciarAssinatura;
+        planAction.appendChild(portalBtn);
+      }
     }
   });
 }
@@ -3622,6 +3637,38 @@ function abrirModalPlanos() {
 function fecharModalPlanos(e) {
   if (!e || e.target === document.getElementById('modalPlanos')) {
     document.getElementById('modalPlanos').classList.remove('open');
+  }
+}
+
+async function gerenciarAssinatura() {
+  const btn = document.getElementById('btnGerenciarAssinatura');
+  if (btn) { btn.textContent = 'Redirecionando...'; btn.disabled = true; }
+
+  try {
+    const res = await fetch(`${API}/auth/billing-portal`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+
+    if (res.status === 400) {
+      // Sem assinatura — orienta o usuário
+      mostrarToast('Nenhuma assinatura encontrada. Escolha um plano para continuar.', 'info', '💳', 5000);
+      if (btn) { btn.textContent = 'Gerenciar Assinatura'; btn.disabled = false; }
+      return;
+    }
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    if (data.url) {
+      location.href = data.url;
+    } else {
+      throw new Error('URL não retornada');
+    }
+  } catch (err) {
+    console.error('[CaseOS] Erro ao abrir portal de assinatura:', err);
+    mostrarToast('Erro ao abrir portal. Tente novamente.', 'error', '⚠️');
+    if (btn) { btn.textContent = 'Gerenciar Assinatura'; btn.disabled = false; }
   }
 }
 

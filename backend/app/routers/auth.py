@@ -37,6 +37,15 @@ from app.services.email import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# Price IDs hardcoded como fallback — evita NameError caso env vars não estejam configuradas.
+# Os valores de settings.stripe_*_price_id têm precedência quando definidos.
+def _get_price_ids() -> dict:
+    return {
+        "starter":       settings.stripe_starter_price_id or "price_1TZxQv3oJrMmxd1m332GRzl2",
+        "pro":           settings.stripe_pro_price_id      or "price_1TZxR43oJrMmxd1m0BsTg21X",
+        "institucional": settings.stripe_inst_price_id     or "price_1TZxR73oJrMmxd1m1ZVKBsDS",
+    }
+
 
 class TrocarSenhaRequest(BaseModel):
     senha_atual: str
@@ -439,9 +448,15 @@ async def criar_checkout(
 
     stripe.api_key = settings.stripe_secret_key
 
-    # Price IDs are not secrets. Use the current Stripe prices as source of truth
-    # so stale Render env vars cannot keep charging retired R$97/R$497 prices.
-    price_map = STRIPE_CURRENT_PRICE_IDS
+    # Bloqueia tentativa de comprar o plano que o usuário já possui
+    if user.plano == body.plano:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Você já possui o plano '{body.plano}'. "
+                   "Para gerenciar sua assinatura acesse o portal de faturamento.",
+        )
+
+    price_map = _get_price_ids()
     price_id = price_map.get(body.plano)
     if not price_id:
         raise HTTPException(status_code=400, detail="Plano inválido.")
@@ -459,6 +474,42 @@ async def criar_checkout(
             locale="pt-BR",
             success_url=f"{settings.frontend_url}/dashboard.html?upgrade=ok&plano={body.plano}",
             cancel_url=f"{settings.frontend_url}/dashboard.html?upgrade=cancel",
+        )
+        return {"url": session.url}
+    except Exception as e:
+        err = getattr(e, "user_message", None) or getattr(e, "error", {})
+        detail = err.get("message", str(e)) if isinstance(err, dict) else str(e)
+        raise HTTPException(status_code=402, detail=f"Stripe: {detail}")
+
+
+# ── Stripe Customer Portal ────────────────────────────────────────────────────
+
+@router.post("/billing-portal")
+async def billing_portal(
+    user: Usuario = Depends(get_verified_user),
+):
+    """
+    Cria uma sessão no Stripe Customer Portal para o usuário gerenciar
+    sua assinatura (trocar plano, cancelar, atualizar cartão etc.).
+    Exige stripe_customer_id preenchido — usuários sem assinatura ativa
+    recebem 400 orientando a fazer upgrade primeiro.
+    """
+    import stripe
+    if not settings.stripe_secret_key:
+        raise HTTPException(status_code=501, detail="Pagamentos não configurados.")
+
+    if not user.stripe_customer_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Nenhuma assinatura encontrada. Faça upgrade para um plano pago primeiro.",
+        )
+
+    stripe.api_key = settings.stripe_secret_key
+
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=user.stripe_customer_id,
+            return_url=f"{settings.frontend_url}/dashboard.html",
         )
         return {"url": session.url}
     except Exception as e:

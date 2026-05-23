@@ -477,6 +477,49 @@ async def enviar_artigo_pronto(
     })
 
 
+# ── Aviso de pagamento falhou ────────────────────────────────────────────────
+
+async def enviar_aviso_pagamento_falhou(
+    destinatario: str, nome: str, proxima_tentativa: str = ""
+) -> bool:
+    if not settings.resend_api_key:
+        return False
+
+    primeiro = nome.split()[0]
+    aviso_tentativa = (
+        f"<p style='font-size:11px;color:{_DIM};margin:10px 0 0 0;font-family:monospace'>"
+        f"Próxima tentativa automática: <strong style='color:{_TEXT}'>{proxima_tentativa}</strong></p>"
+        if proxima_tentativa else ""
+    )
+
+    html = _base(
+        char_url=f"{_ASSETS}/pixel-char-flask.png",
+        headline=f"Falha no<br>pagamento, {primeiro}.",
+        body_html=f"""
+          <p style="font-size:13px;color:{_MUTED};margin:0 0 12px 0;line-height:1.7">
+            Não conseguimos cobrar sua assinatura CaseOS.
+            Atualize seu método de pagamento para manter o acesso ao plano ativo.
+          </p>""",
+        cta_url=f"{settings.frontend_url}/dashboard.html",
+        cta_label="Atualizar pagamento",
+        notice_html=f"""
+          <div style="background:#1a1000;border-left:3px solid #D97706;border-radius:0 4px 4px 0;
+                      padding:12px 16px;margin:16px 0 0 0">
+            <p style="font-size:11px;color:#D97706;margin:0;font-family:monospace;letter-spacing:.04em">
+              ⚠ Sem atualização, sua assinatura será cancelada e o plano voltará para Gratuito.
+            </p>
+            {aviso_tentativa}
+          </div>""",
+    )
+
+    return await _send({
+        "from": settings.resend_from_email,
+        "to": [destinatario],
+        "subject": "[CaseOS] Ação necessária: pagamento não aprovado",
+        "html": html,
+    })
+
+
 # ── Erro no pipeline ─────────────────────────────────────────────────────────
 
 async def enviar_erro_pipeline(destinatario: str, nome: str, sessao_id: str) -> bool:

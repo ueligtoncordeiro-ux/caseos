@@ -15,7 +15,7 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.models.database import get_db, Usuario, PLANO_FREE, PLANO_STARTER, PLANO_PRO, PLANO_INSTITUCIONAL, TOKENS_LIMITE
-from app.services.email import enviar_boas_vindas_pro
+from app.services.email import enviar_boas_vindas_pro, enviar_aviso_pagamento_falhou
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 logger = logging.getLogger(__name__)
@@ -186,7 +186,28 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
 
     # ── invoice.payment_failed → aviso de cobrança falhou ─────────────────────
     elif etype == "invoice.payment_failed":
-        # Por ora apenas loga; pode enviar email de aviso ao usuário
-        pass
+        customer = data.get("customer")
+        if customer:
+            result = await db.execute(
+                select(Usuario).where(Usuario.stripe_customer_id == customer)
+            )
+            user = result.scalar_one_or_none()
+            if user:
+                # Próxima tentativa de cobrança (epoch → string BR)
+                proxima_ts = data.get("next_payment_attempt")
+                proxima_str = ""
+                if proxima_ts:
+                    from datetime import datetime, timezone
+                    proxima_str = datetime.fromtimestamp(
+                        proxima_ts, tz=timezone.utc
+                    ).strftime("%d/%m/%Y")
+
+                asyncio.create_task(
+                    enviar_aviso_pagamento_falhou(user.email, user.nome, proxima_str)
+                )
+                logger.warning(
+                    "invoice.payment_failed: customer=%s email=%s próxima=%s",
+                    customer, user.email, proxima_str,
+                )
 
     return {"received": True}
