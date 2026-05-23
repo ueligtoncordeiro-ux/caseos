@@ -201,6 +201,18 @@ async def _chamar_gemini(
                 generation_config={"max_output_tokens": max_tokens},
             )
             texto = resp.text.strip()
+
+            # Detecta resposta truncada pelo Gemini (finish_reason MAX_TOKENS)
+            # Nesse caso tenta o próximo modelo ao invés de retornar texto cortado.
+            try:
+                finish = resp.candidates[0].finish_reason
+                # finish_reason 2 = MAX_TOKENS no enum do Gemini SDK
+                if finish and str(finish) in ("2", "MAX_TOKENS", "FinishReason.MAX_TOKENS"):
+                    erros.append(f"{nome_modelo}: resposta truncada (MAX_TOKENS)")
+                    continue  # tenta próximo modelo/fallback
+            except Exception:
+                pass  # campo não disponível — segue normalmente
+
             # Gemini não retorna usage de forma confiável — estima por caracteres
             estimado = (len(prompt) + len(texto)) // 4
             _registrar_tokens(estimado, "gemini")

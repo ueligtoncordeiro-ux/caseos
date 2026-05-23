@@ -3990,7 +3990,12 @@ function _appendMensagem(role, content) {
     <div class="bubble ${isUser ? 'user' : 'ai'}">${_sanitize(content)}</div>
   `;
   msgs.appendChild(wrap);
-  msgs.scrollTop = msgs.scrollHeight;
+  // Aguarda o layout recalcular antes de scrollar (fix mobile render timing)
+  requestAnimationFrame(() => {
+    msgs.scrollTop = msgs.scrollHeight;
+    // Segunda passagem para garantir após imagens carregadas
+    setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 80);
+  });
 }
 
 function _sanitize(str) {

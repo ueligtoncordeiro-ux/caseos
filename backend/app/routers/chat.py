@@ -49,9 +49,9 @@ ESTILO
 - Não se apresente em toda resposta. Se perguntarem quem é você, diga apenas: "Sou o assistente do CaseOS."
 - Prefira respostas de 2 a 5 frases. Use lista curta só quando houver passos.
 - Use linguagem adequada ao profissional de saúde, sem soar robótico.
-- Mantenha respostas com até 150 palavras, salvo se o usuário pedir detalhamento.
-- Seja sucinto, mas nunca entregue frase cortada ou ideia inacabada.
-- Antes de finalizar, confira se a resposta termina com uma frase completa e pontuação final."""
+- Mantenha respostas com até 120 palavras, salvo se o usuário pedir detalhamento.
+- CRÍTICO: NUNCA termine uma resposta no meio de uma palavra, sílaba ou frase. Termine SEMPRE com ponto final, exclamação ou interrogação.
+- Se estiver próximo do limite, encurte a ideia e finalize corretamente. Prefira frase curta completa a frase longa cortada."""
 
 
 class MensagemChat(BaseModel):
@@ -84,7 +84,7 @@ async def chat(
 
     user_prompt = f"""{contexto}Usuário: {req.mensagem}
 
-Responda de forma curta, mas completa. Não termine no meio de uma frase."""
+Responda de forma curta e COMPLETA. Termine com ponto final. Nunca corte no meio de uma palavra."""
 
     # BAIXA = Gemini primeiro para o chatbox ficar acessivel agora.
     # O router ainda pula automaticamente para outras hierarquias quando usadas.
@@ -93,7 +93,7 @@ Responda de forma curta, mas completa. Não termine no meio de uma frase."""
             system=_SYSTEM,
             user=user_prompt,
             complexidade=Complexidade.BAIXA,
-            max_tokens=520,
+            max_tokens=800,
         )
     except Exception as exc:
         raise HTTPException(
