@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import desc, func, select
+from sqlalchemy import delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import (
@@ -466,9 +466,15 @@ async def decidir_fonte(
     user: Usuario = Depends(get_verified_user),
 ):
     fonte = await _get_fonte_ou_404(revisao_id, fonte_id, user.id, db)
+    estava_aprovada = fonte.aprovada_para_escrita
     fonte.decisao_humana = body.decisao
     fonte.motivo_decisao = body.motivo
     fonte.aprovada_para_escrita = body.decisao == "incluida"
+
+    if estava_aprovada and not fonte.aprovada_para_escrita:
+        await db.execute(
+            delete(RevisaoFonteChunk).where(RevisaoFonteChunk.fonte_id == fonte.id)
+        )
 
     db.add(
         RevisaoDecisao(

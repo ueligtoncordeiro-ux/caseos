@@ -30,9 +30,27 @@ def _chunk_texto(texto: str, max_chars: int = _MAX_CHARS_CHUNK) -> list[str]:
     frases = re.split(r"(?<=[.!?])\s+", texto)
     chunks: list[str] = []
     atual = ""
+
+    def _adicionar_bloco(bloco: str) -> None:
+        bloco = bloco.strip()
+        if not bloco:
+            return
+        if len(bloco) <= max_chars:
+            chunks.append(bloco)
+            return
+        for inicio in range(0, len(bloco), max_chars):
+            parte = bloco[inicio:inicio + max_chars].strip()
+            if parte:
+                chunks.append(parte)
+
     for frase in frases:
         frase = frase.strip()
         if not frase:
+            continue
+        if len(frase) > max_chars:
+            _adicionar_bloco(atual)
+            atual = ""
+            _adicionar_bloco(frase)
             continue
         if len(atual) + len(frase) + 1 <= max_chars:
             atual = f"{atual} {frase}".strip()
