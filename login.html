@@ -77,29 +77,15 @@ body {
 .brand-tagline em { font-style: normal; color: var(--obsidian); background: var(--acid); padding: 0 6px; border-radius: 4px; }
 .brand-desc { font-size: 14px; color: var(--gray); line-height: 1.7; margin-bottom: 28px; }
 
-/* Mock pipeline card */
-.mock-card {
-  background: var(--light);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px 18px;
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  line-height: 1.8;
-}
-.mock-title {
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 10px;
-  font-family: var(--body);
-  font-weight: 600;
-}
-.mock-line { display: flex; gap: 10px; align-items: center; }
-.mock-check { color: var(--green); font-size: 12px; }
-.mock-label { color: var(--gray); flex: 1; }
-.mock-score { color: var(--obsidian); font-weight: 700; font-size: 15px; }
+/* Pipeline bubble content */
+.pipeline-label { font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); font-family:var(--body); font-weight:600; border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:8px; }
+.pipeline-line { display:flex; gap:6px; align-items:center; font-family:'Courier New',monospace; font-size:10px; color:var(--obsidian); line-height:1.9; }
+.pipeline-check { color:var(--green); font-weight:700; }
+.pipeline-name { flex:1; }
+.pipeline-val { font-weight:700; }
+.pipeline-divider { height:1px; background:var(--border); margin:6px 0; }
+.pipeline-score-row { display:flex; justify-content:space-between; align-items:center; font-family:'Courier New',monospace; font-size:10px; color:var(--obsidian); }
+.pipeline-score-num { font-size:13px; font-weight:700; color:#5A6600; }
 
 /* ── Personagem + balão — posição absoluta no canto inferior direito ── */
 .brand-character {
@@ -112,6 +98,16 @@ body {
   pointer-events: none;
 }
 
+/* Container de múltiplos balões */
+.brand-bubbles {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+  margin-right: 14px;
+  margin-bottom: 32px;
+}
+
 /* Balão à esquerda do personagem, cauda aponta para a direita */
 .brand-bubble {
   position: relative;
@@ -122,8 +118,6 @@ body {
   max-width: 200px;
   min-width: 160px;
   text-align: left;
-  margin-right: 14px;
-  margin-bottom: 32px;     /* alinha verticalmente com o torso do personagem */
   image-rendering: pixelated;
   box-shadow:
     -3px 0 0 0 var(--obsidian),
@@ -131,8 +125,13 @@ body {
      0 -3px 0 0 var(--obsidian),
      0  3px 0 0 var(--obsidian);
 }
-/* Cauda apontando para a direita → em direção ao personagem */
-.brand-bubble::before {
+
+/* Pipeline bubble: hidden initially */
+.brand-bubble-pipeline { opacity: 0; transition: opacity 0.6s ease; }
+.brand-bubble-pipeline.visible { opacity: 1; pointer-events: auto; }
+
+/* Cauda apontando para a direita → em direção ao personagem (apenas no balão de fala) */
+.brand-bubble-speech::before {
   content: '';
   position: absolute;
   right: -15px;
@@ -142,7 +141,7 @@ body {
   border-bottom: 9px solid transparent;
   border-left: 13px solid var(--obsidian);
 }
-.brand-bubble::after {
+.brand-bubble-speech::after {
   content: '';
   position: absolute;
   right: -9px;
@@ -463,34 +462,24 @@ body {
         Pipeline multi-agente com IA para médicos e pesquisadores brasileiros.
         Do formulário ao artigo com CARE Score e referências PubMed.
       </div>
-      <div class="mock-card">
-        <div class="mock-title">Pipeline CaseOS — ao vivo</div>
-        <div class="mock-line">
-          <span class="mock-check">✓</span>
-          <span class="mock-label">Agente Escritor</span>
-          <span style="color:#555;font-size:11px">8 seções</span>
-        </div>
-        <div class="mock-line">
-          <span class="mock-check">✓</span>
-          <span class="mock-label">Revisor CARE 2013</span>
-          <span style="color:#555;font-size:11px">13/13</span>
-        </div>
-        <div class="mock-line">
-          <span class="mock-check">✓</span>
-          <span class="mock-label">Bibliógrafo PubMed</span>
-          <span style="color:#555;font-size:11px">12 refs</span>
-        </div>
-        <div class="mock-line" style="margin-top:6px;padding-top:10px;border-top:1px solid var(--border)">
-          <span class="mock-label">CARE Score</span>
-          <span class="mock-score">92/100</span>
-        </div>
-      </div>
     </div>
 
-    <!-- Personagem pixel + balão de fala -->
+    <!-- Personagem pixel + balões de fala -->
     <div class="brand-character">
-      <div class="brand-bubble">
-        <span class="brand-bubble-text" id="loginBubbleText"></span><span class="brand-bubble-cursor" id="loginBubbleCursor">█</span>
+      <div class="brand-bubbles">
+        <!-- Pipeline bubble (hidden initially, fades in after typewriter) -->
+        <div class="brand-bubble brand-bubble-pipeline" id="pipelineBubble">
+          <div class="pipeline-label">Pipeline — ao vivo</div>
+          <div class="pipeline-line"><span class="pipeline-check">✓</span> <span class="pipeline-name">Agente Escritor</span> <span class="pipeline-val">8 seções</span></div>
+          <div class="pipeline-line"><span class="pipeline-check">✓</span> <span class="pipeline-name">Revisor CARE</span> <span class="pipeline-val">13/13</span></div>
+          <div class="pipeline-line"><span class="pipeline-check">✓</span> <span class="pipeline-name">Bibliógrafo</span> <span class="pipeline-val">12 refs</span></div>
+          <div class="pipeline-divider"></div>
+          <div class="pipeline-score-row"><span>CARE Score</span> <strong class="pipeline-score-num">92/100</strong></div>
+        </div>
+        <!-- Typewriter bubble -->
+        <div class="brand-bubble brand-bubble-speech">
+          <span class="brand-bubble-text" id="loginBubbleText"></span><span class="brand-bubble-cursor" id="loginBubbleCursor">█</span>
+        </div>
       </div>
       <img src="assets/pixel-researcher.png" alt="">
     </div>
@@ -902,6 +891,10 @@ async function submitReset(e) {
     } else {
       // Blink cursor after done
       setTimeout(() => { if (cursor) cursor.style.display = 'none'; }, 1800);
+      setTimeout(() => {
+        const pb = document.getElementById('pipelineBubble');
+        if (pb) pb.classList.add('visible');
+      }, 2400);
     }
   }
   setTimeout(type, 700);

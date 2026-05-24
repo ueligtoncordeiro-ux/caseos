@@ -159,6 +159,7 @@ async def historico(
                 "created_at": s.created_at.isoformat() if s.created_at else None,
                 "updated_at": s.updated_at.isoformat() if s.updated_at else None,
                 "tem_docx": bool(s.docx_path and Path(s.docx_path).exists()),
+                "versao_edicao": (s.resultado or {}).get("versao_edicao", 1) if s.resultado else 1,
             }
             for s in sessoes
         ],
@@ -615,6 +616,84 @@ async def buscar_biblioteca(
         "erros": erros,
         "artigos": [_normalizar_artigo(art) for art in artigos],
     }
+
+
+@router.patch("/{sessao_id}/secao")
+async def editar_secao(
+    sessao_id: str,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    """Salva edição manual de uma seção do artigo."""
+    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
+    sessao = result.scalar_one_or_none()
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    if sessao.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+    if not sessao.resultado:
+        raise HTTPException(status_code=400, detail="Artigo não gerado ainda.")
+
+    secao = body.get("secao")
+    conteudo = body.get("conteudo")
+    SECOES_VALIDAS = {"introducao", "caso_clinico", "discussao", "conclusao", "palavras_chave"}
+    if secao not in SECOES_VALIDAS:
+        raise HTTPException(status_code=400, detail=f"Seção inválida. Válidas: {SECOES_VALIDAS}")
+    if not isinstance(conteudo, list):
+        raise HTTPException(status_code=400, detail="conteudo deve ser uma lista.")
+
+    resultado = dict(sessao.resultado)
+    resultado[secao] = conteudo
+    resultado["versao_edicao"] = resultado.get("versao_edicao", 1) + 1
+    sessao.resultado = resultado
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(sessao, "resultado")
+    await db.commit()
+    return {"ok": True, "versao_edicao": resultado["versao_edicao"]}
+
+
+@router.post("/{sessao_id}/melhorar-secao")
+async def melhorar_secao(
+    sessao_id: str,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    """Reescreve uma seção usando IA (consome tokens)."""
+    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
+    sessao = result.scalar_one_or_none()
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    if sessao.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+    if not sessao.resultado:
+        raise HTTPException(status_code=400, detail="Artigo não gerado ainda.")
+
+    secao = body.get("secao")
+    conteudo_atual = body.get("conteudo_atual", "")
+    instrucao = body.get("instrucao", "")
+    SECOES_VALIDAS = {"introducao", "caso_clinico", "discussao", "conclusao"}
+    if secao not in SECOES_VALIDAS:
+        raise HTTPException(status_code=400, detail="Seção inválida.")
+
+    from app.agents.editor import melhorar_secao_llm
+    paragrafos = await melhorar_secao_llm(
+        secao=secao,
+        conteudo_atual=conteudo_atual,
+        instrucao=instrucao,
+        cko=sessao.cko or {},
+    )
+
+    resultado = dict(sessao.resultado)
+    resultado[secao] = paragrafos
+    resultado["versao_edicao"] = resultado.get("versao_edicao", 1) + 1
+    sessao.resultado = resultado
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(sessao, "resultado")
+    await db.commit()
+
+    return {"ok": True, "conteudo": paragrafos, "versao_edicao": resultado["versao_edicao"]}
 
 
 @router.post("/biblioteca/salvar")

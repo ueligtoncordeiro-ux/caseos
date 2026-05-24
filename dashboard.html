@@ -1433,8 +1433,77 @@ tbody td {
 .relato-meta .badge { font-size: 12px; }
 .relato-meta-item { font-size: 12.5px; color: var(--t3); }
 .relato-secao { margin-bottom: 22px; }
-.relato-secao-titulo { font-size: 13px; font-weight: 700; color: var(--t2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+.relato-secao-titulo { font-size: 13px; font-weight: 700; color: var(--t2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .relato-paragrafo { font-size: 14px; color: var(--t1); line-height: 1.7; margin-bottom: 10px; text-align: justify; }
+.btn-editar-secao {
+  background: none;
+  border: 1px solid var(--card-bdr);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 11.5px;
+  color: var(--t2);
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: all .15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: normal;
+}
+.btn-editar-secao:hover { background: var(--row-hover); color: var(--t1); border-color: #D0D0CE; }
+.sec-textarea {
+  width: 100%;
+  min-height: 180px;
+  padding: 12px;
+  border: 1.5px solid var(--indigo, #4F46E5);
+  border-radius: 8px;
+  font-family: 'Georgia', serif;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--t1);
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+  background: #FAFEFF;
+  margin-top: 10px;
+}
+.sec-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.btn-sec-salvar {
+  background: var(--obsidian); color: #fff;
+  border: none; border-radius: 7px;
+  padding: 7px 16px; font-size: 12.5px;
+  cursor: pointer; font-family: var(--sans);
+  transition: opacity .15s;
+}
+.btn-sec-salvar:hover { opacity: .85; }
+.btn-sec-ia {
+  background: none; color: #5A6600;
+  border: 1.5px solid #8FA800; border-radius: 7px;
+  padding: 7px 16px; font-size: 12.5px;
+  cursor: pointer; font-family: var(--sans);
+  transition: all .15s;
+}
+.btn-sec-ia:hover { background: #F5FFD6; }
+.btn-sec-ia:disabled { opacity: .5; cursor: not-allowed; }
+.btn-sec-cancelar {
+  background: none; color: var(--t3);
+  border: 1px solid var(--card-bdr); border-radius: 7px;
+  padding: 7px 14px; font-size: 12.5px;
+  cursor: pointer; font-family: var(--sans);
+}
+.badge-versao {
+  background: #EEF2FF; color: #4F46E5;
+  border: 1px solid #C7D2FE;
+  border-radius: 99px; padding: 2px 8px;
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: .02em; margin-left: 6px;
+}
 .relato-refs { list-style: none; padding: 0; margin: 0; }
 .relato-refs li { font-size: 13px; color: var(--t2); line-height: 1.6; margin-bottom: 6px; padding-left: 20px; text-indent: -20px; }
 .care-banner { display: flex; align-items: center; gap: 14px; background: var(--row-hover); border: 1px solid var(--card-bdr); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px; }
@@ -3879,6 +3948,7 @@ function _renderTabela(itens) {
     const score   = r.care_score ?? null;
     const data    = r.criado_em || r.data_criacao || '';
     const id      = r.sessao_id || r.id || '';
+    const versao  = r.versao_edicao || 1;
 
     const badgeCls = {
       concluido:    'badge-concluido',
@@ -3911,7 +3981,7 @@ function _renderTabela(itens) {
 
     return `
       <tr class="tr-clickable" onclick="visualizarRelato('${id}')">
-        <td class="td-titulo" title="${tituloHtml}">${titulo}</td>
+        <td class="td-titulo" title="${tituloHtml}">${titulo}${versao > 1 ? '<span class="badge-versao" style="margin-left:6px">v'+versao+'</span>' : ''}</td>
         <td><span class="badge ${badgeCls}">${badgeLabel}</span></td>
         <td>${scoreHtml}</td>
         <td style="font-size:12.5px;color:var(--t3);white-space:nowrap">${dataFormatada}</td>
@@ -4074,11 +4144,25 @@ function _renderModalRelato(d) {
   const score = d.care_score ?? rel.care_score ?? null;
   const data = d.criado_em ? new Date(d.criado_em).toLocaleDateString('pt-BR') : '—';
 
-  const secao = (titulo, paragrafos) => {
+  const secao = (titulo, chave, paragrafos) => {
     if (!paragrafos || !paragrafos.length) return '';
-    return `<div class="relato-secao">
-      <div class="relato-secao-titulo">${titulo}</div>
-      ${paragrafos.map(p => `<p class="relato-paragrafo">${p}</p>`).join('')}
+    const textoJunto = paragrafos.join('\n\n').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<div class="relato-secao" id="sec-wrap-${chave}">
+      <div class="relato-secao-titulo">
+        ${titulo}
+        <button class="btn-editar-secao" onclick="toggleEditarSecao('${chave}')">✏ Editar</button>
+      </div>
+      <div id="sec-view-${chave}">
+        ${paragrafos.map(p => `<p class="relato-paragrafo">${p}</p>`).join('')}
+      </div>
+      <div id="sec-edit-${chave}" style="display:none">
+        <textarea class="sec-textarea" id="sec-ta-${chave}">${textoJunto}</textarea>
+        <div class="sec-edit-actions">
+          <button class="btn-sec-salvar" onclick="salvarSecao('${chave}')">💾 Salvar</button>
+          <button class="btn-sec-ia" id="sec-ia-btn-${chave}" onclick="melhorarSecao('${chave}')">✨ Melhorar com IA</button>
+          <button class="btn-sec-cancelar" onclick="cancelarEdicaoSecao('${chave}')">Cancelar</button>
+        </div>
+      </div>
     </div>`;
   };
 
@@ -4134,10 +4218,10 @@ function _renderModalRelato(d) {
     ${scoreHtml}
     ${kwHtml}
     ${resumoHtml}
-    ${secao('Introdução', r.introducao)}
-    ${secao('Relato do Caso', r.relato_caso)}
-    ${secao('Discussão', r.discussao)}
-    ${secao('Conclusão', r.conclusao)}
+    ${secao('Introdução', 'introducao', r.introducao)}
+    ${secao('Relato do Caso', 'caso_clinico', r.caso_clinico)}
+    ${secao('Discussão', 'discussao', r.discussao)}
+    ${secao('Conclusão', 'conclusao', r.conclusao)}
     ${refsHtml}
   `;
 }
@@ -4145,6 +4229,89 @@ function _renderModalRelato(d) {
 function fecharModalRelato(e) {
   if (!e || e.target === document.getElementById('modalRelato')) {
     document.getElementById('modalRelato').classList.remove('open');
+  }
+}
+
+function toggleEditarSecao(chave) {
+  document.getElementById(`sec-view-${chave}`).style.display = 'none';
+  document.getElementById(`sec-edit-${chave}`).style.display = 'block';
+  const ta = document.getElementById(`sec-ta-${chave}`);
+  if (ta) ta.focus();
+}
+
+function cancelarEdicaoSecao(chave) {
+  document.getElementById(`sec-view-${chave}`).style.display = '';
+  document.getElementById(`sec-edit-${chave}`).style.display = 'none';
+}
+
+async function salvarSecao(chave) {
+  const sessaoId = window.__relatoAtualId;
+  if (!sessaoId) return;
+  const ta = document.getElementById(`sec-ta-${chave}`);
+  const paragrafos = ta.value.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+  const btn = document.querySelector(`#sec-edit-${chave} .btn-sec-salvar`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando…'; }
+  try {
+    const res = await fetch(`${API}/artigo/${sessaoId}/secao`, {
+      method: 'PATCH',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secao: chave, conteudo: paragrafos }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    // Update view
+    const view = document.getElementById(`sec-view-${chave}`);
+    if (view) view.innerHTML = paragrafos.map(p => `<p class="relato-paragrafo">${p}</p>`).join('');
+    cancelarEdicaoSecao(chave);
+    mostrarToast('Seção salva!', 'success', '💾');
+    // Update version badge in modal title
+    if (data.versao_edicao > 1) {
+      const tituloEl = document.getElementById('modalRelatoTitulo');
+      if (tituloEl && !tituloEl.querySelector('.badge-versao')) {
+        tituloEl.insertAdjacentHTML('beforeend', `<span class="badge-versao">v${data.versao_edicao}</span>`);
+      } else if (tituloEl) {
+        const bv = tituloEl.querySelector('.badge-versao');
+        if (bv) bv.textContent = `v${data.versao_edicao}`;
+      }
+    }
+    await carregarHistorico(paginaAtual); // refresh table to show version badge
+  } catch (err) {
+    mostrarToast('Erro ao salvar seção.', 'error', '⚠️');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Salvar'; }
+  }
+}
+
+async function melhorarSecao(chave) {
+  const sessaoId = window.__relatoAtualId;
+  if (!sessaoId) return;
+  const ta = document.getElementById(`sec-ta-${chave}`);
+  const btn = document.getElementById(`sec-ia-btn-${chave}`);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Melhorando…'; }
+  try {
+    const res = await fetch(`${API}/artigo/${sessaoId}/melhorar-secao`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secao: chave, conteudo_atual: ta.value }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    ta.value = data.conteudo.join('\n\n');
+    mostrarToast('✨ Seção melhorada! Revise e clique em Salvar.', 'success', '✨');
+    // Update version badge
+    if (data.versao_edicao > 1) {
+      const tituloEl = document.getElementById('modalRelatoTitulo');
+      if (tituloEl) {
+        const bv = tituloEl.querySelector('.badge-versao');
+        if (bv) bv.textContent = `v${data.versao_edicao}`;
+        else tituloEl.insertAdjacentHTML('beforeend', `<span class="badge-versao">v${data.versao_edicao}</span>`);
+      }
+    }
+    await carregarHistorico(paginaAtual);
+  } catch (err) {
+    mostrarToast('Erro ao melhorar seção.', 'error', '⚠️');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Melhorar com IA'; }
   }
 }
 
