@@ -4145,8 +4145,19 @@ async function confirmarRenomear() {
   }
 }
 
-async function downloadRelato(sessaoId) {
-  mostrarToast('Preparando download...', 'info', '⬇');
+async function downloadRelato(sessaoId, _tentativa) {
+  const tentativa  = _tentativa || 1;
+  const maxTentativas = 3;
+
+  /* Feedback visual no botão do modal (se estiver aberto) */
+  const btnModal = document.getElementById('btnDownloadModal');
+  if (btnModal && tentativa === 1) {
+    btnModal._textoOriginal = btnModal.innerHTML;
+    btnModal.disabled = true;
+    btnModal.innerHTML = '⏳ Gerando DOCX…';
+  }
+
+  if (tentativa === 1) mostrarToast('Preparando download…', 'info', '⬇');
 
   try {
     const res = await fetch(`${API}/artigo/${sessaoId}/resultado`, {
@@ -4167,8 +4178,29 @@ async function downloadRelato(sessaoId) {
 
     mostrarToast('Download iniciado!', 'success', '✅');
   } catch (err) {
-    console.error('[CaseOS] Erro no download:', err);
-    mostrarToast('Erro ao baixar o relato.', 'error', '⚠️');
+    console.error(`[CaseOS] Erro no download (tentativa ${tentativa}):`, err);
+
+    if (tentativa < maxTentativas) {
+      /* Retry automático com delay crescente */
+      const delay = tentativa * 1500;
+      mostrarToast(`Gerando arquivo… (tentativa ${tentativa + 1}/${maxTentativas})`, 'info', '🔄');
+      await new Promise(r => setTimeout(r, delay));
+      return downloadRelato(sessaoId, tentativa + 1);
+    }
+
+    /* Todas as tentativas falharam — mostra toast com botão de retry */
+    mostrarToast(
+      `Falha ao baixar. <button onclick="downloadRelato('${sessaoId}')" ` +
+      `style="background:var(--acid);color:#000;border:none;border-radius:6px;padding:2px 10px;cursor:pointer;font-weight:700;margin-left:8px">` +
+      `Tentar novamente</button>`,
+      'error', '⚠️', 8000
+    );
+  } finally {
+    /* Sempre restaura o botão do modal */
+    if (btnModal && tentativa === 1) {
+      btnModal.disabled = false;
+      btnModal.innerHTML = btnModal._textoOriginal || '↓ BAIXAR ARTIGO';
+    }
   }
 }
 
