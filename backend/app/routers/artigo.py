@@ -155,6 +155,7 @@ async def historico(
                 "titulo": s.titulo or f"Relato {s.external_id[:8]}",
                 "status": s.status,
                 "care_score": s.care_score,
+                "criado_em": s.created_at.isoformat() if s.created_at else None,
                 "created_at": s.created_at.isoformat() if s.created_at else None,
                 "updated_at": s.updated_at.isoformat() if s.updated_at else None,
                 "tem_docx": bool(s.docx_path and Path(s.docx_path).exists()),
@@ -263,12 +264,46 @@ async def status_sessao(
     )
 
 
+@router.get("/{sessao_id}")
+async def detalhe_sessao(
+    sessao_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    """Retorna dados completos da sessão (cko + resultado + relatorio) para visualização."""
+    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
+    sessao = result.scalar_one_or_none()
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    if sessao.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+
+    return {
+        "sessao_id": sessao.external_id,
+        "titulo": sessao.titulo or f"Relato {sessao.external_id[:8]}",
+        "status": sessao.status,
+        "care_score": sessao.care_score,
+        "criado_em": sessao.created_at.isoformat() if sessao.created_at else None,
+        "cko": sessao.cko,
+        "resultado": sessao.resultado,
+        "relatorio": sessao.relatorio,
+        "flags": sessao.flags,
+        "tokens_usados": sessao.tokens_usados,
+    }
+
+
 @router.get("/{sessao_id}/resultado")
 async def download_resultado(
     sessao_id: str,
     db: AsyncSession = Depends(get_db),
     user: Usuario = Depends(get_verified_user),
 ):
+    from app.config import settings
+    from app.models.schemas import ArtigoGerado, CKO as CKOSchema
+    from app.services.docx_generator import gerar_docx
+    from fastapi.responses import FileResponse
+    import tempfile
+
     result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
     sessao = result.scalar_one_or_none()
 
@@ -279,25 +314,93 @@ async def download_resultado(
     if sessao.status != "concluido":
         raise HTTPException(status_code=425,
                             detail=f"Artigo ainda não concluído. Status: {sessao.status}")
-    if not sessao.docx_path:
-        raise HTTPException(status_code=404, detail="Arquivo DOCX não encontrado.")
 
-    # Defesa-em-profundidade: valida que o path está dentro do diretório permitido
-    # Evita path traversal caso o campo docx_path no BD seja comprometido
-    from app.config import settings
-    docx_base = Path(settings.docx_output_dir).resolve()
-    docx_path = Path(sessao.docx_path).resolve()
-    if not str(docx_path).startswith(str(docx_base)):
-        raise HTTPException(status_code=400, detail="Caminho de arquivo inválido.")
+    # Se docx_path existe e o arquivo está no disco, serve diretamente
+    if sessao.docx_path:
+        docx_base = Path(settings.docx_output_dir).resolve()
+        docx_path = Path(sessao.docx_path).resolve()
+        if str(docx_path).startswith(str(docx_base)) and docx_path.exists():
+            return FileResponse(
+                path=str(docx_path),
+                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                filename=f"CaseOS_{sessao_id}.docx",
+            )
 
-    if not docx_path.exists():
-        raise HTTPException(status_code=404, detail="Arquivo DOCX não encontrado no servidor.")
+    # Geração on-the-fly a partir do resultado JSON armazenado
+    if not sessao.resultado:
+        raise HTTPException(status_code=404,
+                            detail="Conteúdo do artigo não encontrado.")
 
-    return FileResponse(
-        path=str(docx_path),
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        filename=f"RCCS_{sessao_id}.docx",
-    )
+    try:
+        import copy
+        res = copy.deepcopy(sessao.resultado)
+
+        # Normaliza campo caso_clinico (importações usam relato_caso)
+        if "caso_clinico" not in res and "relato_caso" in res:
+            res["caso_clinico"] = res.pop("relato_caso")
+
+        # Normaliza resumo (importações usam "relato" em vez de "caso")
+        if isinstance(res.get("resumo"), dict):
+            rs = res["resumo"]
+            if "caso" not in rs and "relato" in rs:
+                rs["caso"] = rs.pop("relato")
+
+        # Normaliza referências (podem ser strings ou dicts)
+        refs_raw = res.get("referencias", [])
+        refs_norm = []
+        for i, ref in enumerate(refs_raw, start=1):
+            if isinstance(ref, str):
+                refs_norm.append({
+                    "numero": i, "autores": "", "titulo": ref,
+                    "periodico": "", "ano": "", "formatada": ref,
+                })
+            elif isinstance(ref, dict):
+                if "formatada" not in ref:
+                    ref["formatada"] = ref.get("titulo", "")
+                refs_norm.append(ref)
+        res["referencias"] = refs_norm
+
+        artigo = ArtigoGerado(**res)
+
+        # CKO — tenta parsear, usa mínimo como fallback
+        cko_data = sessao.cko or {}
+        try:
+            cko = CKOSchema(**cko_data)
+        except Exception:
+            from app.models.schemas import (
+                Identificacao, Historia, Achados, Diagnostico,
+                Intervencao, Desfechos, Editorial,
+                IntervencoesAnteriores, Timeline,
+            )
+            cko = CKOSchema(
+                sessao_id=sessao_id,
+                identificacao=Identificacao(),
+                historia=Historia(queixa_principal="", hda=""),
+                intervencoes_anteriores=IntervencoesAnteriores(),
+                achados=Achados(exame_geral="", achados_especificos=""),
+                timeline=Timeline(),
+                diagnostico=Diagnostico(diagnostico_definitivo=""),
+                intervencao=Intervencao(tipo="", descricao=""),
+                desfechos=Desfechos(desfecho_clinico=""),
+                editorial=Editorial(problemas_clinicos="", diferencial_caso=""),
+            )
+
+        docx_path = await gerar_docx(sessao_id, artigo, cko)
+
+        # Persiste o path para evitar regerar sempre
+        sessao.docx_path = docx_path
+        await db.commit()
+
+        return FileResponse(
+            path=str(docx_path),
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            filename=f"CaseOS_{sessao_id}.docx",
+        )
+    except Exception as exc:
+        import traceback, logging
+        logging.getLogger(__name__).error(f"Erro ao gerar DOCX: {traceback.format_exc()}")
+        raise HTTPException(status_code=500,
+                            detail=f"Erro ao gerar DOCX: {str(exc)}")
 
 
 @router.post("/{sessao_id}/confirmar-flags")
