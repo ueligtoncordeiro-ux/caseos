@@ -3995,21 +3995,34 @@ async function excluirConta() {
 /* ═══════════════════════════════════════════════
    NOTIFICATIONS
 ═══════════════════════════════════════════════ */
+// Notificações estáticas — lidas persistidas em localStorage
+const _NOTIF_LS_KEY = 'caseos_notif_lidas_v1';
+
 const notificacoes = [
-  { id: 1, texto: 'Bem-vindo ao CaseOS! Explore todas as funcionalidades.', lida: false, tempo: 'agora' },
-  { id: 2, texto: 'Adicione créditos para gerar mais relatos.', lida: false, tempo: '5 min atrás' },
+  { id: 1, texto: 'Bem-vindo ao CaseOS! Explore todas as funcionalidades.', tempo: 'agora' },
+  { id: 2, texto: 'Adicione créditos para gerar mais relatos.', tempo: '5 min atrás' },
 ];
+
+function _notifLidasIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(_NOTIF_LS_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+
+function _salvarLidas(ids) {
+  try { localStorage.setItem(_NOTIF_LS_KEY, JSON.stringify([...ids])); } catch {}
+}
 
 function renderNotificacoes() {
   const list  = document.getElementById('notifList');
   const badge = document.getElementById('notifBadge');
+  const lidas = _notifLidasIds();
 
-  const naoLidas = notificacoes.filter(n => !n.lida).length;
+  const naoLidas = notificacoes.filter(n => !lidas.has(n.id)).length;
   badge.textContent = naoLidas;
   badge.style.display = naoLidas > 0 ? 'flex' : 'none';
 
   list.innerHTML = notificacoes.map(n => `
-    <div class="notif-item ${n.lida ? '' : 'unread'}">
+    <div class="notif-item ${lidas.has(n.id) ? '' : 'unread'}">
       <span class="notif-dot"></span>
       <div>
         <div class="notif-text">${n.texto}</div>
@@ -4020,7 +4033,8 @@ function renderNotificacoes() {
 }
 
 function marcarTodasLidas() {
-  notificacoes.forEach(n => n.lida = true);
+  const ids = new Set(notificacoes.map(n => n.id));
+  _salvarLidas(ids);
   renderNotificacoes();
 }
 
@@ -4233,12 +4247,22 @@ async function enviarMensagemChat() {
       body: JSON.stringify({ mensagem, historico: chatHistorico }),
     });
 
-    if (res.status === 401 && await refreshToken()) {
-      res = await fetch(`${API}/chat`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ mensagem, historico: chatHistorico }),
-      });
+    // Token expirado → tenta refresh e repete
+    if (res.status === 401) {
+      const refreshed = await refreshToken();
+      if (refreshed) {
+        res = await fetch(`${API}/chat`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ mensagem, historico: chatHistorico }),
+        });
+      } else {
+        // Refresh também falhou (sessão morta) → pede re-login
+        _appendMensagem('assistant',
+          'Sua sessão expirou. [Clique aqui para fazer login novamente](login.html) e continue a conversa.');
+        if (typing) typing.classList.remove('show');
+        return;
+      }
     }
 
     if (!res.ok) {
@@ -4258,7 +4282,7 @@ async function enviarMensagemChat() {
   } catch (err) {
     console.error('[CaseOS] Erro no chat:', err);
     _appendMensagem('assistant',
-      `Desculpe, ocorreu um erro ao processar sua mensagem: ${err.message || 'tente novamente em instantes.'}`);
+      'Não consegui processar sua mensagem. Verifique sua conexão ou [recarregue a página](javascript:location.reload()).');
   } finally {
     if (typing) typing.classList.remove('show');
   }
