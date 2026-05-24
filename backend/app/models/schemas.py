@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator, EmailStr, ConfigDict
-from typing import Optional, Any
+from typing import Any, Optional
 from datetime import datetime
 
 
@@ -429,6 +429,16 @@ class RevisaoFonteDecisaoRequest(BaseModel):
         if valor not in DECISOES_FONTE:
             raise ValueError("Decisão inválida.")
         return valor
+
+
+class RevisaoBuscarFontesRequest(BaseModel):
+    query: str = Field(..., min_length=3, max_length=300)
+    max: int = Field(12, ge=1, le=30)
+    fontes: list[str] = Field(default_factory=lambda: ["pubmed", "openalex", "semantic"])
+
+
+class RevisaoImportarFontesRequest(RevisaoBuscarFontesRequest):
+    artigos: list[dict[str, Any]] = Field(default_factory=list, max_length=50)
 
 
 class RevisaoMatrizItemRequest(BaseModel):

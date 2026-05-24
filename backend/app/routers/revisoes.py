@@ -12,14 +12,17 @@ from app.models.database import (
     get_db,
 )
 from app.models.schemas import (
+    RevisaoBuscarFontesRequest,
     RevisaoCreateRequest,
     RevisaoFonteCreateRequest,
     RevisaoFonteDecisaoRequest,
     RevisaoFontePublica,
+    RevisaoImportarFontesRequest,
     RevisaoPublica,
     RevisaoUpdateRequest,
 )
 from app.services.auth import get_verified_user
+from app.services.scientific_search import buscar_literatura
 
 router = APIRouter(prefix="/revisoes", tags=["revisoes"])
 
@@ -58,6 +61,74 @@ async def _get_fonte_ou_404(
     if not fonte:
         raise HTTPException(status_code=404, detail="Fonte não encontrada.")
     return fonte
+
+
+def _fonte_key(artigo: dict) -> str:
+    doi = (artigo.get("doi") or "").lower().strip()
+    pmid = (artigo.get("pmid") or "").strip()
+    titulo = (artigo.get("titulo") or "").lower().strip()
+    return doi or (f"pmid:{pmid}" if pmid else titulo)
+
+
+def _fonte_payload(revisao_id: str, artigo: dict, query: str) -> RevisaoFonte:
+    fonte = artigo.get("fonte") or ("PubMed" if artigo.get("pmid") else "")
+    return RevisaoFonte(
+        revisao_id=revisao_id,
+        origem="busca",
+        fonte_base=fonte,
+        titulo=artigo.get("titulo") or "Sem título",
+        autores=artigo.get("autores") or None,
+        ano=str(artigo.get("ano") or "") or None,
+        periodico=artigo.get("periodico") or None,
+        doi=artigo.get("doi") or None,
+        pmid=artigo.get("pmid") or None,
+        url=artigo.get("url") or artigo.get("url_pubmed") or artigo.get("open_access_url") or None,
+        abstract=artigo.get("abstract") or None,
+        metadados={
+            "query": query,
+            "citacoes": artigo.get("citacoes", 0),
+            "open_access_url": artigo.get("open_access_url") or "",
+            "openalex_id": artigo.get("openalex_id") or "",
+            "s2_id": artigo.get("s2_id") or "",
+        },
+        tags=[fonte.lower().replace(" ", "_")] if fonte else [],
+    )
+
+
+async def _importar_artigos(
+    revisao_id: str,
+    artigos: list[dict],
+    query: str,
+    db: AsyncSession,
+) -> tuple[list[RevisaoFonte], int]:
+    result = await db.execute(
+        select(RevisaoFonte).where(RevisaoFonte.revisao_id == revisao_id)
+    )
+    existentes = {_fonte_key({
+        "doi": fonte.doi,
+        "pmid": fonte.pmid,
+        "titulo": fonte.titulo,
+    }) for fonte in result.scalars().all()}
+
+    importadas: list[RevisaoFonte] = []
+    duplicadas = 0
+    vistas_lote: set[str] = set()
+    for artigo in artigos:
+        chave = _fonte_key(artigo)
+        if not chave or chave in existentes or chave in vistas_lote:
+            duplicadas += 1
+            continue
+        vistas_lote.add(chave)
+        fonte = _fonte_payload(revisao_id, artigo, query)
+        db.add(fonte)
+        importadas.append(fonte)
+
+    if importadas:
+        await db.commit()
+        for fonte in importadas:
+            await db.refresh(fonte)
+
+    return importadas, duplicadas
 
 
 @router.post("", response_model=RevisaoPublica, status_code=status.HTTP_201_CREATED)
@@ -190,6 +261,51 @@ async def adicionar_fonte(
     await db.commit()
     await db.refresh(fonte)
     return fonte
+
+
+@router.post("/{revisao_id}/buscar-fontes")
+async def buscar_fontes_para_revisao(
+    revisao_id: str,
+    body: RevisaoBuscarFontesRequest,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    await _get_revisao_ou_404(revisao_id, user.id, db)
+    try:
+        return await buscar_literatura(body.query, max_results=body.max, fontes=body.fontes)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/{revisao_id}/importar-fontes")
+async def importar_fontes_para_revisao(
+    revisao_id: str,
+    body: RevisaoImportarFontesRequest,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    await _get_revisao_ou_404(revisao_id, user.id, db)
+    artigos = body.artigos
+    erros: list[str] = []
+
+    if not artigos:
+        try:
+            resultado = await buscar_literatura(body.query, max_results=body.max, fontes=body.fontes)
+            artigos = resultado["artigos"]
+            erros = resultado.get("erros", [])
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    importadas, duplicadas = await _importar_artigos(revisao_id, artigos, body.query, db)
+    return {
+        "revisao_id": revisao_id,
+        "query": body.query,
+        "fontes": body.fontes,
+        "importadas": len(importadas),
+        "duplicadas_ignoradas": duplicadas,
+        "erros": erros,
+        "items": [RevisaoFontePublica.model_validate(fonte) for fonte in importadas],
+    }
 
 
 @router.get("/{revisao_id}/fontes")
