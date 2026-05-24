@@ -90,6 +90,14 @@ def _add_paragraph(doc: Document, text: str, first_line_indent: bool = True):
     return p
 
 
+def _superscript(run):
+    """Apply superscript formatting to a run via XML."""
+    rPr = run._r.get_or_add_rPr()
+    vertAlign = OxmlElement("w:vertAlign")
+    vertAlign.set(qn("w:val"), "superscript")
+    rPr.append(vertAlign)
+
+
 def _add_title_page(doc: Document, artigo: ArtigoGerado, cko: CKO):
     # Título
     p = doc.add_paragraph()
@@ -98,7 +106,83 @@ def _add_title_page(doc: Document, artigo: ArtigoGerado, cko: CKO):
     run.font.name = "Times New Roman"
     run.font.size = Pt(14)
     run.font.bold = True
-    p.paragraph_format.space_after = Pt(18)
+    p.paragraph_format.space_after = Pt(6)
+
+    # ── Autores ────────────────────────────────────────────────────────────────
+    autores = cko.autores if cko.autores else []
+    if autores:
+        # Collect unique affiliations preserving order
+        afils: list[str] = []
+        for a in autores:
+            inst = (a.instituicao or "").strip()
+            if inst and inst not in afils:
+                afils.append(inst)
+
+        # Author byline: "Nome¹, Nome²..."
+        byline_p = doc.add_paragraph()
+        byline_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        byline_p.paragraph_format.space_after = Pt(4)
+        for idx, autor in enumerate(autores):
+            if idx > 0:
+                sep = byline_p.add_run(", ")
+                sep.font.name = "Times New Roman"
+                sep.font.size = Pt(11)
+            name_run = byline_p.add_run(autor.nome)
+            name_run.font.name = "Times New Roman"
+            name_run.font.size = Pt(11)
+            # Add superscript affiliation number if there are affiliations
+            if afils and (autor.instituicao or "").strip():
+                sup_num = afils.index((autor.instituicao or "").strip()) + 1
+                sup_run = byline_p.add_run(str(sup_num))
+                sup_run.font.name = "Times New Roman"
+                sup_run.font.size = Pt(9)
+                _superscript(sup_run)
+            # Mark corresponding author with asterisk
+            if autor.correspondente:
+                cor_run = byline_p.add_run("*")
+                cor_run.font.name = "Times New Roman"
+                cor_run.font.size = Pt(9)
+                _superscript(cor_run)
+
+        # Affiliations
+        for i, inst in enumerate(afils, start=1):
+            afil_p = doc.add_paragraph()
+            afil_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            afil_p.paragraph_format.space_after = Pt(2)
+            num_run = afil_p.add_run(str(i))
+            num_run.font.name = "Times New Roman"
+            num_run.font.size = Pt(9)
+            _superscript(num_run)
+            inst_run = afil_p.add_run(" " + inst)
+            inst_run.font.name = "Times New Roman"
+            inst_run.font.size = Pt(10)
+
+        # Corresponding author line
+        corresp = next((a for a in autores if a.correspondente), None)
+        if corresp and corresp.email:
+            cor_p = doc.add_paragraph()
+            cor_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            cor_p.paragraph_format.space_after = Pt(2)
+            label_run = cor_p.add_run("*Autor correspondente: ")
+            label_run.font.name = "Times New Roman"
+            label_run.font.size = Pt(10)
+            label_run.font.italic = True
+            email_run = cor_p.add_run(corresp.email)
+            email_run.font.name = "Times New Roman"
+            email_run.font.size = Pt(10)
+            email_run.font.italic = True
+
+        # ORCID line (for those who provided it)
+        orcid_autores = [(a.nome, a.orcid) for a in autores if a.orcid]
+        if orcid_autores:
+            orc_p = doc.add_paragraph()
+            orc_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            orc_p.paragraph_format.space_before = Pt(2)
+            orc_p.paragraph_format.space_after = Pt(4)
+            orc_run = orc_p.add_run("ORCID: " + " | ".join(f"{n}: {o}" for n, o in orcid_autores))
+            orc_run.font.name = "Times New Roman"
+            orc_run.font.size = Pt(9)
+            orc_run.font.color.rgb = RGBColor(80, 80, 80)
 
     # Palavras-chave
     doc.add_paragraph()

@@ -94,6 +94,14 @@ class ImagemCaso(BaseModel):
     filename: Optional[str] = Field(None, max_length=255)
 
 
+class Autor(BaseModel):
+    nome: str = Field(..., max_length=200)
+    instituicao: Optional[str] = Field(None, max_length=500)
+    orcid: Optional[str] = Field(None, max_length=50)   # formato 0000-XXXX-XXXX-XXXX
+    email: Optional[str] = Field(None, max_length=254)
+    correspondente: bool = False
+
+
 class CKO(BaseModel):
     sessao_id: str
     identificacao: Identificacao
@@ -107,6 +115,7 @@ class CKO(BaseModel):
     perspectiva_paciente: Optional[str] = None
     editorial: Editorial
     imagens: list[ImagemCaso] = Field(default=[], max_length=20)
+    autores: list[Autor] = Field(default=[], max_length=20)
 
     @field_validator("sessao_id")
     @classmethod

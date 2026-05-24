@@ -1834,6 +1834,18 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
           <div class="img-grid" id="imgGrid"></div>
         </div>
 
+        <!-- ── Autores e Colaboradores ── -->
+        <div class="section-card">
+          <div class="section-card-title">👥 Autores e colaboradores</div>
+          <p style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.6">
+            Adicione os autores na ordem de autoria. O primeiro será considerado autor principal. Marque o autor correspondente para incluir o e-mail de contato no DOCX.
+          </p>
+          <div id="autoresList" style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px"></div>
+          <button type="button" onclick="adicionarAutor()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:1.5px dashed var(--border);border-radius:8px;background:transparent;color:var(--t2);font-size:13px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--indigo)';this.style.color='var(--indigo)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--t2)'">
+            <span style="font-size:16px;line-height:1">+</span> Adicionar autor
+          </button>
+        </div>
+
         <div class="section-card">
           <div class="section-card-title">✅ Consentimento para publicação</div>
           <div class="check-group">
@@ -2294,6 +2306,7 @@ buildSidebar();
 restoreCaseSidebar();
 updateNavUI();
 updateProgress();
+renderAutoresList();
 
 /* ══ TIMELINE ══ */
 let timeline = [];
@@ -2390,6 +2403,89 @@ async function runAssist(menuBtn, acao, campo) {
   } finally {
     document.getElementById('assistLoading').classList.remove('show');
   }
+}
+
+/* ══ AUTORES ══ */
+let autorsList = [];
+let _autorIdCounter = 0;
+
+function adicionarAutor() {
+  const id = ++_autorIdCounter;
+  autorsList.push({ id, nome: '', instituicao: '', orcid: '', email: '', correspondente: false });
+  renderAutoresList();
+  // Focus the nome field of the new row
+  setTimeout(function() {
+    const el = document.getElementById('autor-nome-' + id);
+    if (el) el.focus();
+  }, 50);
+}
+
+function removerAutor(id) {
+  autorsList = autorsList.filter(function(a) { return a.id !== id; });
+  renderAutoresList();
+}
+
+function updateAutorField(id, field, value) {
+  const autor = autorsList.find(function(a) { return a.id === id; });
+  if (!autor) return;
+  if (field === 'correspondente') {
+    // Only one corresponding author at a time
+    autorsList.forEach(function(a) { a.correspondente = false; });
+    autor.correspondente = value;
+    renderAutoresList();
+  } else {
+    autor[field] = value;
+  }
+}
+
+function renderAutoresList() {
+  const container = document.getElementById('autoresList');
+  if (!container) return;
+  if (autorsList.length === 0) {
+    container.innerHTML = '<p style="font-size:13px;color:var(--t3);font-style:italic">Nenhum autor adicionado. Clique em "+ Adicionar autor" abaixo.</p>';
+    return;
+  }
+  container.innerHTML = autorsList.map(function(autor, idx) {
+    return '<div style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;background:var(--surface)">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+        '<span style="font-size:12px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.04em">' +
+          (idx === 0 ? 'Autor principal' : 'Coautor ' + idx) +
+        '</span>' +
+        '<button type="button" onclick="removerAutor(' + autor.id + ')" style="background:none;border:none;cursor:pointer;color:var(--t3);font-size:18px;line-height:1;padding:0 2px" title="Remover">×</button>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+        '<div class="form-group" style="margin:0">' +
+          '<label style="font-size:12px">Nome completo <span style="color:var(--danger)">*</span></label>' +
+          '<input type="text" id="autor-nome-' + autor.id + '" value="' + _esc(autor.nome) + '" placeholder="Ex: João Silva" ' +
+            'oninput="updateAutorField(' + autor.id + ',\'nome\',this.value)" style="height:36px;font-size:13px" />' +
+        '</div>' +
+        '<div class="form-group" style="margin:0">' +
+          '<label style="font-size:12px">Instituição</label>' +
+          '<input type="text" value="' + _esc(autor.instituicao) + '" placeholder="Ex: USP, Hospital das Clínicas" ' +
+            'oninput="updateAutorField(' + autor.id + ',\'instituicao\',this.value)" style="height:36px;font-size:13px" />' +
+        '</div>' +
+        '<div class="form-group" style="margin:0">' +
+          '<label style="font-size:12px">ORCID</label>' +
+          '<input type="text" value="' + _esc(autor.orcid) + '" placeholder="0000-0000-0000-0000" ' +
+            'oninput="updateAutorField(' + autor.id + ',\'orcid\',this.value)" style="height:36px;font-size:13px" />' +
+        '</div>' +
+        '<div class="form-group" style="margin:0">' +
+          '<label style="font-size:12px">E-mail</label>' +
+          '<input type="email" value="' + _esc(autor.email) + '" placeholder="autor@instituicao.br" ' +
+            'oninput="updateAutorField(' + autor.id + ',\'email\',this.value)" style="height:36px;font-size:13px" />' +
+        '</div>' +
+      '</div>' +
+      '<div style="margin-top:10px;display:flex;align-items:center;gap:8px">' +
+        '<input type="checkbox" id="autor-corr-' + autor.id + '" ' + (autor.correspondente ? 'checked' : '') + ' ' +
+          'onchange="updateAutorField(' + autor.id + ',\'correspondente\',this.checked)" style="width:16px;height:16px;cursor:pointer" />' +
+        '<label for="autor-corr-' + autor.id + '" style="font-size:13px;color:var(--t2);cursor:pointer;margin:0">Autor correspondente (e-mail incluído no DOCX)</label>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function _esc(str) {
+  return (str || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /* ══ IMAGE UPLOAD ══ */
@@ -2566,6 +2662,15 @@ function coletarDados() {
         legenda: img.caption || ('Figura ' + (idx+1)),
         titulo_abrev: img.titulo_abrev || null,
         filename: img.uploaded_filename || null
+      };
+    }),
+    autores: autorsList.filter(function(a) { return a.nome.trim(); }).map(function(a) {
+      return {
+        nome: a.nome.trim(),
+        instituicao: a.instituicao.trim() || null,
+        orcid: a.orcid.trim() || null,
+        email: a.email.trim() || null,
+        correspondente: a.correspondente
       };
     }),
     editorial: {
