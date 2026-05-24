@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     max_agent_timeout: int = 120
 
     docx_output_dir: str = "./docx_output"
+    review_upload_dir: str = "./review_uploads"
 
     # ── Google OAuth ──────────────────────────────────────────────────────────
     google_client_id: str = ""

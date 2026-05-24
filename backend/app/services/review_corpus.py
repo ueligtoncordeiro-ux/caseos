@@ -15,9 +15,11 @@ def _limpar_texto(texto: str) -> str:
 
 
 def _texto_fonte(fonte: RevisaoFonte) -> str:
+    metadados = fonte.metadados or {}
+    texto_extraido = metadados.get("texto_extraido") if isinstance(metadados, dict) else ""
     blocos = [
         fonte.titulo or "",
-        fonte.abstract or "",
+        texto_extraido or fonte.abstract or "",
     ]
     return _limpar_texto(" ".join(blocos))
 

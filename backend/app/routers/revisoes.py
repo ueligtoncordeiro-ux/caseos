@@ -1,9 +1,13 @@
+from io import BytesIO
+from pathlib import Path
 from typing import Optional
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy import delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.models.database import (
     Revisao,
     RevisaoDecisao,
@@ -29,6 +33,11 @@ from app.services.review_corpus import reconstruir_corpus_fechado
 from app.services.scientific_search import buscar_literatura
 
 router = APIRouter(prefix="/revisoes", tags=["revisoes"])
+
+_UPLOAD_EXTENSOES_PERMITIDAS = {".pdf", ".docx", ".txt", ".md"}
+_MAX_UPLOAD_BYTES = 12 * 1024 * 1024
+_MAX_TEXTO_EXTRAIDO = 120_000
+_MAX_ABSTRACT_PREVIEW = 4_000
 
 
 async def _get_revisao_ou_404(
@@ -72,6 +81,109 @@ def _fonte_key(artigo: dict) -> str:
     pmid = (artigo.get("pmid") or "").strip()
     titulo = (artigo.get("titulo") or "").lower().strip()
     return doi or (f"pmid:{pmid}" if pmid else titulo)
+
+
+def _valor_form(valor: Optional[str]) -> Optional[str]:
+    valor = (valor or "").strip()
+    return valor or None
+
+
+def _safe_upload_path(user_id: str, revisao_id: str, filename: str) -> Path:
+    ext = Path(filename or "").suffix.lower()
+    if ext not in _UPLOAD_EXTENSOES_PERMITIDAS:
+        permitidas = ", ".join(sorted(_UPLOAD_EXTENSOES_PERMITIDAS))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Formato não suportado. Envie: {permitidas}.",
+        )
+
+    base = Path(settings.review_upload_dir).resolve()
+    pasta = (base / user_id / revisao_id).resolve()
+    destino = (pasta / f"{uuid4().hex}{ext}").resolve()
+    try:
+        destino.relative_to(base)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Nome de arquivo inválido.")
+    pasta.mkdir(parents=True, exist_ok=True)
+    return destino
+
+
+def _decodificar_texto(conteudo: bytes) -> str:
+    for encoding in ("utf-8", "utf-8-sig", "latin-1"):
+        try:
+            return conteudo.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return conteudo.decode("utf-8", errors="ignore")
+
+
+def _extrair_texto_docx(conteudo: bytes) -> str:
+    try:
+        from docx import Document
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="Extração de DOCX indisponível no servidor.",
+        )
+
+    documento = Document(BytesIO(conteudo))
+    paragrafos = [p.text.strip() for p in documento.paragraphs if p.text.strip()]
+    return "\n".join(paragrafos)
+
+
+def _extrair_texto_pdf(conteudo: bytes) -> str:
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="Extração de PDF indisponível no servidor.",
+        )
+
+    try:
+        leitor = PdfReader(BytesIO(conteudo))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Não foi possível ler o PDF enviado.")
+
+    partes: list[str] = []
+    for index, pagina in enumerate(leitor.pages):
+        if index >= 80:
+            break
+        texto = pagina.extract_text() or ""
+        if texto.strip():
+            partes.append(texto.strip())
+        if sum(len(parte) for parte in partes) >= _MAX_TEXTO_EXTRAIDO:
+            break
+    return "\n".join(partes)
+
+
+def _extrair_texto_upload(filename: str, conteudo: bytes) -> tuple[str, Optional[str]]:
+    ext = Path(filename or "").suffix.lower()
+    aviso = None
+    if ext in {".txt", ".md"}:
+        texto = _decodificar_texto(conteudo)
+    elif ext == ".docx":
+        texto = _extrair_texto_docx(conteudo)
+    elif ext == ".pdf":
+        texto = _extrair_texto_pdf(conteudo)
+    else:
+        texto = ""
+
+    texto = " ".join((texto or "").split())
+    if len(texto) > _MAX_TEXTO_EXTRAIDO:
+        texto = texto[:_MAX_TEXTO_EXTRAIDO].strip()
+        aviso = "Texto extraído truncado para manter o corpus responsivo."
+    if not texto:
+        aviso = "Não foi possível extrair texto automaticamente deste arquivo."
+    return texto, aviso
+
+
+def _fonte_publica(fonte: RevisaoFonte) -> RevisaoFontePublica:
+    payload = RevisaoFontePublica.model_validate(fonte)
+    metadados = dict(payload.metadados or {})
+    metadados.pop("texto_extraido", None)
+    payload.metadados = metadados
+    return payload
 
 
 def _fonte_payload(revisao_id: str, artigo: dict, query: str) -> RevisaoFonte:
@@ -264,7 +376,83 @@ async def adicionar_fonte(
     db.add(fonte)
     await db.commit()
     await db.refresh(fonte)
-    return fonte
+    return _fonte_publica(fonte)
+
+
+@router.post(
+    "/{revisao_id}/fontes/upload",
+    status_code=status.HTTP_201_CREATED,
+)
+async def enviar_fonte_upload(
+    revisao_id: str,
+    arquivo: UploadFile = File(...),
+    titulo: Optional[str] = Form(default=None),
+    autores: Optional[str] = Form(default=None),
+    ano: Optional[str] = Form(default=None),
+    periodico: Optional[str] = Form(default=None),
+    doi: Optional[str] = Form(default=None),
+    url: Optional[str] = Form(default=None),
+    aprovar_para_escrita: bool = Form(default=False),
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    await _get_revisao_ou_404(revisao_id, user.id, db)
+    filename = arquivo.filename or "fonte"
+    destino = _safe_upload_path(user.id, revisao_id, filename)
+    conteudo = await arquivo.read()
+
+    if not conteudo:
+        raise HTTPException(status_code=400, detail="Arquivo vazio.")
+    if len(conteudo) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="Arquivo muito grande. Envie arquivos de até 12 MB.",
+        )
+
+    destino.write_bytes(conteudo)
+    texto_extraido, aviso = _extrair_texto_upload(filename, conteudo)
+    titulo_final = _valor_form(titulo) or Path(filename).stem.replace("_", " ").strip() or "Fonte enviada"
+    ext = destino.suffix.lower().lstrip(".")
+
+    metadados = {
+        "original_filename": filename,
+        "content_type": arquivo.content_type or "",
+        "size_bytes": len(conteudo),
+        "extension": ext,
+        "texto_extraido": texto_extraido,
+        "texto_extraido_chars": len(texto_extraido),
+    }
+    if aviso:
+        metadados["extracao_aviso"] = aviso
+
+    fonte = RevisaoFonte(
+        revisao_id=revisao_id,
+        origem="upload",
+        fonte_base="Upload",
+        status="importada",
+        titulo=titulo_final,
+        autores=_valor_form(autores),
+        ano=_valor_form(ano),
+        periodico=_valor_form(periodico),
+        doi=_valor_form(doi),
+        pmid=None,
+        url=_valor_form(url),
+        abstract=texto_extraido[:_MAX_ABSTRACT_PREVIEW] if texto_extraido else None,
+        arquivo_path=str(destino),
+        metadados=metadados,
+        tags=["upload", ext],
+        decisao_humana="incluida" if aprovar_para_escrita else None,
+        aprovada_para_escrita=aprovar_para_escrita,
+    )
+    db.add(fonte)
+    await db.commit()
+    await db.refresh(fonte)
+
+    return {
+        "fonte": _fonte_publica(fonte),
+        "texto_extraido_chars": len(texto_extraido),
+        "extracao_aviso": aviso,
+    }
 
 
 @router.post("/{revisao_id}/buscar-fontes")
@@ -308,7 +496,7 @@ async def importar_fontes_para_revisao(
         "importadas": len(importadas),
         "duplicadas_ignoradas": duplicadas,
         "erros": erros,
-        "items": [RevisaoFontePublica.model_validate(fonte) for fonte in importadas],
+        "items": [_fonte_publica(fonte) for fonte in importadas],
     }
 
 
@@ -348,7 +536,7 @@ async def listar_fontes(
         "pagina": pagina,
         "por_pagina": por_pagina,
         "paginas": (total + por_pagina - 1) // por_pagina,
-        "items": [RevisaoFontePublica.model_validate(fonte) for fonte in fontes],
+        "items": [_fonte_publica(fonte) for fonte in fontes],
     }
 
 
@@ -408,6 +596,32 @@ async def listar_corpus(
         "paginas": (total + por_pagina - 1) // por_pagina,
         "items": [RevisaoFonteChunkPublico.model_validate(chunk) for chunk in chunks],
     }
+
+
+@router.delete("/{revisao_id}/fontes/{fonte_id}")
+async def deletar_fonte(
+    revisao_id: str,
+    fonte_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    fonte = await _get_fonte_ou_404(revisao_id, fonte_id, user.id, db)
+    arquivo_path = fonte.arquivo_path
+    await db.delete(fonte)
+    await db.commit()
+
+    if arquivo_path:
+        caminho = Path(arquivo_path)
+        try:
+            base = Path(settings.review_upload_dir).resolve()
+            caminho_resolvido = caminho.resolve()
+            caminho_resolvido.relative_to(base)
+            if caminho_resolvido.exists():
+                caminho_resolvido.unlink()
+        except (OSError, ValueError):
+            pass
+
+    return {"deletado": True, "fonte_id": fonte_id}
 
 
 @router.get("/{revisao_id}/corpus/resumo")
@@ -487,4 +701,4 @@ async def decidir_fonte(
     )
     await db.commit()
     await db.refresh(fonte)
-    return fonte
+    return _fonte_publica(fonte)
