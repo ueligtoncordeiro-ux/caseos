@@ -637,11 +637,20 @@ async def editar_secao(
 
     secao = body.get("secao")
     conteudo = body.get("conteudo")
-    SECOES_VALIDAS = {"introducao", "caso_clinico", "discussao", "conclusao", "palavras_chave"}
+    SECOES_VALIDAS = {"introducao", "caso_clinico", "discussao", "conclusao", "palavras_chave", "resumo"}
     if secao not in SECOES_VALIDAS:
-        raise HTTPException(status_code=400, detail=f"Seção inválida. Válidas: {SECOES_VALIDAS}")
-    if not isinstance(conteudo, list):
-        raise HTTPException(status_code=400, detail="conteudo deve ser uma lista.")
+        raise HTTPException(status_code=400, detail=f"Seção inválida.")
+
+    # Type validation per section
+    if secao in {"introducao", "caso_clinico", "discussao", "conclusao"}:
+        if not isinstance(conteudo, list):
+            raise HTTPException(status_code=400, detail="conteudo deve ser uma lista de parágrafos.")
+    elif secao == "palavras_chave":
+        if not isinstance(conteudo, list):
+            raise HTTPException(status_code=400, detail="conteudo deve ser uma lista de palavras.")
+    elif secao == "resumo":
+        if not isinstance(conteudo, dict):
+            raise HTTPException(status_code=400, detail="conteudo deve ser um dicionário {introducao, caso, discussao, conclusao}.")
 
     resultado = dict(sessao.resultado)
     resultado[secao] = conteudo
@@ -715,3 +724,95 @@ async def salvar_pesquisa(
     db.add(item)
     await db.commit()
     return {"salvo": True, "id": item.id, "tipo": item.tipo}
+
+
+@router.get("/biblioteca/artigos")
+async def listar_artigos_salvos(
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    """Lista artigos salvos pelo usuário (tipo artigo ou caso_clinico)."""
+    result = await db.execute(
+        select(PesquisaSalva)
+        .where(PesquisaSalva.user_id == user.id)
+        .where(PesquisaSalva.tipo.in_(["artigo", "caso_clinico"]))
+        .order_by(desc(PesquisaSalva.created_at))
+        .limit(100)
+    )
+    itens = result.scalars().all()
+    artigos = []
+    for item in itens:
+        for art in (item.artigos or []):
+            entry = dict(art)
+            entry["tipo_salvo"] = item.tipo
+            entry["observacao"] = item.observacao
+            entry["salvo_em"] = item.created_at.isoformat() if item.created_at else None
+            entry["pesquisa_id"] = item.id
+            artigos.append(entry)
+    return {"total": len(artigos), "artigos": artigos}
+
+
+@router.post("/{sessao_id}/adicionar-referencia")
+async def adicionar_referencia(
+    sessao_id: str,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    """Adiciona uma referência bibliográfica ao resultado de um relato."""
+    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
+    sessao = result.scalar_one_or_none()
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    if sessao.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+    if not sessao.resultado:
+        raise HTTPException(status_code=400, detail="Artigo não gerado ainda.")
+
+    art = body.get("artigo", {})
+    resultado = dict(sessao.resultado)
+    refs = list(resultado.get("referencias", []))
+
+    # Next reference number
+    numeros = [r.get("numero", 0) if isinstance(r, dict) else 0 for r in refs]
+    proximo = (max(numeros) + 1) if numeros else 1
+
+    # Build Vancouver-formatted citation
+    autores = art.get("autores") or ""
+    titulo = art.get("titulo") or ""
+    periodico = art.get("periodico_abrev") or art.get("periodico") or ""
+    ano = art.get("ano") or ""
+    volume = art.get("volume") or ""
+    numero_ed = art.get("numero") or ""
+    paginas = art.get("paginas") or ""
+    doi = art.get("doi") or ""
+
+    formatada = f"{autores}. {titulo.rstrip('.')}. {periodico}. {ano}"
+    if volume: formatada += f";{volume}"
+    if numero_ed: formatada += f"({numero_ed})"
+    if paginas: formatada += f":{paginas}"
+    formatada += "."
+    if doi: formatada += f" doi: {doi}"
+
+    nova_ref = {
+        "numero": proximo,
+        "autores": autores,
+        "titulo": titulo,
+        "periodico": periodico,
+        "ano": ano,
+        "volume": volume or None,
+        "paginas": paginas or None,
+        "doi": doi or None,
+        "pmid": art.get("pmid") or None,
+        "formatada": art.get("formatada") or formatada,
+    }
+
+    refs.append(nova_ref)
+    resultado["referencias"] = refs
+    resultado["versao_edicao"] = resultado.get("versao_edicao", 1) + 1
+    sessao.resultado = resultado
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(sessao, "resultado")
+    await db.commit()
+
+    return {"ok": True, "numero": proximo, "ref": nova_ref, "versao_edicao": resultado["versao_edicao"]}

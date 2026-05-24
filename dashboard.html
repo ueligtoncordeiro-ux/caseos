@@ -3184,6 +3184,19 @@ tbody td {
       </div>
     </div>
 
+    <!-- Artigos Salvos -->
+    <div id="artigosSalvosSection" style="display:none;margin-top:24px">
+      <div class="section-header">
+        <span class="section-title">Artigos Salvos</span>
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="carregarArtigosSalvos()">↻ Atualizar</button>
+      </div>
+      <div id="artigosSalvosLista" class="table-card" style="padding:12px 18px">
+        <div style="text-align:center;padding:24px;color:var(--t3);font-size:13px">
+          Nenhum artigo salvo ainda. Use a busca científica acima e clique em "Salvar".
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -3476,6 +3489,7 @@ tbody td {
   <div class="modal modal-relato" onclick="event.stopPropagation()">
     <div class="modal-header">
       <div class="modal-title" id="modalRelatoTitulo">Relato de Caso</div>
+      <button class="btn-editar-secao" id="btnEditarTitulo" onclick="editarTitulo()" style="flex-shrink:0;margin-left:8px" title="Editar título">✏</button>
       <button class="modal-close" onclick="fecharModalRelato()">✕</button>
     </div>
     <div class="modal-body" id="modalRelatoBody">
@@ -3486,6 +3500,27 @@ tbody td {
       <button class="btn btn-primary btn-sm" id="btnDownloadModal" onclick="downloadRelato(window.__relatoAtualId)">
         <span class="px-icon px-download" style="margin-right:6px;background:currentColor"></span>Baixar DOCX
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: selecionar relato para adicionar referência -->
+<div class="modal-overlay" id="modalAdicionarRef" onclick="if(event.target===this)fecharModalAdicionarRef()">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title">Adicionar a caso clínico</div>
+      <button class="modal-close" onclick="fecharModalAdicionarRef()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px">
+      <p style="font-size:13px;color:var(--t2);margin-bottom:14px">Selecione o relato que receberá esta referência:</p>
+      <select id="selectRelatoRef" style="width:100%;padding:10px;border:1px solid var(--card-bdr);border-radius:8px;font-size:13px;background:var(--card-bg);color:var(--t1)">
+        <option value="">— carregando relatos... —</option>
+      </select>
+      <div id="artRefPreview" style="margin-top:14px;padding:12px;background:var(--row-hover);border-radius:8px;font-size:12px;color:var(--t2);line-height:1.5;display:none"></div>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--card-bdr)">
+      <button class="btn btn-secondary" onclick="fecharModalAdicionarRef()">Cancelar</button>
+      <button class="btn btn-primary" id="btnConfirmarAdicionarRef" onclick="confirmarAdicionarRef()">Adicionar referência</button>
     </div>
   </div>
 </div>
@@ -4172,12 +4207,34 @@ function _renderModalRelato(d) {
     const partes = [
       rs.introducao && `<strong>Introdução:</strong> ${rs.introducao}`,
       rs.relato     && `<strong>Relato:</strong> ${rs.relato}`,
+      rs.caso       && `<strong>Relato:</strong> ${rs.caso}`,
       rs.discussao  && `<strong>Discussão:</strong> ${rs.discussao}`,
       rs.conclusao  && `<strong>Conclusão:</strong> ${rs.conclusao}`,
     ].filter(Boolean);
-    return `<div class="relato-secao">
-      <div class="relato-secao-titulo">Resumo</div>
-      ${partes.map(p => `<p class="relato-paragrafo">${p}</p>`).join('')}
+    // Build textarea text: labeled sections
+    const resumoTexto = [
+      rs.introducao ? `[Introdução]\n${rs.introducao}` : '',
+      (rs.relato || rs.caso) ? `[Relato]\n${rs.relato || rs.caso}` : '',
+      rs.discussao ? `[Discussão]\n${rs.discussao}` : '',
+      rs.conclusao ? `[Conclusão]\n${rs.conclusao}` : '',
+    ].filter(Boolean).join('\n\n').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<div class="relato-secao" id="sec-wrap-resumo">
+      <div class="relato-secao-titulo">
+        Resumo
+        <button class="btn-editar-secao" onclick="toggleEditarSecao('resumo')">✏ Editar</button>
+      </div>
+      <div id="sec-view-resumo">
+        ${partes.map(p => `<p class="relato-paragrafo">${p}</p>`).join('')}
+      </div>
+      <div id="sec-edit-resumo" style="display:none">
+        <p style="font-size:12px;color:var(--t3);margin:8px 0 4px">Use os marcadores <code>[Introdução]</code>, <code>[Relato]</code>, <code>[Discussão]</code>, <code>[Conclusão]</code> para identificar cada parte.</p>
+        <textarea class="sec-textarea" id="sec-ta-resumo" rows="12">${resumoTexto}</textarea>
+        <div class="sec-edit-actions">
+          <button class="btn-sec-salvar" onclick="salvarSecao('resumo')">💾 Salvar</button>
+          <button class="btn-sec-ia" id="sec-ia-btn-resumo" onclick="melhorarSecao('resumo')">✨ Melhorar com IA</button>
+          <button class="btn-sec-cancelar" onclick="cancelarEdicaoSecao('resumo')">Cancelar</button>
+        </div>
+      </div>
     </div>`;
   })();
 
@@ -4202,9 +4259,22 @@ function _renderModalRelato(d) {
   const kwHtml = (() => {
     const kws = r.palavras_chave || [];
     if (!kws.length) return '';
-    return `<div class="relato-secao">
-      <div class="relato-secao-titulo">Palavras-chave</div>
-      <p class="relato-paragrafo">${kws.join(' · ')}</p>
+    const kwEsc = kws.join('; ').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<div class="relato-secao" id="sec-wrap-palavras_chave">
+      <div class="relato-secao-titulo">
+        Palavras-chave
+        <button class="btn-editar-secao" onclick="toggleEditarSecao('palavras_chave')">✏ Editar</button>
+      </div>
+      <div id="sec-view-palavras_chave">
+        <p class="relato-paragrafo">${kws.join(' · ')}</p>
+      </div>
+      <div id="sec-edit-palavras_chave" style="display:none">
+        <textarea class="sec-textarea" id="sec-ta-palavras_chave" rows="3" style="min-height:80px" placeholder="Separe com ponto e vírgula: palavra1; palavra2; palavra3">${kwEsc}</textarea>
+        <div class="sec-edit-actions">
+          <button class="btn-sec-salvar" onclick="salvarSecao('palavras_chave')">💾 Salvar</button>
+          <button class="btn-sec-cancelar" onclick="cancelarEdicaoSecao('palavras_chave')">Cancelar</button>
+        </div>
+      </div>
     </div>`;
   })();
 
@@ -4248,20 +4318,52 @@ async function salvarSecao(chave) {
   const sessaoId = window.__relatoAtualId;
   if (!sessaoId) return;
   const ta = document.getElementById(`sec-ta-${chave}`);
-  const paragrafos = ta.value.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+  let conteudo;
+  if (chave === 'palavras_chave') {
+    conteudo = ta.value.split(/[;,]/).map(p => p.trim()).filter(Boolean);
+  } else if (chave === 'resumo') {
+    // Parse labeled sections
+    const parsed = {};
+    const texto = ta.value;
+    const secMatches = {
+      introducao: texto.match(/\[Introdução\]\s*([\s\S]*?)(?=\[|$)/i),
+      relato:     texto.match(/\[Relato\]\s*([\s\S]*?)(?=\[|$)/i),
+      discussao:  texto.match(/\[Discussão\]\s*([\s\S]*?)(?=\[|$)/i),
+      conclusao:  texto.match(/\[Conclusão\]\s*([\s\S]*?)(?=\[|$)/i),
+    };
+    if (secMatches.introducao) parsed.introducao = secMatches.introducao[1].trim();
+    if (secMatches.relato)     parsed.caso = secMatches.relato[1].trim();
+    if (secMatches.discussao)  parsed.discussao = secMatches.discussao[1].trim();
+    if (secMatches.conclusao)  parsed.conclusao = secMatches.conclusao[1].trim();
+    conteudo = parsed;
+  } else {
+    conteudo = ta.value.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+  }
   const btn = document.querySelector(`#sec-edit-${chave} .btn-sec-salvar`);
   if (btn) { btn.disabled = true; btn.textContent = 'Salvando…'; }
   try {
     const res = await fetch(`${API}/artigo/${sessaoId}/secao`, {
       method: 'PATCH',
       headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ secao: chave, conteudo: paragrafos }),
+      body: JSON.stringify({ secao: chave, conteudo }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     // Update view
     const view = document.getElementById(`sec-view-${chave}`);
-    if (view) view.innerHTML = paragrafos.map(p => `<p class="relato-paragrafo">${p}</p>`).join('');
+    if (chave === 'palavras_chave') {
+      if (view) view.innerHTML = `<p class="relato-paragrafo">${conteudo.join(' · ')}</p>`;
+    } else if (chave === 'resumo') {
+      const partes = [
+        conteudo.introducao && `<strong>Introdução:</strong> ${conteudo.introducao}`,
+        (conteudo.relato || conteudo.caso) && `<strong>Relato:</strong> ${conteudo.relato || conteudo.caso}`,
+        conteudo.discussao && `<strong>Discussão:</strong> ${conteudo.discussao}`,
+        conteudo.conclusao && `<strong>Conclusão:</strong> ${conteudo.conclusao}`,
+      ].filter(Boolean);
+      if (view) view.innerHTML = partes.map(p => `<p class="relato-paragrafo">${p}</p>`).join('');
+    } else {
+      if (view) view.innerHTML = conteudo.map(p => `<p class="relato-paragrafo">${p}</p>`).join('');
+    }
     cancelarEdicaoSecao(chave);
     mostrarToast('Seção salva!', 'success', '💾');
     // Update version badge in modal title
@@ -4313,6 +4415,29 @@ async function melhorarSecao(chave) {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '✨ Melhorar com IA'; }
   }
+}
+
+function editarTitulo() {
+  const tituloEl = document.getElementById('modalRelatoTitulo');
+  const sessaoId = window.__relatoAtualId;
+  if (!sessaoId || !tituloEl) return;
+  const tituloAtual = tituloEl.firstChild?.textContent?.trim() || tituloEl.textContent.trim();
+  const novoTitulo = prompt('Editar título do relato:', tituloAtual);
+  if (!novoTitulo || novoTitulo === tituloAtual) return;
+  // Reuse the rename endpoint
+  fetch(`${API}/artigo/${sessaoId}`, {
+    method: 'PATCH',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ titulo: novoTitulo }),
+  }).then(r => {
+    if (!r.ok) throw new Error();
+    // Update modal title (preserve version badge if present)
+    const bv = tituloEl.querySelector('.badge-versao');
+    tituloEl.textContent = novoTitulo;
+    if (bv) tituloEl.appendChild(bv);
+    mostrarToast('Título atualizado!', 'success', '✏️');
+    carregarHistorico(paginaAtual);
+  }).catch(() => mostrarToast('Erro ao atualizar título.', 'error', '⚠️'));
 }
 
 /* Filter & search */
@@ -4846,6 +4971,10 @@ function mostrarSecaoPubMed() {
   if (!isVisible) {
     sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setTimeout(() => document.getElementById('pubmedInput')?.focus(), 400);
+    carregarArtigosSalvos();
+  } else {
+    const salvosSec = document.getElementById('artigosSalvosSection');
+    if (salvosSec) salvosSec.style.display = 'none';
   }
   if (window.innerWidth <= 768) toggleSidebar();
 }
@@ -4914,8 +5043,8 @@ async function buscarPubMed() {
             ${art.pmid ? `<a class="pubmed-badge" href="https://pubmed.ncbi.nlm.nih.gov/${_esc(art.pmid)}" target="_blank" rel="noopener">PMID ${_esc(art.pmid)}</a>` : ''}
             ${art.doi ? `<a class="pubmed-badge doi" href="https://doi.org/${_esc(art.doi)}" target="_blank" rel="noopener">DOI</a>` : ''}
             ${art.citacoes ? `<span class="pubmed-badge citations">📊 ${art.citacoes} citações</span>` : ''}
-            <button class="pubmed-badge" style="cursor:pointer;" onclick="salvarArtigoBusca(${idx}, 'artigo')">Salvar</button>
-            <button class="pubmed-badge doi" style="cursor:pointer;" onclick="salvarArtigoBusca(${idx}, 'caso_clinico')">Adicionar a caso clínico</button>
+            <button class="pubmed-badge" style="cursor:pointer;" id="btn-salvar-${idx}" onclick="salvarArtigoBusca(${idx})">Salvar</button>
+            <button class="pubmed-badge doi" style="cursor:pointer;" onclick="abrirModalAdicionarRef(${idx})">Adicionar a caso clínico</button>
           </div>
         </div>
       `).join('');
@@ -4945,16 +5074,131 @@ async function salvarBuscaAtual() {
   }, 'Busca salva na biblioteca.');
 }
 
-async function salvarArtigoBusca(idx, tipo) {
+// ── Artigos Salvos ─────────────────────────────────────────────────────────
+
+async function carregarArtigosSalvos() {
+  const section = document.getElementById('artigosSalvosSection');
+  const lista = document.getElementById('artigosSalvosLista');
+  if (!lista) return;
+  lista.innerHTML = '<div style="padding:16px;text-align:center;color:var(--t3);font-size:13px">⏳ Carregando...</div>';
+  if (section) section.style.display = 'block';
+  try {
+    const res = await fetch(`${API}/artigo/biblioteca/artigos`, { headers: authHeaders() });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.artigos || !data.artigos.length) {
+      lista.innerHTML = '<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px">Nenhum artigo salvo ainda. Use a busca científica e clique em "Salvar".</div>';
+      return;
+    }
+    lista.innerHTML = data.artigos.map((art, idx) => `
+      <div class="pubmed-card">
+        <a class="pubmed-card-title" href="${_esc(art.url || art.url_pubmed || '#')}" target="_blank" rel="noopener noreferrer">${_esc(art.titulo)}</a>
+        <div class="pubmed-card-meta">
+          ${art.fonte ? `<span>${_esc(art.fonte)}</span>` : ''}
+          <span>${_esc(art.autores || '')}</span>
+          ${art.periodico ? `<span>· ${_esc(art.periodico)}</span>` : ''}
+          ${art.ano ? `<span>· ${_esc(art.ano)}</span>` : ''}
+          ${art.salvo_em ? `<span style="margin-left:auto;color:var(--t4)">Salvo em ${new Date(art.salvo_em).toLocaleDateString('pt-BR')}</span>` : ''}
+        </div>
+        <div class="pubmed-card-badges">
+          ${art.pmid ? `<a class="pubmed-badge" href="https://pubmed.ncbi.nlm.nih.gov/${_esc(art.pmid)}" target="_blank" rel="noopener">PMID ${_esc(art.pmid)}</a>` : ''}
+          ${art.doi ? `<a class="pubmed-badge doi" href="https://doi.org/${_esc(art.doi)}" target="_blank" rel="noopener">DOI</a>` : ''}
+          <button class="pubmed-badge doi" style="cursor:pointer" onclick='abrirModalAdicionarRef(null, ${JSON.stringify(JSON.stringify(art))})'>Adicionar a caso clínico</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    lista.innerHTML = '<div style="padding:16px;color:var(--red);font-size:13px">Erro ao carregar artigos salvos.</div>';
+  }
+}
+
+// ── Salvar artigo da busca ────────────────────────────────────────────────
+
+async function salvarArtigoBusca(idx) {
   const art = _ultimaBuscaCientifica?.artigos?.[idx];
   if (!art) return;
+  const btn = document.getElementById(`btn-salvar-${idx}`);
+  if (btn) { btn.disabled = true; btn.textContent = '✓ Salvo'; }
   await salvarBiblioteca({
-    tipo,
+    tipo: 'artigo',
     query: _ultimaBuscaCientifica.query || art.titulo || 'Artigo salvo',
     fontes: _ultimaBuscaCientifica.fontes || [],
     artigos: [art],
-    observacao: tipo === 'caso_clinico' ? 'Artigo selecionado para uso em caso clínico' : 'Artigo salvo no dashboard',
-  }, tipo === 'caso_clinico' ? 'Artigo adicionado ao caso clínico.' : 'Artigo salvo.');
+    observacao: 'Artigo salvo pelo usuário',
+  }, 'Artigo salvo!');
+  carregarArtigosSalvos();
+}
+
+// ── Modal Adicionar Referência a Relato ──────────────────────────────────
+
+let _artToAdd = null;
+
+async function abrirModalAdicionarRef(idx, artJson) {
+  // artJson is a double-encoded JSON string when coming from saved articles list
+  if (idx !== null && idx !== undefined) {
+    _artToAdd = _ultimaBuscaCientifica?.artigos?.[idx] || null;
+  } else if (artJson) {
+    try { _artToAdd = JSON.parse(artJson); } catch { _artToAdd = null; }
+  }
+  if (!_artToAdd) return;
+
+  // Show article preview
+  const preview = document.getElementById('artRefPreview');
+  if (preview) {
+    preview.style.display = 'block';
+    preview.innerHTML = `<strong>${_esc(_artToAdd.titulo)}</strong><br>${_esc(_artToAdd.autores || '')} ${_artToAdd.ano ? '· ' + _artToAdd.ano : ''}`;
+  }
+
+  // Load user's relatos into select
+  const sel = document.getElementById('selectRelatoRef');
+  if (sel) {
+    sel.innerHTML = '<option value="">Carregando...</option>';
+    try {
+      const res = await fetch(`${API}/artigo/historico?limite=50&status=concluido`, { headers: authHeaders() });
+      const data = await res.json();
+      const itens = data.itens || [];
+      if (!itens.length) {
+        sel.innerHTML = '<option value="">Nenhum relato concluído disponível</option>';
+      } else {
+        sel.innerHTML = '<option value="">— Selecione o relato —</option>' +
+          itens.map(it => `<option value="${_esc(it.sessao_id)}">${_esc(it.titulo)}</option>`).join('');
+      }
+    } catch {
+      sel.innerHTML = '<option value="">Erro ao carregar relatos</option>';
+    }
+  }
+
+  document.getElementById('modalAdicionarRef').classList.add('open');
+}
+
+function fecharModalAdicionarRef() {
+  document.getElementById('modalAdicionarRef').classList.remove('open');
+  _artToAdd = null;
+}
+
+async function confirmarAdicionarRef() {
+  const sel = document.getElementById('selectRelatoRef');
+  const sessaoId = sel?.value;
+  if (!sessaoId) { mostrarToast('Selecione um relato.', 'info', 'ℹ️'); return; }
+  if (!_artToAdd) return;
+  const btn = document.getElementById('btnConfirmarAdicionarRef');
+  if (btn) { btn.disabled = true; btn.textContent = 'Adicionando…'; }
+  try {
+    const res = await fetch(`${API}/artigo/${sessaoId}/adicionar-referencia`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ artigo: _artToAdd }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    fecharModalAdicionarRef();
+    mostrarToast(`Referência [${data.numero}] adicionada! Lembre-se de citar como [${data.numero}] no texto.`, 'success', '📚');
+    await carregarHistorico(paginaAtual);
+  } catch (err) {
+    mostrarToast('Erro ao adicionar referência.', 'error', '⚠️');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Adicionar referência'; }
+  }
 }
 
 async function salvarBiblioteca(payload, mensagemSucesso) {
