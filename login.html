@@ -52,10 +52,11 @@ body {
   padding: 52px 52px 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;   /* conteúdo no topo; personagem é absoluto */
   position: relative;
   overflow: hidden;
   border-right: 1px solid var(--border);
+  min-height: 100vh;             /* garante altura suficiente para personagem */
 }
 .brand-logo { display: flex; align-items: flex-start; margin-bottom: 52px; }
 .brand-logo-img {
@@ -100,27 +101,29 @@ body {
 .mock-label { color: var(--gray); flex: 1; }
 .mock-score { color: var(--obsidian); font-weight: 700; font-size: 15px; }
 
-/* Pixel character + speech bubble — bottom of brand panel */
+/* ── Personagem + balão — posição absoluta no canto inferior direito ── */
 .brand-character {
+  position: absolute;
+  bottom: 48px;            /* alinha acima do brand-footer */
+  right: 0;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  margin-top: auto;
-  pointer-events: none;
+  align-items: flex-end;
   gap: 0;
+  pointer-events: none;
 }
 
-/* Speech bubble above the character */
+/* Balão à esquerda do personagem, cauda aponta para a direita */
 .brand-bubble {
   position: relative;
   background: var(--white);
   border: 3px solid var(--obsidian);
   border-radius: 0;
-  padding: 12px 16px;
-  max-width: 220px;
+  padding: 14px 18px;
+  max-width: 200px;
+  min-width: 160px;
   text-align: left;
-  margin-bottom: 14px;
+  margin-right: 14px;
+  margin-bottom: 32px;     /* alinha verticalmente com o torso do personagem */
   image-rendering: pixelated;
   box-shadow:
     -3px 0 0 0 var(--obsidian),
@@ -128,34 +131,33 @@ body {
      0 -3px 0 0 var(--obsidian),
      0  3px 0 0 var(--obsidian);
 }
-/* Cauda apontando para baixo (em direção ao personagem) */
+/* Cauda apontando para a direita → em direção ao personagem */
 .brand-bubble::before {
   content: '';
   position: absolute;
-  bottom: -15px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: -15px;
+  bottom: 22px;
   width: 0; height: 0;
-  border-left: 9px solid transparent;
-  border-right: 9px solid transparent;
-  border-top: 13px solid var(--obsidian);
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  border-left: 13px solid var(--obsidian);
 }
 .brand-bubble::after {
   content: '';
   position: absolute;
-  bottom: -9px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: -9px;
+  bottom: 24px;
   width: 0; height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 9px solid var(--white);
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 9px solid var(--white);
 }
+
 .brand-bubble-text {
   font-family: 'Courier New', 'Lucida Console', monospace;
   font-size: 11px;
   color: var(--obsidian);
-  line-height: 1.6;
+  line-height: 1.7;
   letter-spacing: 0.02em;
   white-space: pre-line;
   display: block;
@@ -174,16 +176,17 @@ body {
 }
 
 .brand-character img {
-  width: 220px;
+  width: 240px;
   height: auto;
   display: block;
-  transform: scaleX(-1); /* vira para encarar o formulário */
+  /* personagem olha para a esquerda → enfrenta o balão e o formulário */
+  transform: scaleX(-1);
   animation: float-login 3.5s ease-in-out infinite;
-  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.1));
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.12));
 }
 @keyframes float-login {
   0%, 100% { transform: scaleX(-1) translateY(0px); }
-  50%       { transform: scaleX(-1) translateY(-8px); }
+  50%       { transform: scaleX(-1) translateY(-7px); }
 }
 
 .brand-footer {
@@ -191,7 +194,10 @@ body {
   color: var(--muted);
   padding: 18px 0;
   border-top: 1px solid var(--border);
-  margin-top: 16px;
+  margin-top: auto;   /* empurra para o fundo do painel, sobre o personagem absoluto */
+  position: relative;
+  z-index: 2;
+  background: var(--white);
 }
 .brand-footer a { color: var(--gray); text-decoration: none; transition: color 0.15s; }
 .brand-footer a:hover { color: var(--obsidian); }
@@ -883,7 +889,7 @@ async function submitReset(e) {
 <script>
 /* ── Typewriter no balão do personagem ── */
 (function() {
-  const texto = 'Relatos de caso\npublicáveis\nem minutos.\n\nScience starts\nwith one case.';
+  const texto = 'Olá, pesquisador!\n\nSeu próximo artigo\ncomeça agora.\n\nVamos escrever\njuntos?';
   const el    = document.getElementById('loginBubbleText');
   const cursor= document.getElementById('loginBubbleCursor');
   if (!el) return;
