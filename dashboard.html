@@ -959,6 +959,7 @@ body {
 .stat-card {
   background: var(--card-bg);
   border: 1px solid var(--card-bdr);
+  border-left: 3px solid transparent;
   border-radius: var(--radius);
   padding: 20px 22px;
   position: relative;
@@ -970,8 +971,12 @@ body {
 .stat-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
-  border-color: #D8D8D6;
 }
+
+.stat-card:nth-child(1) { border-left-color: var(--obsidian); }
+.stat-card:nth-child(2) { border-left-color: var(--green); }
+.stat-card:nth-child(3) { border-left-color: #5A6600; }
+.stat-card:nth-child(4) { border-left-color: var(--blue); }
 
 .stat-icon {
   font-size: 20px;
@@ -2914,9 +2919,17 @@ tbody td {
 
       <!-- CARE score -->
       <div class="stat-card">
-        <span class="stat-icon accent">
-          <svg><use href="#px-star"/></svg>
-        </span>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
+          <span class="stat-icon accent" style="margin-bottom:0">
+            <svg><use href="#px-star"/></svg>
+          </span>
+          <!-- Mini donut arc -->
+          <svg id="careArc" width="44" height="44" viewBox="0 0 44 44" style="transform:rotate(-90deg);opacity:.85">
+            <circle cx="22" cy="22" r="17" fill="none" stroke="#EDEDED" stroke-width="4"/>
+            <circle id="careArcFill" cx="22" cy="22" r="17" fill="none" stroke="#5A6600" stroke-width="4"
+              stroke-linecap="round" stroke-dasharray="0 106.8" style="transition:stroke-dasharray .6s ease"/>
+          </svg>
+        </div>
         <div class="stat-value accent" id="statScore">—</div>
         <div class="stat-label">Score CARE médio</div>
         <div class="stat-sub">de 100 pontos</div>
@@ -2938,10 +2951,7 @@ tbody td {
 
     <!-- Quick actions -->
     <div class="quick-actions">
-      <a href="novo-relato" class="btn btn-primary">
-        <svg class="btn-icon"><use href="#px-pencil"/></svg>&nbsp;Novo Relato
-      </a>
-      <button class="btn btn-secondary" onclick="carregarHistorico(paginaAtual)">
+      <button class="btn btn-secondary" onclick="carregarHistorico(paginaAtual); carregarStats()">
         <svg class="btn-icon"><use href="#px-refresh"/></svg>&nbsp;Atualizar
       </button>
       <button class="btn btn-ghost" onclick="abrirModalPlanos()">
@@ -3753,9 +3763,9 @@ async function carregarStats() {
     if (!res.ok) return;
     const data = await res.json();
 
-    const total = data.total ?? 0;
+    const total = data.total_relatos ?? data.total ?? 0;
     const concl  = data.concluidos ?? 0;
-    const score  = data.score_medio ?? null;
+    const score  = data.media_care_score ?? data.score_medio ?? null;
 
     const elTotal = document.getElementById('statTotal');
     if (elTotal) elTotal.textContent = total;
@@ -3771,6 +3781,13 @@ async function carregarStats() {
 
     const elScore = document.getElementById('statScore');
     if (elScore) elScore.textContent = score !== null ? `${score}/100` : '—';
+    // Animate CARE arc (circumference = 2π×17 ≈ 106.8)
+    const arcFill = document.getElementById('careArcFill');
+    if (arcFill && score !== null) {
+      const pct = Math.min(Math.max(score, 0), 100);
+      const dash = (pct / 100) * 106.8;
+      arcFill.setAttribute('stroke-dasharray', `${dash} ${106.8 - dash}`);
+    }
 
     const ts = document.getElementById('lastUpdated');
     if (ts) ts.textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
@@ -3890,12 +3907,11 @@ function _renderTabela(itens) {
       ? new Date(data).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' })
       : '—';
 
-    const idEscapado     = JSON.stringify(id);
-    const tituloEscapado = JSON.stringify(titulo);
+    const tituloHtml = titulo.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
     return `
       <tr class="tr-clickable" onclick="visualizarRelato('${id}')">
-        <td class="td-titulo" title="${titulo}">${titulo}</td>
+        <td class="td-titulo" title="${tituloHtml}">${titulo}</td>
         <td><span class="badge ${badgeCls}">${badgeLabel}</span></td>
         <td>${scoreHtml}</td>
         <td style="font-size:12.5px;color:var(--t3);white-space:nowrap">${dataFormatada}</td>
@@ -3903,7 +3919,7 @@ function _renderTabela(itens) {
           <div class="actions" onclick="event.stopPropagation()">
             <button class="action-btn" onclick="visualizarRelato('${id}')" title="Visualizar artigo"><span class="px-icon px-eye"></span></button>
             <button class="action-btn" onclick="downloadRelato('${id}')" title="Baixar DOCX"><span class="px-icon px-download"></span></button>
-            <button class="action-btn" onclick="renomearRelato('${id}', ${tituloEscapado})" title="Renomear título"><span class="px-icon px-edit"></span></button>
+            <button class="action-btn" data-sessao-id="${id}" data-titulo="${tituloHtml}" onclick="renomearRelato(this.dataset.sessaoId, this.dataset.titulo)" title="Renomear título"><span class="px-icon px-edit"></span></button>
             <button class="action-btn danger" onclick="deletarRelato('${id}')" title="Excluir"><span class="px-icon px-trash"></span></button>
           </div>
         </td>
