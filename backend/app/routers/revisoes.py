@@ -8,13 +8,16 @@ from app.models.database import (
     Revisao,
     RevisaoDecisao,
     RevisaoFonte,
+    RevisaoFonteChunk,
     Usuario,
     get_db,
 )
 from app.models.schemas import (
     RevisaoBuscarFontesRequest,
+    RevisaoCorpusBuildRequest,
     RevisaoCreateRequest,
     RevisaoFonteCreateRequest,
+    RevisaoFonteChunkPublico,
     RevisaoFonteDecisaoRequest,
     RevisaoFontePublica,
     RevisaoImportarFontesRequest,
@@ -22,6 +25,7 @@ from app.models.schemas import (
     RevisaoUpdateRequest,
 )
 from app.services.auth import get_verified_user
+from app.services.review_corpus import reconstruir_corpus_fechado
 from app.services.scientific_search import buscar_literatura
 
 router = APIRouter(prefix="/revisoes", tags=["revisoes"])
@@ -345,6 +349,108 @@ async def listar_fontes(
         "por_pagina": por_pagina,
         "paginas": (total + por_pagina - 1) // por_pagina,
         "items": [RevisaoFontePublica.model_validate(fonte) for fonte in fontes],
+    }
+
+
+@router.post("/{revisao_id}/corpus/reconstruir")
+async def reconstruir_corpus(
+    revisao_id: str,
+    body: RevisaoCorpusBuildRequest,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    await _get_revisao_ou_404(revisao_id, user.id, db)
+    resumo = await reconstruir_corpus_fechado(
+        revisao_id,
+        db,
+        somente_aprovadas=body.somente_aprovadas,
+    )
+    return {"revisao_id": revisao_id, **resumo}
+
+
+@router.get("/{revisao_id}/corpus")
+async def listar_corpus(
+    revisao_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+    pagina: int = Query(default=1, ge=1),
+    por_pagina: int = Query(default=30, ge=1, le=100),
+    fonte_id: Optional[str] = Query(default=None),
+):
+    await _get_revisao_ou_404(revisao_id, user.id, db)
+    filtros = [RevisaoFonte.revisao_id == revisao_id]
+    if fonte_id:
+        filtros.append(RevisaoFonteChunk.fonte_id == fonte_id)
+
+    total_result = await db.execute(
+        select(func.count())
+        .select_from(RevisaoFonteChunk)
+        .join(RevisaoFonte, RevisaoFonte.id == RevisaoFonteChunk.fonte_id)
+        .where(*filtros)
+    )
+    total = total_result.scalar() or 0
+
+    result = await db.execute(
+        select(RevisaoFonteChunk)
+        .join(RevisaoFonte, RevisaoFonte.id == RevisaoFonteChunk.fonte_id)
+        .where(*filtros)
+        .order_by(RevisaoFonte.titulo, RevisaoFonteChunk.ordem)
+        .offset((pagina - 1) * por_pagina)
+        .limit(por_pagina)
+    )
+    chunks = result.scalars().all()
+
+    return {
+        "revisao_id": revisao_id,
+        "total": total,
+        "pagina": pagina,
+        "por_pagina": por_pagina,
+        "paginas": (total + por_pagina - 1) // por_pagina,
+        "items": [RevisaoFonteChunkPublico.model_validate(chunk) for chunk in chunks],
+    }
+
+
+@router.get("/{revisao_id}/corpus/resumo")
+async def resumo_corpus(
+    revisao_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    await _get_revisao_ou_404(revisao_id, user.id, db)
+
+    fontes_result = await db.execute(
+        select(func.count())
+        .select_from(RevisaoFonte)
+        .where(RevisaoFonte.revisao_id == revisao_id)
+    )
+    aprovadas_result = await db.execute(
+        select(func.count())
+        .select_from(RevisaoFonte)
+        .where(
+            RevisaoFonte.revisao_id == revisao_id,
+            RevisaoFonte.aprovada_para_escrita.is_(True),
+        )
+    )
+    chunks_result = await db.execute(
+        select(func.count())
+        .select_from(RevisaoFonteChunk)
+        .join(RevisaoFonte, RevisaoFonte.id == RevisaoFonteChunk.fonte_id)
+        .where(RevisaoFonte.revisao_id == revisao_id)
+    )
+    chars_result = await db.execute(
+        select(func.coalesce(func.sum(func.length(RevisaoFonteChunk.texto)), 0))
+        .select_from(RevisaoFonteChunk)
+        .join(RevisaoFonte, RevisaoFonte.id == RevisaoFonteChunk.fonte_id)
+        .where(RevisaoFonte.revisao_id == revisao_id)
+    )
+
+    return {
+        "revisao_id": revisao_id,
+        "fontes_total": fontes_result.scalar() or 0,
+        "fontes_aprovadas": aprovadas_result.scalar() or 0,
+        "chunks_total": chunks_result.scalar() or 0,
+        "caracteres_indexados": chars_result.scalar() or 0,
+        "modo": "corpus_fechado",
     }
 
 

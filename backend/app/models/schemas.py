@@ -441,6 +441,22 @@ class RevisaoImportarFontesRequest(RevisaoBuscarFontesRequest):
     artigos: list[dict[str, Any]] = Field(default_factory=list, max_length=50)
 
 
+class RevisaoCorpusBuildRequest(BaseModel):
+    somente_aprovadas: bool = True
+
+
+class RevisaoFonteChunkPublico(BaseModel):
+    id: str
+    fonte_id: str
+    ordem: int
+    secao: Optional[str] = None
+    texto: str
+    metadados: dict = Field(default_factory=dict)
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class RevisaoMatrizItemRequest(BaseModel):
     fonte_id: Optional[str] = None
     autor_ano: Optional[str] = Field(None, max_length=200)
