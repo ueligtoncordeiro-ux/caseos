@@ -142,12 +142,14 @@ async def historico(
     result = await db.execute(q)
     sessoes = result.scalars().all()
 
+    total_paginas = max(1, (total + por_pagina - 1) // por_pagina)
     return {
         "total": total,
         "pagina": pagina,
         "por_pagina": por_pagina,
-        "paginas": (total + por_pagina - 1) // por_pagina,
-        "items": [
+        "total_paginas": total_paginas,   # campo que o dashboard lê
+        "paginas": total_paginas,          # alias de compatibilidade
+        "itens": [                         # campo que o dashboard lê
             {
                 "sessao_id": s.external_id,
                 "titulo": s.titulo or f"Relato {s.external_id[:8]}",

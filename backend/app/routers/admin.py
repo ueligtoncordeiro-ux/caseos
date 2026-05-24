@@ -9,8 +9,9 @@ Segurança:
 """
 import asyncio
 import logging
+import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -969,3 +970,59 @@ async def enviar_broadcast(
         len(users), body.assunto, admin.id,
     )
     return {"ok": True, "enviando_para": len(users)}
+
+
+# ── Importar sessão completa (seed / teste) ───────────────────────────────────
+
+class ImportarSessaoRequest(BaseModel):
+    """Importa uma sessão já concluída diretamente no banco (uso admin/teste)."""
+    user_email: str                    # e-mail do dono do relato
+    titulo: str
+    cko: dict[str, Any]               # CKO completo serializado
+    resultado: dict[str, Any]         # ArtigoGerado serializado
+    relatorio: dict[str, Any]         # RelatorioGerado serializado
+    care_score: int = 88
+    flags: list[str] = []
+    tokens_usados: int = 0
+
+
+@router.post("/sessions/importar")
+async def importar_sessao(
+    body: ImportarSessaoRequest,
+    admin: Usuario = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Cria uma Sessao com status=concluido diretamente no banco.
+    Útil para testes, seeds e demonstrações sem passar pelo pipeline de IA.
+    """
+    # Resolve usuário alvo
+    result = await db.execute(
+        select(Usuario).where(Usuario.email == body.user_email)
+    )
+    target_user = result.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(404, f"Usuário '{body.user_email}' não encontrado.")
+
+    ext_id = str(uuid.uuid4())
+    sessao = Sessao(
+        external_id=ext_id,
+        user_id=target_user.id,
+        status="concluido",
+        titulo=body.titulo,
+        cko=body.cko,
+        resultado=body.resultado,
+        relatorio=body.relatorio,
+        flags=body.flags,
+        care_score=body.care_score,
+        tokens_usados=body.tokens_usados,
+    )
+    db.add(sessao)
+    await db.commit()
+    await db.refresh(sessao)
+
+    logger.warning(
+        "ADMIN IMPORT SESSION → sessao=%s user=%s by admin=%s",
+        ext_id, target_user.email, admin.email,
+    )
+    return {"ok": True, "sessao_id": ext_id, "titulo": body.titulo}
