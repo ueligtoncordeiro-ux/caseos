@@ -93,12 +93,19 @@ _GOOGLE_TOKEN_URL  = "https://oauth2.googleapis.com/token"
 _GOOGLE_USERINFO   = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 _REFRESH_COOKIE    = "rccs_refresh"
-_COOKIE_OPTS: dict = dict(httponly=True, secure=False, samesite="lax", max_age=30 * 86400)
-
 
 def _set_refresh_cookie(response: Response, token: str):
-    opts = {**_COOKIE_OPTS, "secure": settings.environment == "production"}
-    response.set_cookie(_REFRESH_COOKIE, token, **opts)
+    is_prod = settings.environment == "production"
+    # Em produção: SameSite=None + Secure=True para funcionar cross-domain
+    # (Cloudflare Pages → Render). Em dev: Lax sem Secure.
+    response.set_cookie(
+        _REFRESH_COOKIE,
+        token,
+        httponly=True,
+        secure=is_prod,
+        samesite="none" if is_prod else "lax",
+        max_age=30 * 86400,
+    )
 
 
 def _clear_refresh_cookie(response: Response):

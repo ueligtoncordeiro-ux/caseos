@@ -1716,7 +1716,7 @@ tbody td {
   bottom: 24px;
   right: 24px;
   z-index: 399;
-  background: var(--obsidian);
+  background: var(--acid);          /* Verde acid da paleta */
   border: none;
   border-radius: 50%;
   width: 56px;
@@ -1725,30 +1725,50 @@ tbody td {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 24px rgba(10,10,11,0.24);
+  box-shadow: 0 6px 24px rgba(200,255,0,0.35), 0 2px 8px rgba(0,0,0,0.18);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   overflow: hidden;
 }
 
 .chat-toggle-btn:hover {
   transform: scale(1.08);
-  box-shadow: 0 10px 32px rgba(10,10,11,0.30);
+  box-shadow: 0 10px 32px rgba(200,255,0,0.45), 0 4px 12px rgba(0,0,0,0.22);
 }
 
 .chat-toggle-btn .chat-bubble-icon {
-  font-size: 22px;
+  font-size: 0;    /* esconde o emoji — usamos SVG */
   line-height: 1;
   transition: transform 0.2s ease, opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Dot indicator — unread */
+/* SVG inline do ícone de chat — preto sobre verde */
+.chat-toggle-btn .chat-bubble-icon::before {
+  content: '';
+  display: block;
+  width: 26px;
+  height: 26px;
+  background: var(--obsidian);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M12 2C6.477 2 2 6.012 2 11c0 2.387.94 4.56 2.47 6.18L3 21l4.23-1.4A10.07 10.07 0 0 0 12 20c5.523 0 10-4.012 10-9S17.523 2 12 2Zm-1 13H7v-2h4v2Zm6 0h-4v-2h4v2Zm0-4H7V9h10v2Z'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M12 2C6.477 2 2 6.012 2 11c0 2.387.94 4.56 2.47 6.18L3 21l4.23-1.4A10.07 10.07 0 0 0 12 20c5.523 0 10-4.012 10-9S17.523 2 12 2Zm-1 13H7v-2h4v2Zm6 0h-4v-2h4v2Zm0-4H7V9h10v2Z'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* Quando chat estiver aberto: ícone vira X preto */
+.chat-toggle-btn.chat-open-state .chat-bubble-icon::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M18 6 6 18M6 6l12 12' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M18 6 6 18M6 6l12 12' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+}
+
+/* Dot indicator — unread (obsidian sobre verde) */
 .chat-toggle-btn .chat-unread-dot {
   position: absolute;
-  top: 10px; right: 10px;
-  width: 9px; height: 9px;
+  top: 8px; right: 8px;
+  width: 10px; height: 10px;
   border-radius: 50%;
-  background: var(--acid);
-  border: 2px solid var(--obsidian);
+  background: var(--obsidian);
+  border: 2px solid var(--acid);
   display: none;
 }
 .chat-toggle-btn.has-unread .chat-unread-dot { display: block; }
@@ -4063,13 +4083,12 @@ function toggleChat() {
 
   panel.classList.toggle('open', chatAberto);
 
-  // Floating widget: button stays visible but changes icon
+  // Floating widget: CSS mask troca ícone via classe
+  toggleBtn.classList.toggle('chat-open-state', chatAberto);
+
   if (chatAberto) {
-    toggleBtn.querySelector('.chat-bubble-icon').textContent = '✕';
     toggleBtn.classList.remove('has-unread');
     document.getElementById('chatInput')?.focus();
-  } else {
-    toggleBtn.querySelector('.chat-bubble-icon').textContent = '💬';
   }
 }
 
