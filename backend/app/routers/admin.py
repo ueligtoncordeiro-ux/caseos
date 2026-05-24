@@ -1018,6 +1018,11 @@ async def importar_sessao(
         tokens_usados=body.tokens_usados,
     )
     db.add(sessao)
+
+    # Atualiza contadores do usuário (reflete na coluna ARTIGOS do admin)
+    target_user.artigos_mes = (target_user.artigos_mes or 0) + 1
+    target_user.tokens_mes  = (target_user.tokens_mes  or 0) + body.tokens_usados
+
     await db.commit()
     await db.refresh(sessao)
 

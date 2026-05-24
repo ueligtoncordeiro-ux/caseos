@@ -1605,7 +1605,7 @@ function renderSessionRow(s) {
       <td class="mono">${escHtml(s.external_id)}</td>
       <td class="mono" style="font-size:11px">${s.user_id ? escHtml(s.user_id) : '<span style="color:var(--t4)">—</span>'}</td>
       <td>${sessionStatusBadge(s.status)}</td>
-      <td>${s.care_score !== null && s.care_score !== undefined ? s.care_score + '/13' : '—'}</td>
+      <td>${s.care_score !== null && s.care_score !== undefined ? s.care_score + '/100' : '—'}</td>
       <td>${fmtNum(s.tokens_usados)}</td>
       <td style="font-size:12px">${fmtDate(s.created_at)}</td>
       <td>
