@@ -280,3 +280,186 @@ class TokenResponse(BaseModel):
 
 class CheckoutRequest(BaseModel):
     plano: str  # "starter" | "pro" | "institucional"
+
+
+# ── Review Studio ────────────────────────────────────────────────────────────
+
+TIPOS_REVISAO = {"narrativa", "integrativa", "escopo", "estado_da_arte"}
+FORMATOS_REFERENCIA = {"vancouver", "abnt", "apa"}
+DECISOES_FONTE = {"incluida", "excluida", "duvida"}
+
+
+class RevisaoCreateRequest(BaseModel):
+    tipo: str = Field("narrativa", max_length=50)
+    titulo: Optional[str] = Field(None, max_length=200)
+    tema: Optional[str] = Field(None, max_length=2000)
+    pergunta: Optional[str] = Field(None, max_length=2000)
+    objetivo: Optional[str] = Field(None, max_length=3000)
+    formato_ref: str = Field("vancouver", max_length=50)
+
+    @field_validator("tipo")
+    @classmethod
+    def tipo_valido(cls, v: str) -> str:
+        valor = (v or "").strip().lower()
+        if valor not in TIPOS_REVISAO:
+            raise ValueError("Tipo de revisão inválido.")
+        return valor
+
+    @field_validator("formato_ref")
+    @classmethod
+    def formato_ref_valido(cls, v: str) -> str:
+        valor = (v or "").strip().lower()
+        if valor not in FORMATOS_REFERENCIA:
+            raise ValueError("Formato de referência inválido.")
+        return valor
+
+
+class RevisaoUpdateRequest(BaseModel):
+    tipo: Optional[str] = Field(None, max_length=50)
+    status: Optional[str] = Field(None, max_length=50)
+    titulo: Optional[str] = Field(None, max_length=200)
+    tema: Optional[str] = Field(None, max_length=2000)
+    pergunta: Optional[str] = Field(None, max_length=2000)
+    objetivo: Optional[str] = Field(None, max_length=3000)
+    mneumonico: Optional[str] = Field(None, max_length=50)
+    guideline: Optional[str] = Field(None, max_length=100)
+    formato_ref: Optional[str] = Field(None, max_length=50)
+    protocolo: Optional[dict] = None
+    criterios: Optional[dict] = None
+    preferencias: Optional[dict] = None
+    checklist: Optional[dict] = None
+
+    @field_validator("tipo")
+    @classmethod
+    def tipo_valido(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        valor = v.strip().lower()
+        if valor not in TIPOS_REVISAO:
+            raise ValueError("Tipo de revisão inválido.")
+        return valor
+
+    @field_validator("formato_ref")
+    @classmethod
+    def formato_ref_valido(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        valor = v.strip().lower()
+        if valor not in FORMATOS_REFERENCIA:
+            raise ValueError("Formato de referência inválido.")
+        return valor
+
+
+class RevisaoPublica(BaseModel):
+    id: str
+    tipo: str
+    status: str
+    titulo: Optional[str] = None
+    tema: Optional[str] = None
+    pergunta: Optional[str] = None
+    objetivo: Optional[str] = None
+    mneumonico: Optional[str] = None
+    guideline: Optional[str] = None
+    formato_ref: str
+    protocolo: dict = Field(default_factory=dict)
+    criterios: dict = Field(default_factory=dict)
+    preferencias: dict = Field(default_factory=dict)
+    checklist: dict = Field(default_factory=dict)
+    tokens_usados: int = 0
+    docx_path: Optional[str] = None
+    pdf_path: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class RevisaoFonteCreateRequest(BaseModel):
+    origem: str = Field("busca", max_length=50)
+    fonte_base: Optional[str] = Field(None, max_length=80)
+    titulo: str = Field(..., min_length=3, max_length=1000)
+    autores: Optional[str] = Field(None, max_length=2000)
+    ano: Optional[str] = Field(None, max_length=20)
+    periodico: Optional[str] = Field(None, max_length=500)
+    doi: Optional[str] = Field(None, max_length=200)
+    pmid: Optional[str] = Field(None, max_length=80)
+    url: Optional[str] = Field(None, max_length=2000)
+    abstract: Optional[str] = Field(None, max_length=10000)
+    metadados: dict = Field(default_factory=dict)
+    tags: list[str] = Field(default_factory=list)
+
+
+class RevisaoFontePublica(BaseModel):
+    id: str
+    revisao_id: str
+    origem: str
+    fonte_base: Optional[str] = None
+    status: str
+    titulo: str
+    autores: Optional[str] = None
+    ano: Optional[str] = None
+    periodico: Optional[str] = None
+    doi: Optional[str] = None
+    pmid: Optional[str] = None
+    url: Optional[str] = None
+    abstract: Optional[str] = None
+    arquivo_path: Optional[str] = None
+    metadados: dict = Field(default_factory=dict)
+    tags: list = Field(default_factory=list)
+    relevancia_ia: Optional[int] = None
+    decisao_ia: Optional[str] = None
+    decisao_humana: Optional[str] = None
+    motivo_decisao: Optional[str] = None
+    aprovada_para_escrita: bool = False
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class RevisaoFonteDecisaoRequest(BaseModel):
+    decisao: str = Field(..., max_length=30)
+    motivo: Optional[str] = Field(None, max_length=1000)
+    aprovada_para_escrita: bool = False
+
+    @field_validator("decisao")
+    @classmethod
+    def decisao_valida(cls, v: str) -> str:
+        valor = (v or "").strip().lower()
+        if valor not in DECISOES_FONTE:
+            raise ValueError("Decisão inválida.")
+        return valor
+
+
+class RevisaoMatrizItemRequest(BaseModel):
+    fonte_id: Optional[str] = None
+    autor_ano: Optional[str] = Field(None, max_length=200)
+    objetivo: Optional[str] = Field(None, max_length=3000)
+    metodo: Optional[str] = Field(None, max_length=3000)
+    populacao: Optional[str] = Field(None, max_length=3000)
+    principais_achados: Optional[str] = Field(None, max_length=5000)
+    limitacoes: Optional[str] = Field(None, max_length=3000)
+    contribuicao: Optional[str] = Field(None, max_length=3000)
+    secao_sugerida: Optional[str] = Field(None, max_length=100)
+    qualidade: Optional[str] = Field(None, max_length=100)
+    dados_extraidos: dict = Field(default_factory=dict)
+
+
+class RevisaoMatrizItemPublico(BaseModel):
+    id: str
+    revisao_id: str
+    fonte_id: Optional[str] = None
+    autor_ano: Optional[str] = None
+    objetivo: Optional[str] = None
+    metodo: Optional[str] = None
+    populacao: Optional[str] = None
+    principais_achados: Optional[str] = None
+    limitacoes: Optional[str] = None
+    contribuicao: Optional[str] = None
+    secao_sugerida: Optional[str] = None
+    qualidade: Optional[str] = None
+    dados_extraidos: dict = Field(default_factory=dict)
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}

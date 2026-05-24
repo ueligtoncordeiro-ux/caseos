@@ -95,6 +95,11 @@ class Usuario(Base):
         back_populates="usuario",
         lazy="noload",
     )
+    revisoes: Mapped[List["Revisao"]] = relationship(
+        "Revisao",
+        back_populates="usuario",
+        lazy="noload",
+    )
 
 
 class Sessao(Base):
@@ -170,6 +175,198 @@ class PesquisaSalva(Base):
     fontes: Mapped[list] = mapped_column(JSON, default=list)
     artigos: Mapped[list] = mapped_column(JSON, default=list)
     observacao: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+# ── Review Studio — revisões científicas assistidas por IA ───────────────────
+
+class Revisao(Base):
+    __tablename__ = "revisoes"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True,
+                                    default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("usuarios.id"),
+                                         nullable=False, index=True)
+    usuario: Mapped["Usuario"] = relationship("Usuario", back_populates="revisoes")
+
+    tipo: Mapped[str] = mapped_column(String, default="narrativa")
+    status: Mapped[str] = mapped_column(String, default="rascunho", index=True)
+    titulo: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    tema: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    pergunta: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    objetivo: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    mneumonico: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    guideline: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    formato_ref: Mapped[str] = mapped_column(String, default="vancouver")
+
+    protocolo: Mapped[dict] = mapped_column(JSON, default=dict)
+    criterios: Mapped[dict] = mapped_column(JSON, default=dict)
+    preferencias: Mapped[dict] = mapped_column(JSON, default=dict)
+    checklist: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    tokens_usados: Mapped[int] = mapped_column(Integer, default=0)
+    docx_path: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    pdf_path: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime,
+                                                  default=datetime.utcnow,
+                                                  onupdate=datetime.utcnow)
+
+    fontes: Mapped[List["RevisaoFonte"]] = relationship(
+        "RevisaoFonte",
+        back_populates="revisao",
+        lazy="noload",
+        cascade="all, delete-orphan",
+    )
+    matriz: Mapped[List["RevisaoMatrizItem"]] = relationship(
+        "RevisaoMatrizItem",
+        back_populates="revisao",
+        lazy="noload",
+        cascade="all, delete-orphan",
+    )
+    documentos: Mapped[List["RevisaoDocumento"]] = relationship(
+        "RevisaoDocumento",
+        back_populates="revisao",
+        lazy="noload",
+        cascade="all, delete-orphan",
+    )
+
+
+class RevisaoFonte(Base):
+    __tablename__ = "revisao_fontes"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True,
+                                    default=lambda: str(uuid.uuid4()))
+    revisao_id: Mapped[str] = mapped_column(String, ForeignKey("revisoes.id"),
+                                            nullable=False, index=True)
+    revisao: Mapped["Revisao"] = relationship("Revisao", back_populates="fontes")
+
+    origem: Mapped[str] = mapped_column(String, default="busca")
+    fonte_base: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="importada", index=True)
+
+    titulo: Mapped[str] = mapped_column(Text)
+    autores: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ano: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    periodico: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    doi: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    pmid: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    abstract: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    arquivo_path: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    metadados: Mapped[dict] = mapped_column(JSON, default=dict)
+    tags: Mapped[list] = mapped_column(JSON, default=list)
+    relevancia_ia: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    decisao_ia: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    decisao_humana: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    motivo_decisao: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    aprovada_para_escrita: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime,
+                                                  default=datetime.utcnow,
+                                                  onupdate=datetime.utcnow)
+
+    chunks: Mapped[List["RevisaoFonteChunk"]] = relationship(
+        "RevisaoFonteChunk",
+        back_populates="fonte",
+        lazy="noload",
+        cascade="all, delete-orphan",
+    )
+    decisoes: Mapped[List["RevisaoDecisao"]] = relationship(
+        "RevisaoDecisao",
+        back_populates="fonte",
+        lazy="noload",
+        cascade="all, delete-orphan",
+    )
+
+
+class RevisaoFonteChunk(Base):
+    __tablename__ = "revisao_fonte_chunks"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True,
+                                    default=lambda: str(uuid.uuid4()))
+    fonte_id: Mapped[str] = mapped_column(String, ForeignKey("revisao_fontes.id"),
+                                          nullable=False, index=True)
+    fonte: Mapped["RevisaoFonte"] = relationship("RevisaoFonte", back_populates="chunks")
+
+    ordem: Mapped[int] = mapped_column(Integer, default=0)
+    secao: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    texto: Mapped[str] = mapped_column(Text)
+    embedding: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    metadados: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class RevisaoDecisao(Base):
+    __tablename__ = "revisao_decisoes"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True,
+                                    default=lambda: str(uuid.uuid4()))
+    revisao_id: Mapped[str] = mapped_column(String, ForeignKey("revisoes.id"),
+                                            nullable=False, index=True)
+    fonte_id: Mapped[str] = mapped_column(String, ForeignKey("revisao_fontes.id"),
+                                          nullable=False, index=True)
+    fonte: Mapped["RevisaoFonte"] = relationship("RevisaoFonte", back_populates="decisoes")
+
+    decisao: Mapped[str] = mapped_column(String)
+    motivo: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    etapa: Mapped[str] = mapped_column(String, default="triagem")
+    feita_por: Mapped[str] = mapped_column(String, default="humano")
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class RevisaoMatrizItem(Base):
+    __tablename__ = "revisao_matriz"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True,
+                                    default=lambda: str(uuid.uuid4()))
+    revisao_id: Mapped[str] = mapped_column(String, ForeignKey("revisoes.id"),
+                                            nullable=False, index=True)
+    revisao: Mapped["Revisao"] = relationship("Revisao", back_populates="matriz")
+    fonte_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("revisao_fontes.id"),
+                                                    nullable=True, index=True)
+
+    autor_ano: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    objetivo: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    metodo: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    populacao: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    principais_achados: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    limitacoes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    contribuicao: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    secao_sugerida: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    qualidade: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    dados_extraidos: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime,
+                                                  default=datetime.utcnow,
+                                                  onupdate=datetime.utcnow)
+
+
+class RevisaoDocumento(Base):
+    __tablename__ = "revisao_documentos"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True,
+                                    default=lambda: str(uuid.uuid4()))
+    revisao_id: Mapped[str] = mapped_column(String, ForeignKey("revisoes.id"),
+                                            nullable=False, index=True)
+    revisao: Mapped["Revisao"] = relationship("Revisao", back_populates="documentos")
+
+    tipo: Mapped[str] = mapped_column(String, default="manuscrito")
+    versao: Mapped[int] = mapped_column(Integer, default=1)
+    formato_ref: Mapped[str] = mapped_column(String, default="vancouver")
+    secoes: Mapped[dict] = mapped_column(JSON, default=dict)
+    referencias: Mapped[list] = mapped_column(JSON, default=list)
+    citacoes: Mapped[dict] = mapped_column(JSON, default=dict)
+    checklist: Mapped[dict] = mapped_column(JSON, default=dict)
+    docx_path: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    pdf_path: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
