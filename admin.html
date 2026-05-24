@@ -1396,28 +1396,32 @@ async function sendBroadcast() {
   const count     = parseInt(countText) || 0;
   if (!count) { toast('Nenhum destinatário com os filtros selecionados.', 'error'); return; }
 
-  if (!confirm(`Enviar campanha para ${count} usuários? Esta ação não pode ser desfeita.`)) return;
+  if (!confirm(`Enviar campanha para ${count} usuário(s)? Esta ação não pode ser desfeita.`)) return;
 
   const btn = document.getElementById('bc-send-btn');
   btn.disabled = true; btn.textContent = `⏳ Enviando para ${count}...`;
 
-  const data = await apiJSON('/admin/broadcast', {
-    method: 'POST',
-    body: JSON.stringify({
-      assunto,
-      mensagem,
-      cta_url:   document.getElementById('bc-cta-url').value.trim() || null,
-      cta_label: document.getElementById('bc-cta-label').value.trim() || 'Acessar o CaseOS',
-      planos:    _getBcPlanos(),
-      apenas_verificados: document.getElementById('bc-verificados').checked,
-      apenas_ativos:      document.getElementById('bc-ativos').checked,
-    }),
-  });
-
-  btn.disabled = false; btn.textContent = '📢 Enviar Campanha';
-  if (!data) return;
-  toast(`✅ Campanha disparada para ${data.enviando_para} usuários!`, 'success');
-  closeModal('broadcast-modal');
+  try {
+    const data = await apiJSON('/admin/broadcast', {
+      method: 'POST',
+      body: JSON.stringify({
+        assunto,
+        mensagem,
+        cta_url:   document.getElementById('bc-cta-url').value.trim() || null,
+        cta_label: document.getElementById('bc-cta-label').value.trim() || 'Acessar o CaseOS',
+        planos:    _getBcPlanos(),
+        apenas_verificados: document.getElementById('bc-verificados').checked,
+        apenas_ativos:      document.getElementById('bc-ativos').checked,
+      }),
+    });
+    if (!data) return;
+    toast(`✅ Campanha disparada para ${data.enviando_para} usuário(s)!`, 'success');
+    closeModal('broadcast-modal');
+  } catch (err) {
+    toast(`Erro ao enviar campanha: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '📢 Enviar Campanha';
+  }
 }
 
 /* ── Users ────────────────────────────────────────────────────────────────── */

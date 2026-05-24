@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -917,9 +917,10 @@ async def preview_broadcast(
 
 @router.post("/broadcast")
 async def enviar_broadcast(
-    body:  BroadcastRequest,
-    admin: Usuario = Depends(get_admin_user),
-    db:    AsyncSession = Depends(get_db),
+    body:             BroadcastRequest,
+    background_tasks: BackgroundTasks,
+    admin:            Usuario = Depends(get_admin_user),
+    db:               AsyncSession = Depends(get_db),
 ):
     """Envia e-mail em lote para usuários filtrados por plano/status."""
     from sqlalchemy import and_
@@ -944,32 +945,34 @@ async def enviar_broadcast(
     if not users:
         raise HTTPException(400, "Nenhum usuário encontrado com os filtros especificados.")
 
-    # Semáforo limita envios simultâneos → evita rate-limit do Resend
-    sem = asyncio.Semaphore(5)
+    # Captura dados necessários antes de encerrar a sessão DB
+    destinatarios = [(u.email, u.nome) for u in users]
 
-    async def _send_one(u: Usuario):
-        async with sem:
-            try:
-                await enviar_email_admin(
-                    destinatario=u.email,
-                    nome=u.nome,
-                    assunto=body.assunto,
-                    mensagem=body.mensagem,
-                    cta_url=body.cta_url or "",
-                    cta_label=body.cta_label or "Acessar o CaseOS",
-                )
-            except Exception as e:
-                logger.warning("Broadcast: falha ao enviar para %s: %s", u.email, e)
+    async def _enviar_tudo():
+        """Roda em background após a resposta HTTP ser enviada."""
+        sem = asyncio.Semaphore(5)  # max 5 envios paralelos
+        async def _one(email: str, nome: str):
+            async with sem:
+                try:
+                    await enviar_email_admin(
+                        destinatario=email,
+                        nome=nome,
+                        assunto=body.assunto,
+                        mensagem=body.mensagem,
+                        cta_url=body.cta_url or "",
+                        cta_label=body.cta_label or "Acessar o CaseOS",
+                    )
+                except Exception as e:
+                    logger.warning("Broadcast: falha ao enviar para %s: %s", email, e)
+        await asyncio.gather(*[_one(e, n) for e, n in destinatarios], return_exceptions=True)
 
-    asyncio.create_task(
-        asyncio.gather(*[_send_one(u) for u in users], return_exceptions=True)
-    )
+    background_tasks.add_task(_enviar_tudo)
 
     logger.warning(
         "ADMIN BROADCAST → %d destinatários, assunto='%s' by admin=%s",
-        len(users), body.assunto, admin.id,
+        len(destinatarios), body.assunto, admin.id,
     )
-    return {"ok": True, "enviando_para": len(users)}
+    return {"ok": True, "enviando_para": len(destinatarios)}
 
 
 # ── Importar sessão completa (seed / teste) ───────────────────────────────────

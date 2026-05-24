@@ -316,18 +316,8 @@ async def download_resultado(
         raise HTTPException(status_code=425,
                             detail=f"Artigo ainda não concluído. Status: {sessao.status}")
 
-    # Se docx_path existe e o arquivo está no disco, serve diretamente
-    if sessao.docx_path:
-        docx_base = Path(settings.docx_output_dir).resolve()
-        docx_path = Path(sessao.docx_path).resolve()
-        if str(docx_path).startswith(str(docx_base)) and docx_path.exists():
-            return FileResponse(
-                path=str(docx_path),
-                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                filename=f"CaseOS_{sessao_id}.docx",
-            )
-
-    # Geração on-the-fly a partir do resultado JSON armazenado
+    # Sempre regenera o DOCX a partir do resultado atual (garante edições manuais salvas)
+    # Nota: o cache em docx_path não é usado para evitar servir versão desatualizada
     if not sessao.resultado:
         raise HTTPException(status_code=404,
                             detail="Conteúdo do artigo não encontrado.")
@@ -659,6 +649,7 @@ async def editar_secao(
     resultado[secao] = conteudo
     resultado["versao_edicao"] = resultado.get("versao_edicao", 1) + 1
     sessao.resultado = resultado
+    sessao.docx_path = None   # invalida cache para forçar regeneração do DOCX
     from sqlalchemy.orm.attributes import flag_modified
     flag_modified(sessao, "resultado")
     await db.commit()
