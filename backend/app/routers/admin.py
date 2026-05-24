@@ -915,6 +915,46 @@ async def preview_broadcast(
     return {"count": count}
 
 
+async def _broadcast_task(
+    destinatarios: list[tuple[str, str]],
+    assunto: str,
+    mensagem: str,
+    cta_url: str,
+    cta_label: str,
+    admin_id: str,
+):
+    """Tarefa de background: envia e-mails em lote com log detalhado por destinatário."""
+    from app.services.email import enviar_email_admin
+
+    ok_count = 0
+    fail_count = 0
+
+    for email, nome in destinatarios:
+        try:
+            sucesso = await enviar_email_admin(
+                destinatario=email,
+                nome=nome,
+                assunto=assunto,
+                mensagem=mensagem,
+                cta_url=cta_url,
+                cta_label=cta_label,
+            )
+            if sucesso:
+                ok_count += 1
+                logger.info("Broadcast OK → %s", email)
+            else:
+                fail_count += 1
+                logger.warning("Broadcast FALHOU (Resend retornou False) → %s", email)
+        except Exception as exc:
+            fail_count += 1
+            logger.error("Broadcast EXCEÇÃO → %s: %s", email, exc)
+
+    logger.warning(
+        "ADMIN BROADCAST CONCLUÍDO → ok=%d falha=%d admin=%s assunto='%s'",
+        ok_count, fail_count, admin_id, assunto,
+    )
+
+
 @router.post("/broadcast")
 async def enviar_broadcast(
     body:             BroadcastRequest,
@@ -924,7 +964,10 @@ async def enviar_broadcast(
 ):
     """Envia e-mail em lote para usuários filtrados por plano/status."""
     from sqlalchemy import and_
-    from app.services.email import enviar_email_admin
+    from app.config import settings as cfg
+
+    if not cfg.resend_api_key:
+        raise HTTPException(400, "RESEND_API_KEY não configurado no servidor. Configure a variável de ambiente.")
 
     conditions = []
     if body.planos:
@@ -945,34 +988,57 @@ async def enviar_broadcast(
     if not users:
         raise HTTPException(400, "Nenhum usuário encontrado com os filtros especificados.")
 
-    # Captura dados necessários antes de encerrar a sessão DB
+    # Captura dados antes de fechar a sessão DB
     destinatarios = [(u.email, u.nome) for u in users]
 
-    async def _enviar_tudo():
-        """Roda em background após a resposta HTTP ser enviada."""
-        sem = asyncio.Semaphore(5)  # max 5 envios paralelos
-        async def _one(email: str, nome: str):
-            async with sem:
-                try:
-                    await enviar_email_admin(
-                        destinatario=email,
-                        nome=nome,
-                        assunto=body.assunto,
-                        mensagem=body.mensagem,
-                        cta_url=body.cta_url or "",
-                        cta_label=body.cta_label or "Acessar o CaseOS",
-                    )
-                except Exception as e:
-                    logger.warning("Broadcast: falha ao enviar para %s: %s", email, e)
-        await asyncio.gather(*[_one(e, n) for e, n in destinatarios], return_exceptions=True)
-
-    background_tasks.add_task(_enviar_tudo)
+    # Usa função de nível de módulo (não closure) para compatibilidade com BackgroundTasks
+    background_tasks.add_task(
+        _broadcast_task,
+        destinatarios=destinatarios,
+        assunto=body.assunto,
+        mensagem=body.mensagem,
+        cta_url=body.cta_url or "",
+        cta_label=body.cta_label or "Acessar o CaseOS",
+        admin_id=str(admin.id),
+    )
 
     logger.warning(
-        "ADMIN BROADCAST → %d destinatários, assunto='%s' by admin=%s",
+        "ADMIN BROADCAST AGENDADO → %d destinatários, assunto='%s' by admin=%s",
         len(destinatarios), body.assunto, admin.id,
     )
     return {"ok": True, "enviando_para": len(destinatarios)}
+
+
+@router.post("/test-email")
+async def testar_email(
+    body: dict,
+    admin: Usuario = Depends(get_admin_user),
+):
+    """Envia um e-mail de teste SÍNCRONO para diagnosticar o serviço Resend."""
+    from app.services.email import enviar_email_admin
+    from app.config import settings as cfg
+
+    destinatario = body.get("email") or admin.email
+    if not cfg.resend_api_key:
+        return {"ok": False, "erro": "RESEND_API_KEY não configurado", "from": cfg.resend_from_email}
+
+    try:
+        sucesso = await enviar_email_admin(
+            destinatario=destinatario,
+            nome=admin.nome,
+            assunto="[CaseOS] Teste de e-mail admin",
+            mensagem="Este é um e-mail de teste enviado pelo painel administrativo do CaseOS.",
+            cta_url=cfg.frontend_url + "/dashboard.html",
+            cta_label="Acessar o CaseOS",
+        )
+        return {
+            "ok": sucesso,
+            "destinatario": destinatario,
+            "from": cfg.resend_from_email,
+            "resend_key_prefix": cfg.resend_api_key[:8] + "...",
+        }
+    except Exception as exc:
+        return {"ok": False, "erro": str(exc), "from": cfg.resend_from_email}
 
 
 # ── Importar sessão completa (seed / teste) ───────────────────────────────────

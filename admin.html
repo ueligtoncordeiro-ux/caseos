@@ -1052,9 +1052,12 @@ tbody td.mono { font-family: ui-monospace, monospace; font-size: 11px; }
       </div>
     </div>
 
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('broadcast-modal')">Cancelar</button>
-      <button class="btn btn-primary" id="bc-send-btn" onclick="sendBroadcast()">📢 Enviar Campanha</button>
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn btn-ghost" id="bc-test-btn" onclick="testarEmail()" style="font-size:12px">🔍 Testar e-mail</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="closeModal('broadcast-modal')">Cancelar</button>
+        <button class="btn btn-primary" id="bc-send-btn" onclick="sendBroadcast()">📢 Enviar Campanha</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1385,6 +1388,24 @@ async function previewBroadcast() {
     spinner.style.display = 'none';
     countEl.textContent = data ? `${data.count} usuários` : 'erro';
   }, 400);
+}
+
+async function testarEmail() {
+  const btn = document.getElementById('bc-test-btn');
+  btn.disabled = true; btn.textContent = '⏳ Testando...';
+  try {
+    const res = await apiFetch('/admin/test-email', { method: 'POST', body: JSON.stringify({}) });
+    const data = await res.json();
+    if (data.ok) {
+      toast(`✅ E-mail de teste enviado para ${data.destinatario} (from: ${data.from})`, 'success');
+    } else {
+      toast(`❌ Falha: ${data.erro || 'Resend retornou erro'} — from: ${data.from}`, 'error');
+    }
+  } catch (err) {
+    toast(`Erro no teste: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '🔍 Testar e-mail';
+  }
 }
 
 async function sendBroadcast() {
