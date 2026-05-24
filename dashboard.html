@@ -3426,31 +3426,56 @@ async function _renderUsageBar(user) {
 }
 
 function _destacarPlanoAtual(plano) {
-  const mapa = { free: 'planCardFree', starter: 'planCardStarter', pro: 'planCardPro', institucional: 'planCardInst' };
+  const mapa = {
+    free:          { id: 'planCardFree',    label: 'Gratuito',      fn: null },
+    starter:       { id: 'planCardStarter', label: 'Assinar Starter', fn: "assinarPlano('starter')" },
+    pro:           { id: 'planCardPro',     label: 'Assinar Pro',    fn: "assinarPlano('pro')" },
+    institucional: { id: 'planCardInst',    label: 'Assinar Institucional', fn: "assinarPlano('institucional')" },
+  };
   const pagos = new Set(['starter', 'pro', 'institucional']);
 
-  Object.entries(mapa).forEach(([p, id]) => {
-    const el = document.getElementById(id);
+  Object.entries(mapa).forEach(([p, cfg]) => {
+    const el = document.getElementById(cfg.id);
     if (!el) return;
+
     el.classList.toggle('current-plan', p === plano);
+
+    // Remove botão de gerenciar injetado anteriormente (pode ter mudado)
+    const oldPortal = el.querySelector('#btnGerenciarAssinatura');
+    if (oldPortal) oldPortal.remove();
+
     const btn = el.querySelector('.btn-assinar');
     if (!btn) return;
 
     if (p === plano) {
+      // Plano atual: desabilita e marca
       btn.textContent = 'Plano atual';
-      btn.disabled = true;
-      btn.className = 'btn-assinar secondary';
+      btn.disabled    = true;
+      btn.className   = 'btn-assinar secondary';
+      btn.onclick     = null;
 
-      // Para planos pagos: injeta botão de gerenciar assinatura (evita duplicar)
-      const planAction = el.querySelector('.plan-action');
-      if (planAction && pagos.has(plano) && !planAction.querySelector('#btnGerenciarAssinatura')) {
-        const portalBtn = document.createElement('button');
-        portalBtn.id = 'btnGerenciarAssinatura';
-        portalBtn.className = 'btn-assinar secondary';
-        portalBtn.style.cssText = 'margin-top:8px;font-size:12px;opacity:0.75';
-        portalBtn.textContent = '⚙ Gerenciar Assinatura';
-        portalBtn.onclick = gerenciarAssinatura;
-        planAction.appendChild(portalBtn);
+      // Para planos pagos: injeta botão de gerenciar assinatura
+      if (pagos.has(plano)) {
+        const planAction = el.querySelector('.plan-action');
+        if (planAction) {
+          const portalBtn = document.createElement('button');
+          portalBtn.id = 'btnGerenciarAssinatura';
+          portalBtn.className = 'btn-assinar secondary';
+          portalBtn.style.cssText = 'margin-top:8px;font-size:12px;opacity:0.75';
+          portalBtn.textContent = '⚙ Gerenciar Assinatura';
+          portalBtn.onclick = gerenciarAssinatura;
+          planAction.appendChild(portalBtn);
+        }
+      }
+    } else {
+      // Não é o plano atual: restaura para estado "assinar"
+      btn.disabled  = false;
+      btn.className = p === 'free' ? 'btn-assinar secondary' : 'btn-assinar primary';
+      btn.textContent = cfg.label;
+      if (cfg.fn) {
+        btn.setAttribute('onclick', cfg.fn);
+      } else {
+        btn.removeAttribute('onclick');
       }
     }
   });
@@ -3468,16 +3493,26 @@ async function initAuth() {
 
   _renderUser(getUser());
 
-  // Fetch fresh profile in background
-  fetch(`${API}/auth/me`, { headers: authHeaders() })
-    .then(r => r.ok ? r.json() : null)
-    .then(u => {
-      if (u) {
-        sessionStorage.setItem('rccs_user', JSON.stringify(u));
-        _renderUser(u);
+  // Busca perfil fresco do backend (garante plano atualizado mesmo sem re-login)
+  (async () => {
+    try {
+      let res = await fetch(`${API}/auth/me`, { headers: authHeaders() });
+
+      // Token expirado → tenta refresh e repete
+      if (res.status === 401) {
+        const ok = await refreshToken();
+        if (ok) {
+          res = await fetch(`${API}/auth/me`, { headers: authHeaders() });
+        }
       }
-    })
-    .catch(() => {});
+
+      if (res.ok) {
+        const u = await res.json();
+        sessionStorage.setItem('rccs_user', JSON.stringify(u));
+        _renderUser(u);   // atualiza UI com plano/dados frescos do banco
+      }
+    } catch { /* falha silenciosa — dados de sessão são usados */ }
+  })();
 
   return true;
 }
