@@ -138,8 +138,53 @@ body {
 .sidebar.collapsed .plan-summary { display: none; }
 .sidebar.collapsed .btn-upgrade span { display: none; }
 .sidebar.collapsed .btn-upgrade { padding: 10px; justify-content: center; border-radius: 12px; }
-/* Desktop sidebar expands only by click, keeping the workspace aligned. */
+
+/* ── Hover expand (igual ao novo-relato.html) ─────────────────────────────── */
+/* Sidebar é position:fixed → expande por cima do conteúdo sem empurrar layout */
+.sidebar.collapsed:hover,
+.sidebar.collapsed:focus-within {
+  width: var(--sidebar-w);
+  box-shadow: 4px 0 24px rgba(0,0,0,0.08);
+}
+.sidebar.collapsed:hover .nav-label,
+.sidebar.collapsed:focus-within .nav-label {
+  opacity: 1; height: auto; padding: revert; overflow: visible;
+}
+.sidebar.collapsed:hover .nav-divider,
+.sidebar.collapsed:focus-within .nav-divider { margin: 6px 20px; }
+.sidebar.collapsed:hover .nav-item span.nav-text,
+.sidebar.collapsed:focus-within .nav-item span.nav-text {
+  opacity: 1; width: auto; overflow: visible;
+}
+.sidebar.collapsed:hover .nav-item,
+.sidebar.collapsed:focus-within .nav-item {
+  justify-content: flex-start; padding: 5px 12px;
+}
+.sidebar.collapsed:hover .nav-item.active,
+.sidebar.collapsed:focus-within .nav-item.active { background: var(--acid-dim); }
+.sidebar.collapsed:hover .nav-item.active::before,
+.sidebar.collapsed:focus-within .nav-item.active::before { display: block; }
+.sidebar.collapsed:hover .nav-icon,
+.sidebar.collapsed:focus-within .nav-icon { width: 24px; height: 24px; font-size: 14px; border-radius: 7px; }
+.sidebar.collapsed:hover .nav-icon svg,
+.sidebar.collapsed:focus-within .nav-icon svg { width: 14px; height: 14px; }
+.sidebar.collapsed:hover .nav-logo-icon,
+.sidebar.collapsed:focus-within .nav-logo-icon { width: 28px; height: 28px; }
+.sidebar.collapsed:hover .sidebar-footer,
+.sidebar.collapsed:focus-within .sidebar-footer { padding: 10px 16px; }
+.sidebar.collapsed:hover .usage-bar-wrap,
+.sidebar.collapsed:focus-within .usage-bar-wrap { display: block; }
+.sidebar.collapsed:hover .plan-summary,
+.sidebar.collapsed:focus-within .plan-summary { display: block; }
+.sidebar.collapsed:hover .btn-upgrade span,
+.sidebar.collapsed:focus-within .btn-upgrade span { display: inline; }
+.sidebar.collapsed:hover .btn-upgrade,
+.sidebar.collapsed:focus-within .btn-upgrade { padding: revert; justify-content: flex-start; border-radius: revert; }
+
+/* Main wrapper usa sempre margem collapsed — sidebar flutua por cima */
 .main-wrapper.sidebar-collapsed { margin-left: var(--sidebar-collapsed-w); }
+/* Quando expandida via click (sem collapsed class), empurra o layout normalmente */
+.main-wrapper:not(.sidebar-collapsed) { margin-left: var(--sidebar-w); }
 
 .sidebar-control {
   padding: 10px 12px 6px;
@@ -2639,7 +2684,7 @@ tbody td {
       <div style="position:relative">
         <button class="notif-btn" id="notifBtn" onclick="toggleNotifDropdown()" aria-label="Notificações" title="Notificações">
           <svg style="width:16px;height:16px;display:block;image-rendering:pixelated"><use href="#px-bell"/></svg>
-          <span class="notif-badge" id="notifBadge">2</span>
+          <span class="notif-badge" id="notifBadge" style="display:none">0</span>
         </button>
         <div class="notif-dropdown" id="notifDropdown">
           <div class="notif-header">
@@ -2983,7 +3028,7 @@ tbody td {
 </aside>
 
 <!-- Chat floating toggle button -->
-<button class="chat-toggle-btn has-unread" id="chatToggleBtn" onclick="toggleChat()" title="Assistente CaseOS" aria-label="Abrir chat">
+<button class="chat-toggle-btn" id="chatToggleBtn" onclick="toggleChat()" title="Assistente CaseOS" aria-label="Abrir chat">
   <span class="chat-bubble-icon">💬</span>
   <span class="chat-unread-dot"></span>
 </button>
@@ -4500,6 +4545,7 @@ function renderizarData() {
 ═══════════════════════════════════════════════ */
 window.addEventListener('DOMContentLoaded', async () => {
   renderizarData();
+  renderNotificacoes();  // inicializa badge a partir do localStorage (sem esperar auth)
 
   // Auth guard — redirect to login if not authenticated
   const autenticado = await initAuth();
