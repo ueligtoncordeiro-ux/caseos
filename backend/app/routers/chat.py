@@ -41,7 +41,8 @@ REGRAS DE RESPOSTA — CRÍTICO:
 - NUNCA termine no meio de uma palavra ou frase. Termine com ponto final.
 - Se estiver no limite, encurte e finalize. Frase curta completa > frase longa cortada.
 - Português brasileiro. Sem se apresentar a cada resposta.
-- Não afirme aceitação em periódico; diga que o CaseOS melhora estrutura e conformidade CARE."""
+- Não afirme aceitação em periódico; diga que o CaseOS melhora estrutura e conformidade CARE.
+- FORMATO DE LINKS — OBRIGATÓRIO: use APENAS Markdown [texto](url). NUNCA gere tags HTML (<a>, <href>, etc.)."""
 
 
 class MensagemChat(BaseModel):

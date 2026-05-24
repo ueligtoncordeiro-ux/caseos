@@ -4191,8 +4191,18 @@ function _appendMensagem(role, content) {
 }
 
 function _sanitize(str) {
-  // 1. Escape HTML
-  let s = str
+  // 0. PRÉ-PROCESSO: converte HTML bruto que o LLM possa ter gerado em Markdown
+  //    <a href="url" ...>texto</a>  →  [texto](url)
+  //    Feito ANTES do escape para capturar os atributos originais
+  let s = str.replace(
+    /<a\s+[^>]*?href=["']([^"']+)["'][^>]*?>([^<]*?)<\/a>/gi,
+    '[$2]($1)'
+  );
+  // Remove qualquer outra tag HTML que o LLM possa ter injetado
+  s = s.replace(/<\/?[a-zA-Z][^>]*>/g, '');
+
+  // 1. Escape HTML (segurança — evita XSS no resto do texto)
+  s = s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
@@ -4200,13 +4210,16 @@ function _sanitize(str) {
   // 2. Markdown links: [texto](url) → <a>
   s = s.replace(
     /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:underline;word-break:break-all;">$1</a>'
+    (_, text, url) =>
+      `<a href="${url}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:underline;word-break:break-all;">${text}</a>`
   );
 
-  // 3. Auto-link bare URLs (after Markdown pass, to avoid double-linking)
+  // 3. Auto-link bare URLs (depois do Markdown, para não duplicar)
+  //    Ignora URLs que já estão dentro de um atributo href= gerado acima
   s = s.replace(
-    /(?<!\()(https?:\/\/[^\s&<"]+)/g,
-    '<a href="$1" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:underline;word-break:break-all;">$1</a>'
+    /(?<!href="|href=')(https?:\/\/[^\s<"&]+)/g,
+    (url) =>
+      `<a href="${url}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:underline;word-break:break-all;">${url}</a>`
   );
 
   // 4. **bold**
