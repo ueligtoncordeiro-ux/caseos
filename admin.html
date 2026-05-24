@@ -676,6 +676,42 @@ tbody td.mono { font-family: ui-monospace, monospace; font-size: 11px; }
         </div>
       </div>
 
+      <!-- ── Funil de Conversão ──────────────────────────────────── -->
+      <div class="section-header" style="margin-top:8px;">
+        <h2>🔄 Funil de Conversão</h2>
+        <button class="btn btn-ghost btn-sm" onclick="loadFunnel()">↺ Atualizar</button>
+      </div>
+      <div id="funnel-wrap" style="margin-bottom:28px;">
+        <div id="funnel-steps" style="display:flex;gap:0;align-items:stretch;flex-wrap:wrap;">
+          <span style="color:var(--t3);font-size:13px;padding:12px 0;">Carregando...</span>
+        </div>
+        <div id="funnel-rates" style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;"></div>
+      </div>
+
+      <!-- ── Alertas de Quota ──────────────────────────────────── -->
+      <div class="section-header" style="margin-top:4px;">
+        <h2>⚡ Próximos do Limite</h2>
+        <button class="btn btn-ghost btn-sm" onclick="loadQuotaAlerts()">↺ Atualizar</button>
+      </div>
+      <div id="quota-alerts-wrap" style="margin-bottom:28px;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Usuário</th>
+                <th>Plano</th>
+                <th>Uso</th>
+                <th>Barra</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="quota-alerts-tbody">
+              <tr class="loading-row"><td colspan="5"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- ── Stripe Revenue ─────────────────────────────────────── -->
       <div class="section-header" style="margin-top: 8px;">
         <h2>💳 Receita (Stripe)</h2>
@@ -924,6 +960,41 @@ tbody td.mono { font-family: ui-monospace, monospace; font-size: 11px; }
   </div>
 </div>
 
+<!-- ── Modal: E-mail Manual ────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="email-modal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h3>✉️ Enviar E-mail</h3>
+      <button class="modal-close" onclick="closeModal('email-modal')">✕</button>
+    </div>
+    <div id="email-modal-dest" style="font-size:12px;color:var(--t3);margin-bottom:14px;"></div>
+
+    <div class="field">
+      <label>Assunto</label>
+      <input type="text" id="email-assunto" placeholder="Ex: Novidade no CaseOS para você">
+    </div>
+    <div class="field">
+      <label>Mensagem (texto simples — cada linha vira um parágrafo)</label>
+      <textarea id="email-mensagem" rows="6"
+        style="width:100%;background:var(--input-bg);border:1px solid var(--card-bdr);border-radius:7px;color:var(--t1);font-family:var(--sans);font-size:13.5px;padding:9px 12px;outline:none;resize:vertical;transition:border-color 0.15s;"
+        placeholder="Olá! Passando para te informar que..."></textarea>
+    </div>
+    <div class="field">
+      <label>Link do botão (opcional)</label>
+      <input type="url" id="email-cta-url" placeholder="https://caseos.voandonaia.com/dashboard.html">
+    </div>
+    <div class="field">
+      <label>Rótulo do botão</label>
+      <input type="text" id="email-cta-label" value="Acessar o CaseOS">
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('email-modal')">Cancelar</button>
+      <button class="btn btn-primary" id="email-send-btn" onclick="sendEmailManual()">Enviar ✉️</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Modal: Editar Usuário ───────────────────────────────────────────────── -->
 <div class="modal-overlay" id="edit-modal">
   <div class="modal">
@@ -985,6 +1056,15 @@ tbody td.mono { font-family: ui-monospace, monospace; font-size: 11px; }
       </div>
       <div id="stripe-user-content" style="font-size:13px; color:var(--t2);">
         <div style="display:flex;align-items:center;gap:8px;color:var(--t3);"><div class="spinner"></div> Carregando...</div>
+      </div>
+    </div>
+
+    <!-- Ações rápidas -->
+    <div style="border-top:1px solid var(--card-bdr); margin-top:16px; padding-top:16px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--t3);margin-bottom:10px;">📬 Comunicação</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" id="upsell-btn" onclick="sendUpsell()">⬆️ Enviar Upsell</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEmailModal()">✉️ E-mail manual</button>
       </div>
     </div>
 
@@ -1124,6 +1204,10 @@ async function loadOverview() {
   document.getElementById('status-processando').textContent = st.processando || 0;
   document.getElementById('status-rascunho').textContent    = st.rascunho || 0;
   document.getElementById('status-erro').textContent        = st.erro || 0;
+
+  // Carrega funil e alertas em paralelo (não bloqueiam o overview principal)
+  loadFunnel();
+  loadQuotaAlerts();
 }
 
 /* ── Users ────────────────────────────────────────────────────────────────── */
@@ -1505,6 +1589,139 @@ function fmtDateTs(ts) {
 function fmtBRL(value) {
   if (value === null || value === undefined) return '—';
   return 'R$ ' + Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/* ── Funil de Conversão ───────────────────────────────────────────────────── */
+async function loadFunnel() {
+  const data = await apiJSON('/admin/funnel');
+  if (!data) return;
+
+  const steps = document.getElementById('funnel-steps');
+  const rates = document.getElementById('funnel-rates');
+  const colors = ['var(--acid)', 'var(--blue)', 'var(--purple)', 'var(--amber)', 'var(--green)'];
+  const maxCount = data.etapas[0]?.count || 1;
+
+  steps.innerHTML = data.etapas.map((e, i) => {
+    const color = colors[i] || 'var(--t2)';
+    const barW = maxCount > 0 ? Math.round(e.count / maxCount * 100) : 0;
+    const arrow = i < data.etapas.length - 1
+      ? `<div style="display:flex;align-items:center;padding:0 4px;color:var(--t4);font-size:18px;flex-shrink:0;">›</div>`
+      : '';
+    return `
+      <div style="flex:1;min-width:130px;background:var(--card);border:1px solid var(--card-bdr);border-radius:var(--radius);padding:14px 16px;border-top:2px solid ${color};">
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--t3);margin-bottom:6px;">${escHtml(e.nome)}</div>
+        <div style="font-family:var(--head);font-size:22px;font-weight:700;color:${color};">${fmtNum(e.count)}</div>
+        <div style="margin-top:6px;height:3px;background:var(--card-bdr);border-radius:99px;overflow:hidden;">
+          <div style="width:${barW}%;height:100%;background:${color};border-radius:99px;"></div>
+        </div>
+        <div style="font-size:11px;color:var(--t3);margin-top:4px;">${e.taxa}% do total</div>
+      </div>${arrow}`;
+  }).join('');
+
+  rates.innerHTML = `
+    <div class="stat-card" style="flex:1;min-width:200px;">
+      <div class="stat-label">Conversão Free → Pago</div>
+      <div class="stat-value" style="color:var(--purple);">${data.conversao_free_to_paid}%</div>
+    </div>
+    <div class="stat-card" style="flex:1;min-width:200px;">
+      <div class="stat-label">Conversão Verificado → Pago</div>
+      <div class="stat-value" style="color:var(--blue);">${data.conversao_verified_to_paid}%</div>
+    </div>`;
+}
+
+/* ── Alertas de Quota ─────────────────────────────────────────────────────── */
+async function loadQuotaAlerts() {
+  const tbody = document.getElementById('quota-alerts-tbody');
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="5"><div class="spinner"></div></td></tr>';
+
+  const data = await apiJSON('/admin/quota-alerts?threshold=0.8');
+  if (!data) return;
+
+  if (!data.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">✅ Nenhum usuário próximo do limite.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data.map(u => {
+    const barColor = u.pct >= 100 ? 'var(--red)' : u.pct >= 90 ? 'var(--amber)' : 'var(--acid)';
+    const barW = Math.min(u.pct, 100);
+    return `<tr>
+      <td class="primary">${escHtml(u.nome)}<br><span style="font-size:11px;color:var(--t3);">${escHtml(u.email)}</span></td>
+      <td>${planoBadge(u.plano)}</td>
+      <td style="font-family:monospace;font-size:12px;">
+        <strong style="color:${barColor}">${u.artigos_mes}</strong> / ${u.limite}
+        <span style="color:var(--t3);"> (${u.pct}%)</span>
+      </td>
+      <td style="min-width:100px;">
+        <div style="height:5px;background:var(--card-bdr);border-radius:99px;overflow:hidden;">
+          <div style="width:${barW}%;height:100%;background:${barColor};border-radius:99px;"></div>
+        </div>
+      </td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="sendUpsellDirect('${escHtml(u.id)}', '${escHtml(u.email)}')">⬆️ Upsell</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function sendUpsellDirect(userId, email) {
+  if (!confirm(`Enviar e-mail de upsell para ${email}?`)) return;
+  const data = await apiJSON(`/admin/users/${userId}/send-upsell`, { method: 'POST' });
+  if (!data) return;
+  toast(`✉️ E-mail de upsell enviado para ${data.destinatario}`, 'success');
+}
+
+/* ── E-mail manual ────────────────────────────────────────────────────────── */
+let _emailModalUserId = null;
+
+function openEmailModal() {
+  const userId = document.getElementById('edit-user-id').value;
+  const nome   = document.getElementById('edit-nome').value;
+  _emailModalUserId = userId;
+  document.getElementById('email-modal-dest').textContent = `Destinatário: ${nome}`;
+  document.getElementById('email-assunto').value   = '';
+  document.getElementById('email-mensagem').value  = '';
+  document.getElementById('email-cta-url').value   = '';
+  document.getElementById('email-cta-label').value = 'Acessar o CaseOS';
+  closeModal('edit-modal');
+  openModal('email-modal');
+}
+
+async function sendEmailManual() {
+  if (!_emailModalUserId) return;
+  const assunto  = document.getElementById('email-assunto').value.trim();
+  const mensagem = document.getElementById('email-mensagem').value.trim();
+  if (!assunto || !mensagem) { toast('Preencha assunto e mensagem.', 'error'); return; }
+
+  const btn = document.getElementById('email-send-btn');
+  btn.disabled = true; btn.textContent = '⏳ Enviando...';
+
+  const data = await apiJSON(`/admin/users/${_emailModalUserId}/send-email`, {
+    method: 'POST',
+    body: JSON.stringify({
+      assunto,
+      mensagem,
+      cta_url:   document.getElementById('email-cta-url').value.trim() || null,
+      cta_label: document.getElementById('email-cta-label').value.trim() || 'Acessar o CaseOS',
+    }),
+  });
+
+  btn.disabled = false; btn.textContent = 'Enviar ✉️';
+  if (!data) return;
+  toast(`✉️ E-mail enviado para ${data.destinatario}`, 'success');
+  closeModal('email-modal');
+}
+
+async function sendUpsell() {
+  const userId = document.getElementById('edit-user-id').value;
+  const plano  = document.getElementById('edit-plano').value;
+  if (plano === 'free') { toast('Upsell não aplicável para plano Free.', 'error'); return; }
+  const btn = document.getElementById('upsell-btn');
+  btn.disabled = true; btn.textContent = '⏳ Enviando...';
+  const data = await apiJSON(`/admin/users/${userId}/send-upsell`, { method: 'POST' });
+  btn.disabled = false; btn.textContent = '⬆️ Enviar Upsell';
+  if (!data) return;
+  toast(`✉️ Upsell enviado para ${data.destinatario}`, 'success');
 }
 
 /* ── Errors ───────────────────────────────────────────────────────────────── */

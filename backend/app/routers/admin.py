@@ -659,3 +659,155 @@ async def retry_sessao(
         sessao_id, sessao.external_id, admin.id,
     )
     return {"ok": True, "sessao_id": sessao_id, "external_id": sessao.external_id, "status": "processando"}
+
+
+# ── Funil de conversão ────────────────────────────────────────────────────────
+
+@router.get("/funnel")
+async def funil_conversao(
+    admin: Usuario = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Funil de conversão da plataforma:
+    Cadastros → Verificados → Pagantes → Pagantes Ativos → Publicaram ≥1 relato
+    """
+    from sqlalchemy import distinct
+
+    total = (await db.execute(select(func.count(Usuario.id)))).scalar() or 0
+    verificados = (await db.execute(
+        select(func.count(Usuario.id)).where(Usuario.is_verified == True)  # noqa: E712
+    )).scalar() or 0
+    pagantes = (await db.execute(
+        select(func.count(Usuario.id)).where(Usuario.plano != PLANO_FREE)
+    )).scalar() or 0
+    pagantes_ativos = (await db.execute(
+        select(func.count(Usuario.id)).where(
+            Usuario.plano != PLANO_FREE,
+            Usuario.is_active == True,  # noqa: E712
+        )
+    )).scalar() or 0
+    publicadores = (await db.execute(
+        select(func.count(distinct(Sessao.user_id))).where(
+            Sessao.status == "concluido",
+            Sessao.user_id.isnot(None),
+        )
+    )).scalar() or 0
+
+    def taxa(n, d):
+        return round(n / d * 100, 1) if d else 0.0
+
+    return {
+        "etapas": [
+            {"nome": "Cadastros",           "count": total,           "taxa": 100.0},
+            {"nome": "Verificados",          "count": verificados,     "taxa": taxa(verificados, total)},
+            {"nome": "Pagantes",             "count": pagantes,        "taxa": taxa(pagantes, total)},
+            {"nome": "Pagantes Ativos",      "count": pagantes_ativos, "taxa": taxa(pagantes_ativos, total)},
+            {"nome": "Publicaram ≥1 Relato", "count": publicadores,    "taxa": taxa(publicadores, total)},
+        ],
+        "conversao_free_to_paid":      taxa(pagantes, total),
+        "conversao_verified_to_paid":  taxa(pagantes, verificados),
+    }
+
+
+# ── Alertas de quota ──────────────────────────────────────────────────────────
+
+@router.get("/quota-alerts")
+async def alertas_quota(
+    threshold: float = Query(0.8, ge=0.0, le=1.0,
+                             description="Percentual mínimo de uso (0.0–1.0). Padrão: 0.8 = 80%."),
+    admin: Usuario = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Lista usuários pagantes que consumiram ≥ threshold% da quota mensal."""
+    result = await db.execute(
+        select(Usuario).where(
+            Usuario.plano != PLANO_FREE,
+            Usuario.is_active == True,  # noqa: E712
+        ).order_by(Usuario.artigos_mes.desc())
+    )
+    users = result.scalars().all()
+
+    alertas = []
+    for u in users:
+        limite = QUOTA_MENSAL.get(u.plano)
+        if limite is None or limite == 0:   # institucional = ilimitado
+            continue
+        pct = u.artigos_mes / limite
+        if pct >= threshold:
+            alertas.append({
+                "id":           u.id,
+                "email":        u.email,
+                "nome":         u.nome,
+                "plano":        u.plano,
+                "artigos_mes":  u.artigos_mes,
+                "limite":       limite,
+                "pct":          round(pct * 100, 1),
+            })
+
+    return alertas
+
+
+@router.post("/users/{user_id}/send-upsell")
+async def enviar_upsell(
+    user_id: str,
+    admin: Usuario = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Envia e-mail de upsell para usuário próximo do limite."""
+    u = await _get_usuario_ou_404(user_id, db)
+    limite = QUOTA_MENSAL.get(u.plano)
+    if limite is None:
+        raise HTTPException(400, "Plano institucional é ilimitado — upsell não aplicável.")
+
+    pct = round(u.artigos_mes / limite * 100) if limite else 0
+
+    from app.services.email import enviar_alerta_quota
+    ok = await enviar_alerta_quota(
+        destinatario=u.email,
+        nome=u.nome,
+        plano_atual=u.plano,
+        artigos_usados=u.artigos_mes,
+        limite=limite,
+        pct=pct,
+    )
+    if not ok:
+        raise HTTPException(500, "Falha ao enviar e-mail. Verifique RESEND_API_KEY.")
+    logger.info("ADMIN upsell email → user=%s plano=%s pct=%d%% by admin=%s",
+                u.id, u.plano, pct, admin.id)
+    return {"ok": True, "destinatario": u.email}
+
+
+# ── E-mail manual ─────────────────────────────────────────────────────────────
+
+class AdminEmailRequest(BaseModel):
+    assunto: str
+    mensagem: str
+    cta_url:   Optional[str] = None
+    cta_label: Optional[str] = "Acessar o CaseOS"
+
+
+@router.post("/users/{user_id}/send-email")
+async def enviar_email_manual(
+    user_id: str,
+    body: AdminEmailRequest,
+    admin: Usuario = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Envia e-mail personalizado para um usuário específico."""
+    u = await _get_usuario_ou_404(user_id, db)
+
+    from app.services.email import enviar_email_admin
+    ok = await enviar_email_admin(
+        destinatario=u.email,
+        nome=u.nome,
+        assunto=body.assunto,
+        mensagem=body.mensagem,
+        cta_url=body.cta_url or "",
+        cta_label=body.cta_label or "Acessar o CaseOS",
+    )
+    if not ok:
+        raise HTTPException(500, "Falha ao enviar e-mail. Verifique RESEND_API_KEY.")
+    logger.info("ADMIN email manual → user=%s assunto='%s' by admin=%s",
+                u.id, body.assunto, admin.id)
+    return {"ok": True, "destinatario": u.email}

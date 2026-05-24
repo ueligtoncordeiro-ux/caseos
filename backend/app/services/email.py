@@ -549,3 +549,110 @@ async def enviar_erro_pipeline(destinatario: str, nome: str, sessao_id: str) -> 
         "subject": "[CaseOS] Erro na geração — tente novamente",
         "html": html,
     })
+
+
+# ── Alerta de quota / upsell ─────────────────────────────────────────────────
+
+async def enviar_alerta_quota(
+    destinatario: str, nome: str,
+    plano_atual: str, artigos_usados: int, limite: int,
+    pct: int,
+) -> bool:
+    if not settings.resend_api_key:
+        return False
+
+    primeiro = nome.split()[0]
+    proximos = {
+        "free":     ("Starter",       "R$ 49/mês",  "6"),
+        "starter":  ("Pro",           "R$ 99/mês",  "12"),
+        "pro":      ("Institucional", "R$ 349/mês", "ilimitados"),
+    }
+    prox_nome, prox_preco, prox_qtd = proximos.get(plano_atual, ("Pro", "R$ 99/mês", "12"))
+
+    bar_color = _ACID if pct < 90 else "#E53E3E"
+    bar_width = min(pct, 100)
+
+    extras = f"""
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding:0 36px 20px 36px">
+            <div style="background:#0D1425;border-radius:6px;padding:16px;border:1px solid rgba(200,255,0,0.1)">
+              <p style="font-size:11px;font-family:monospace;letter-spacing:.1em;text-transform:uppercase;color:{_DIM};margin:0 0 10px 0">
+                USO DO PLANO {plano_atual.upper()}
+              </p>
+              <div style="background:rgba(255,255,255,0.07);border-radius:4px;height:6px;margin-bottom:8px;overflow:hidden">
+                <div style="width:{bar_width}%;height:100%;background:{bar_color};border-radius:4px;font-size:0">&nbsp;</div>
+              </div>
+              <p style="font-size:13px;color:{_TEXT};margin:0;font-family:monospace">
+                <strong style="color:{bar_color}">{artigos_usados}</strong> / {limite} relatos usados ({pct}%)
+              </p>
+            </div>
+            <div style="background:#0A0F1F;border-radius:6px;padding:16px;margin-top:10px;border-top:2px solid {_ACID}">
+              <p style="font-size:11px;font-family:monospace;letter-spacing:.1em;text-transform:uppercase;color:{_DIM};margin:0 0 8px 0">
+                PRÓXIMO PLANO: {prox_nome.upper()}
+              </p>
+              <p style="font-size:13px;color:{_TEXT};margin:0">
+                {prox_qtd} relatos/mês &nbsp;·&nbsp;
+                <strong style="color:{_ACID}">{prox_preco}</strong>
+              </p>
+            </div>
+          </td>
+        </tr>
+      </table>"""
+
+    html = _base(
+        char_url=f"{_ASSETS}/pixel-char-flask.png",
+        headline=f"Quase no limite,<br>{primeiro}!",
+        body_html=f"""
+          <p style="font-size:13px;color:{_MUTED};margin:0;line-height:1.7">
+            Você já usou <strong style="color:{_TEXT}">{pct}%</strong> dos seus relatos
+            este mês. Faça upgrade para continuar publicando sem interrupções.
+          </p>""",
+        cta_url=f"{settings.frontend_url}/dashboard.html",
+        cta_label=f"Upgrade para {prox_nome}",
+        extra_html=extras,
+    )
+
+    return await _send({
+        "from": settings.resend_from_email,
+        "to": [destinatario],
+        "subject": f"[CaseOS] Você usou {pct}% da quota — considere o upgrade",
+        "html": html,
+    })
+
+
+# ── E-mail manual (Admin) ─────────────────────────────────────────────────────
+
+async def enviar_email_admin(
+    destinatario: str, nome: str,
+    assunto: str, mensagem: str,
+    cta_url: str = "",
+    cta_label: str = "Acessar o CaseOS",
+) -> bool:
+    if not settings.resend_api_key:
+        return False
+
+    # Converte quebras de linha em parágrafos HTML
+    paragrafos = "".join(
+        f"<p style='font-size:13px;color:{_MUTED};margin:0 0 10px 0;line-height:1.7'>{p.strip()}</p>"
+        for p in mensagem.split("\n") if p.strip()
+    )
+
+    html = _base(
+        char_url=f"{_ASSETS}/pixel-researcher.png",
+        headline="Mensagem da<br>equipe CaseOS.",
+        body_html=paragrafos,
+        cta_url=cta_url or f"{settings.frontend_url}/dashboard.html",
+        cta_label=cta_label,
+        notice_html=f"""
+          <p style="font-size:10px;color:{_DIM};margin:14px 0 0 0;font-family:monospace">
+            Esta mensagem foi enviada pela equipe do CaseOS para {nome}.
+          </p>""",
+    )
+
+    return await _send({
+        "from": settings.resend_from_email,
+        "to": [destinatario],
+        "subject": assunto,
+        "html": html,
+    })
