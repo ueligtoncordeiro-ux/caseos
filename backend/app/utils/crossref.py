@@ -76,10 +76,13 @@ async def validar_doi(doi: str) -> dict[str, Any]:
             }
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
+                # Only a definitive 404 means the DOI doesn't exist
                 return {"valido": False, "doi": doi, "motivo": "DOI não encontrado na Crossref"}
-            return {"valido": False, "doi": doi, "motivo": str(e)}
+            # Any other HTTP error (rate-limit, server error) → treat as uncertain, keep article
+            return {"valido": True, "doi": doi, "motivo": f"Erro HTTP {e.response.status_code} — mantido por precaução"}
         except Exception as e:
-            return {"valido": False, "doi": doi, "motivo": str(e)}
+            # Network errors, timeouts → keep the article (do not punish valid papers)
+            return {"valido": True, "doi": doi, "motivo": f"Erro de rede — mantido por precaução: {e}"}
 
 
 async def validar_lote(dois: list[str]) -> dict[str, dict]:

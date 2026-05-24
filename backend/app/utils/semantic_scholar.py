@@ -173,7 +173,7 @@ async def executar_busca(
         enrichment = await enriquecer_por_pmids(pmids_pubmed)
 
     # Etapa 2: busca independente
-    artigos_s2 = await buscar(query_principal, max_results=8)
+    artigos_s2 = await buscar(query_principal, max_results=15)
 
     # Etapa 3: recomendações baseadas no paper mais citado
     if not top_s2_id and artigos_s2:
@@ -181,7 +181,7 @@ async def executar_busca(
         top_s2_id = mais_citado.get("s2_id", "")
 
     if top_s2_id:
-        recomendados = await recomendar(top_s2_id, max_results=4)
+        recomendados = await recomendar(top_s2_id, max_results=8)
         # Adicionar apenas os que não duplicam por DOI/PMID
         pmids_existentes = {a.get("pmid") for a in artigos_s2 if a.get("pmid")}
         dois_existentes  = {a.get("doi")  for a in artigos_s2 if a.get("doi")}

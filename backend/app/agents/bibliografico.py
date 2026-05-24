@@ -1,27 +1,27 @@
 """
-Agente Bibliográfico — pipeline 5 fontes:
+Agente Bibliográfico — pipeline 6 fontes:
 
-  1. GPT-4o mini constrói queries otimizadas
+  1. LLM constrói 5 queries otimizadas
   2. PubMed      → base primária (35M artigos biomédicos)
   3. Semantic S2 → enriquece PMIDs + busca complementar (200M artigos)
   4. OpenAlex    → busca complementar (250M artigos, melhor cobertura BR)
-  5. Crossref    → valida todos os DOIs (anti-alucinação)
+  5. Crossref    → busca direta + valida DOIs (anti-alucinação, só remove 404)
   6. Unpaywall   → adiciona PDF open access ao pool
 
-Pool final: deduplicado por DOI/PMID, ordenado por citações, máx 25 artigos.
+Pool final: deduplicado por DOI/PMID, ordenado por citações, máx 40 artigos.
 """
 from app.models.schemas import CKO
 from app.utils.pubmed import pesquisar_pubmed
 from app.utils.semantic_scholar import executar_busca as s2_busca
 from app.utils.openalex import executar_busca as oa_busca
-from app.utils.crossref import validar_lote as crossref_validar
+from app.utils.crossref import validar_lote as crossref_validar, buscar as crossref_buscar
 from app.utils.unpaywall import enriquecer_pool as unpaywall_enriquecer
 from app.services.llm_router import chamar, extrair_json, Complexidade
 
 _SYSTEM = """Você é um especialista em busca bibliográfica biomédica.
 Construa queries PubMed otimizadas. Responda APENAS com JSON válido."""
 
-_TEMPLATE = """Dado o caso clínico abaixo, gere exatamente 4 queries PubMed em inglês.
+_TEMPLATE = """Dado o caso clínico abaixo, gere exatamente 5 queries PubMed em inglês.
 
 DIAGNÓSTICO: {diagnostico}
 INTERVENÇÃO: {intervencao}
@@ -33,9 +33,10 @@ REGRAS:
 2. Query 2: diagnóstico + intervenção (últimos 5 anos, sem case reports)
 3. Query 3: fisiopatologia/epidemiologia — Reviews/Systematic Reviews (últimos 10 anos)
 4. Query 4: diagnósticos diferenciais
+5. Query 5: termos MeSH amplos do diagnóstico + tratamento de primeira linha
 
 Responda com JSON:
-{{"queries": ["q1", "q2", "q3", "q4"]}}"""
+{{"queries": ["q1", "q2", "q3", "q4", "q5"]}}"""
 
 
 async def _construir_queries(cko: CKO) -> list[str]:
@@ -56,6 +57,7 @@ async def _construir_queries(cko: CKO) -> list[str]:
             f'("{diag}"[Title/Abstract]) AND (treatment OR therapy)',
             f'("{diag}"[MeSH Terms]) AND (review[pt] OR systematic review[pt])',
             f'("{diag}"[Title/Abstract]) AND (diagnosis OR differential)',
+            f'("{diag}"[MeSH Terms])',
         ]
 
 
@@ -92,18 +94,19 @@ def _deduplicar(artigos: list[dict]) -> list[dict]:
 async def executar(cko: CKO) -> list[dict]:
     queries = await _construir_queries(cko)
     query_principal = f"{cko.diagnostico.diagnostico_definitivo} {cko.intervencao.tipo}"
+    diag = cko.diagnostico.diagnostico_definitivo
 
-    # ── 1. PubMed — busca ampliada (12 por query, até 30 no total) ───────────
-    artigos_pubmed = await pesquisar_pubmed(queries, max_por_query=12, max_total=30)
+    # ── 1. PubMed — busca ampliada (15 por query, até 40 no total) ───────────
+    artigos_pubmed = await pesquisar_pubmed(queries, max_por_query=15, max_total=40)
 
-    # Fallback: se PubMed retornou pouco, adiciona query genérica mais ampla
-    if len(artigos_pubmed) < 10:
-        diag = cko.diagnostico.diagnostico_definitivo
+    # Fallback: se PubMed retornou pouco, adiciona queries mais amplas
+    if len(artigos_pubmed) < 12:
         fallback_queries = [
             f'("{diag}"[Title/Abstract]) AND (surgery OR treatment OR therapy)',
             f'("{diag}"[MeSH Terms])',
+            f'{diag} management',
         ]
-        artigos_extra = await pesquisar_pubmed(fallback_queries, max_por_query=10, max_total=15)
+        artigos_extra = await pesquisar_pubmed(fallback_queries, max_por_query=12, max_total=20)
         artigos_pubmed = _deduplicar(artigos_pubmed + artigos_extra)
 
     # ── 2. Semantic Scholar ──────────────────────────────────────────────────
@@ -119,26 +122,32 @@ async def executar(cko: CKO) -> list[dict]:
                 art["open_access_url"] = enrichment_s2[pmid].get("open_access_url", "")
 
     # ── 3. OpenAlex ──────────────────────────────────────────────────────────
-    artigos_oa = await oa_busca(query_principal, cko.diagnostico.diagnostico_definitivo)
+    artigos_oa = await oa_busca(query_principal, diag)
+
+    # ── 4. Crossref — busca direta como fonte adicional ───────────────────────
+    try:
+        artigos_crossref = await crossref_buscar(diag, max_results=15)
+    except Exception:
+        artigos_crossref = []
 
     # ── Mesclar todas as fontes ───────────────────────────────────────────────
-    pool = _deduplicar(artigos_pubmed + artigos_s2 + artigos_oa)
+    pool = _deduplicar(artigos_pubmed + artigos_s2 + artigos_oa + artigos_crossref)
 
-    # ── 4. Crossref — validar DOIs (anti-alucinação) ──────────────────────────
+    # ── 5. Crossref — validar DOIs (anti-alucinação): remove APENAS 404 ──────
     dois = [a["doi"] for a in pool if a.get("doi")]
     if dois:
         validacoes = await crossref_validar(dois)
-        # Remover artigos com DOI inválido (não encontrado na Crossref)
+        # Remove only articles whose DOI is DEFINITIVELY not found (HTTP 404)
         pool = [
             art for art in pool
             if not art.get("doi") or validacoes.get(art["doi"], {}).get("valido", True)
         ]
 
-    # ── 5. Unpaywall — adicionar PDF open access ──────────────────────────────
+    # ── 6. Unpaywall — adicionar PDF open access ──────────────────────────────
     pool = await unpaywall_enriquecer(pool)
 
-    # ── Ordenar e numerar (máx 30 para dar margem ao redator escolher ≥15) ────
-    pool = sorted(pool, key=lambda x: x.get("citation_count", 0), reverse=True)[:30]
+    # ── Ordenar e numerar (máx 40 para dar margem ao redator escolher ≥15) ────
+    pool = sorted(pool, key=lambda x: x.get("citation_count", 0), reverse=True)[:40]
 
     for i, art in enumerate(pool, start=1):
         art["numero"] = i
