@@ -98,6 +98,15 @@ PERIÓDICO: {periodico} | FORMATO: {formato_ref}
 ══ REFERÊNCIAS DISPONÍVEIS ══
 {referencias}
 
+══ IMAGENS CLÍNICAS ({n_imagens} figura(s)) ══
+{imagens_txt}
+
+INSTRUÇÕES PARA FIGURAS:
+- Cite cada figura no texto como "(Figura N)" ou "conforme ilustrado na Figura N" no ponto mais relevante da narrativa
+- No Caso Clínico: cite figuras radiográficas no contexto dos achados de imagem; figuras clínicas no exame físico
+- Não reescreva as legendas — apenas mencione as figuras no texto
+- Se não houver imagens, ignore esta seção completamente
+
 ══ ESTRUTURA (APENAS ESTAS SEÇÕES) ══
 TÍTULO: sentence case (apenas primeira palavra e nomes próprios em maiúsculo); NÃO use travessão; exemplo: "Osteorradionecrose de mandíbula após radioterapia: relato de caso"
 PALAVRAS-CHAVE: 3–5 descritores MeSH/DeCS em português
@@ -142,6 +151,15 @@ CASO CLÍNICO (resumido): {caso_resumo}
 
 ══ REFERÊNCIAS DISPONÍVEIS ══
 {referencias}
+
+══ IMAGENS CLÍNICAS ({n_imagens} figura(s)) ══
+{imagens_txt}
+
+INSTRUÇÕES PARA FIGURAS:
+- Cite cada figura no texto como "(Figura N)" ou "conforme ilustrado na Figura N" no ponto mais relevante da narrativa
+- No Caso Clínico: cite figuras radiográficas no contexto dos achados de imagem; figuras clínicas no exame físico
+- Não reescreva as legendas — apenas mencione as figuras no texto
+- Se não houver imagens, ignore esta seção completamente
 
 ══ ESTRUTURA OBRIGATÓRIA (APENAS ESTAS SEÇÕES) ══
 DISCUSSÃO: 10 parágrafos ~900 palavras — cada parágrafo cita ao menos 2 refs diferentes
@@ -233,8 +251,20 @@ async def executar(cko: CKO, artigos: list[dict]) -> ArtigoGerado:
     kw = _build_cko_kwargs(cko)
     refs_txt = _refs_txt(artigos)
 
+    # ── Build imagens context ─────────────────────────────────────────────────
+    if cko.imagens:
+        n_imagens = len(cko.imagens)
+        linhas = [
+            f"Figura {img.numero_figura}: {img.titulo_abrev or ''} — {img.legenda}"
+            for img in cko.imagens
+        ]
+        imagens_txt = "\n".join(linhas)
+    else:
+        n_imagens = 0
+        imagens_txt = "Nenhuma imagem fornecida."
+
     # ── Pass 1: titulo, palavras_chave, resumo, introducao, caso_clinico ─────
-    prompt1 = _TEMPLATE_PASS1.format(**kw, referencias=refs_txt)
+    prompt1 = _TEMPLATE_PASS1.format(**kw, referencias=refs_txt, n_imagens=n_imagens, imagens_txt=imagens_txt)
     resp1 = await chamar(_SYSTEM, prompt1, complexidade=Complexidade.ALTA, max_tokens=5000)
     data1 = extrair_json(resp1)
 
@@ -259,6 +289,8 @@ async def executar(cko: CKO, artigos: list[dict]) -> ArtigoGerado:
         intro_resumo=intro_resumo,
         caso_resumo=caso_resumo,
         referencias=refs_txt,
+        n_imagens=n_imagens,
+        imagens_txt=imagens_txt,
     )
 
     discussao: list[str] = []

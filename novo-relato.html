@@ -2417,7 +2417,7 @@ function handleFiles(files) {
     const reader = new FileReader();
     const imgId = Date.now() + '_' + Math.random().toString(36).substr(2,5);
     reader.onload = function(ev) {
-      uploadedImages.push({ id: imgId, name: file.name, type: file.type, base64: ev.target.result, caption: '' });
+      uploadedImages.push({ id: imgId, name: file.name, type: file.type, base64: ev.target.result, caption: '', titulo_abrev: '', uploaded_filename: null });
       renderImgGrid();
     };
     reader.readAsDataURL(file);
@@ -2427,11 +2427,14 @@ function handleFiles(files) {
 
 function renderImgGrid() {
   if (uploadedImages.length === 0) { imgGrid.innerHTML = ''; return; }
-  imgGrid.innerHTML = uploadedImages.map(function(img) {
+  imgGrid.innerHTML = uploadedImages.map(function(img, idx) {
     return '<div class="img-card">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--t3);margin-bottom:4px;">Figura ' + (idx+1) + '</div>' +
       '<img class="thumb" src="' + img.base64 + '" alt="' + img.name + '" />' +
       '<div class="img-body">' +
-        '<input type="text" value="' + (img.caption||'') + '" placeholder="Legenda da imagem..." ' +
+        '<input type="text" value="' + (img.titulo_abrev||'') + '" placeholder="Título abreviado — ex: Radiografia panorâmica pré-operatória" ' +
+          'oninput="updateTituloAbrev(\'' + img.id + '\',this.value)" style="margin-bottom:6px;" />' +
+        '<input type="text" value="' + (img.caption||'') + '" placeholder="Legenda completa da figura para publicação..." ' +
           'oninput="updateCaption(\'' + img.id + '\',this.value)" />' +
         '<button class="remove-img" onclick="removeImg(\'' + img.id + '\')">✕ Remover</button>' +
       '</div></div>';
@@ -2443,10 +2446,51 @@ function updateCaption(id, val) {
   if (img) img.caption = val;
 }
 
+function updateTituloAbrev(id, val) {
+  const img = uploadedImages.find(function(i) { return i.id === id; });
+  if (img) img.titulo_abrev = val;
+}
+
 function removeImg(id) {
   const idx = uploadedImages.findIndex(function(i) { return i.id === id; });
   if (idx !== -1) uploadedImages.splice(idx, 1);
   renderImgGrid();
+}
+
+function dataURLtoBlob(dataURL) {
+  const [header, data] = dataURL.split(',');
+  const mime = header.match(/:(.*?);/)[1];
+  const binary = atob(data);
+  const arr = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+async function _uploadImages(token) {
+  if (uploadedImages.length === 0) return;
+  for (let i = 0; i < uploadedImages.length; i++) {
+    const img = uploadedImages[i];
+    try {
+      const blob = dataURLtoBlob(img.base64);
+      const ext = img.name.split('.').pop() || 'jpg';
+      const fd = new FormData();
+      fd.append('arquivo', blob, 'figura_' + (i+1) + '.' + ext);
+      fd.append('numero_figura', i + 1);
+      fd.append('legenda', img.caption || ('Figura ' + (i+1)));
+      fd.append('titulo_abrev', img.titulo_abrev || ('Figura ' + (i+1)));
+      const res = await fetch(API + '/imagens/' + sessaoId, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: fd
+      });
+      if (res.ok) {
+        const data = await res.json();
+        img.uploaded_filename = data.filename;
+      }
+    } catch(e) {
+      console.warn('[CaseOS] Falha ao upload figura', i+1, e);
+    }
+  }
 }
 
 /* ══ HELPERS ══ */
@@ -2516,8 +2560,13 @@ function coletarDados() {
       eventos_adversos: getV('eventosAdversos')
     },
     perspectiva_paciente: getV('perspectivaPaciente'),
-    imagens: uploadedImages.map(function(img) {
-      return { nome: img.name, tipo: img.type, base64: img.base64, legenda: img.caption };
+    imagens: uploadedImages.map(function(img, idx) {
+      return {
+        numero_figura: idx + 1,
+        legenda: img.caption || ('Figura ' + (idx+1)),
+        titulo_abrev: img.titulo_abrev || null,
+        filename: img.uploaded_filename || null
+      };
     }),
     editorial: {
       problemas_clinicos: getV('problemasClinicos'),
@@ -2619,6 +2668,12 @@ async function iniciarGeracao() {
   if (!autenticado) return; // login gate shown — user can choose "Ver prévia gratuita"
 
   if (!_validarFormulario()) return;
+
+  // Upload images first, before collecting CKO data
+  if (uploadedImages.length > 0) {
+    showToast('⬆ Enviando imagens clínicas...', 'info');
+    await _uploadImages(getToken());
+  }
 
   const dados = coletarDados();
   document.getElementById('pipelineModal').classList.add('show');
