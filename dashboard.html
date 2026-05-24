@@ -3494,10 +3494,25 @@ tbody td {
 <!-- Modal de Detalhe do Relato -->
 <div class="modal-overlay" id="modalRelato" onclick="fecharModalRelato(event)">
   <div class="modal modal-relato" onclick="event.stopPropagation()">
-    <div class="modal-header">
-      <div class="modal-title" id="modalRelatoTitulo">Relato de Caso</div>
-      <button class="btn-editar-secao" id="btnEditarTitulo" onclick="editarTitulo()" style="flex-shrink:0;margin-left:8px">✏ Editar</button>
-      <button class="modal-close" onclick="fecharModalRelato()">✕</button>
+    <div class="modal-header" id="modalRelatoHeader">
+      <!-- View mode -->
+      <div id="tituloViewMode" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+        <div class="modal-title" id="modalRelatoTitulo" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Relato de Caso</div>
+        <button class="btn-editar-secao" id="btnEditarTitulo" onclick="editarTituloInline()" style="flex-shrink:0">✏ Editar</button>
+      </div>
+      <!-- Edit mode (hidden by default) -->
+      <div id="tituloEditMode" style="display:none;flex:1;gap:8px;align-items:center">
+        <input id="tituloInput" type="text" style="
+          flex:1; min-width:0; padding:7px 12px;
+          border:1.5px solid var(--card-bdr); border-radius:8px;
+          font-family:var(--head); font-size:15px; font-weight:700;
+          color:var(--t1); background:var(--input-bg);
+          outline:none; transition:border-color .15s;
+        " onkeydown="if(event.key==='Enter')salvarTituloInline();if(event.key==='Escape')cancelarTituloInline()">
+        <button class="btn-sec-salvar" onclick="salvarTituloInline()" style="white-space:nowrap">💾 Salvar</button>
+        <button class="btn-sec-cancelar" onclick="cancelarTituloInline()">Cancelar</button>
+      </div>
+      <button class="modal-close" onclick="fecharModalRelato()" style="flex-shrink:0;margin-left:8px">✕</button>
     </div>
     <div class="modal-body" id="modalRelatoBody">
       <div style="text-align:center;padding:40px;color:var(--t3)">Carregando…</div>
@@ -4334,6 +4349,7 @@ function _renderModalRelato(d) {
 function fecharModalRelato(e) {
   if (!e || e.target === document.getElementById('modalRelato')) {
     document.getElementById('modalRelato').classList.remove('open');
+    cancelarTituloInline(); // reset title edit mode
   }
 }
 
@@ -4460,27 +4476,54 @@ async function melhorarSecao(chave) {
   }
 }
 
-function editarTitulo() {
+function editarTituloInline() {
   const tituloEl = document.getElementById('modalRelatoTitulo');
+  const input    = document.getElementById('tituloInput');
+  if (!tituloEl || !input) return;
+  // Populate input with current title text (strip badge if any)
+  const bv = tituloEl.querySelector('.badge-versao');
+  input.value = (bv ? tituloEl.childNodes[0]?.textContent : tituloEl.textContent).trim();
+  document.getElementById('tituloViewMode').style.display = 'none';
+  document.getElementById('tituloEditMode').style.display = 'flex';
+  input.focus();
+  input.select();
+  // Focus ring
+  input.addEventListener('focus', () => { input.style.borderColor = '#8FA800'; input.style.boxShadow = '0 0 0 3px rgba(200,255,0,0.18)'; }, { once: false });
+  input.addEventListener('blur',  () => { input.style.borderColor = 'var(--card-bdr)'; input.style.boxShadow = 'none'; }, { once: false });
+}
+
+function cancelarTituloInline() {
+  document.getElementById('tituloViewMode').style.display = 'flex';
+  document.getElementById('tituloEditMode').style.display = 'none';
+}
+
+async function salvarTituloInline() {
   const sessaoId = window.__relatoAtualId;
-  if (!sessaoId || !tituloEl) return;
-  const tituloAtual = tituloEl.firstChild?.textContent?.trim() || tituloEl.textContent.trim();
-  const novoTitulo = prompt('Editar título do relato:', tituloAtual);
-  if (!novoTitulo || novoTitulo === tituloAtual) return;
-  // Reuse the rename endpoint
-  fetch(`${API}/artigo/${sessaoId}`, {
-    method: 'PATCH',
-    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ titulo: novoTitulo }),
-  }).then(r => {
-    if (!r.ok) throw new Error();
-    // Update modal title (preserve version badge if present)
+  const input    = document.getElementById('tituloInput');
+  const tituloEl = document.getElementById('modalRelatoTitulo');
+  if (!sessaoId || !input || !tituloEl) return;
+  const novoTitulo = input.value.trim();
+  if (!novoTitulo) return;
+  const btn = document.querySelector('#tituloEditMode .btn-sec-salvar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando…'; }
+  try {
+    const res = await fetch(`${API}/artigo/${sessaoId}`, {
+      method: 'PATCH',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo: novoTitulo }),
+    });
+    if (!res.ok) throw new Error();
     const bv = tituloEl.querySelector('.badge-versao');
     tituloEl.textContent = novoTitulo;
     if (bv) tituloEl.appendChild(bv);
+    cancelarTituloInline();
     mostrarToast('Título atualizado!', 'success', '✏️');
     carregarHistorico(paginaAtual);
-  }).catch(() => mostrarToast('Erro ao atualizar título.', 'error', '⚠️'));
+  } catch {
+    mostrarToast('Erro ao atualizar título.', 'error', '⚠️');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Salvar'; }
+  }
 }
 
 /* Filter & search */
