@@ -100,19 +100,90 @@ body {
 .mock-label { color: var(--gray); flex: 1; }
 .mock-score { color: var(--obsidian); font-weight: 700; font-size: 15px; }
 
-/* Pixel character — bottom of brand panel */
+/* Pixel character + speech bubble — bottom of brand panel */
 .brand-character {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: flex-end;
-  align-items: flex-end;
   margin-top: auto;
   pointer-events: none;
+  gap: 0;
 }
+
+/* Speech bubble above the character */
+.brand-bubble {
+  position: relative;
+  background: var(--white);
+  border: 3px solid var(--obsidian);
+  border-radius: 0;
+  padding: 12px 16px;
+  max-width: 220px;
+  text-align: left;
+  margin-bottom: 14px;
+  image-rendering: pixelated;
+  box-shadow:
+    -3px 0 0 0 var(--obsidian),
+     3px 0 0 0 var(--obsidian),
+     0 -3px 0 0 var(--obsidian),
+     0  3px 0 0 var(--obsidian);
+}
+/* Cauda apontando para baixo (em direção ao personagem) */
+.brand-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 13px solid var(--obsidian);
+}
+.brand-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 9px solid var(--white);
+}
+.brand-bubble-text {
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  font-size: 11px;
+  color: var(--obsidian);
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  white-space: pre-line;
+  display: block;
+}
+.brand-bubble-cursor {
+  display: inline-block;
+  width: 7px; height: 11px;
+  background: var(--acid);
+  margin-left: 2px;
+  vertical-align: middle;
+  animation: blink-login 0.8s step-end infinite;
+}
+@keyframes blink-login {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
 .brand-character img {
   width: 220px;
   height: auto;
   display: block;
   transform: scaleX(-1); /* vira para encarar o formulário */
+  animation: float-login 3.5s ease-in-out infinite;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.1));
+}
+@keyframes float-login {
+  0%, 100% { transform: scaleX(-1) translateY(0px); }
+  50%       { transform: scaleX(-1) translateY(-8px); }
 }
 
 .brand-footer {
@@ -410,8 +481,11 @@ body {
       </div>
     </div>
 
-    <!-- Personagem pixel -->
+    <!-- Personagem pixel + balão de fala -->
     <div class="brand-character">
+      <div class="brand-bubble">
+        <span class="brand-bubble-text" id="loginBubbleText"></span><span class="brand-bubble-cursor" id="loginBubbleCursor">█</span>
+      </div>
       <img src="assets/pixel-researcher.png" alt="">
     </div>
 
@@ -804,6 +878,28 @@ async function submitReset(e) {
     setLoading('btnReset', false);
   }
 }
+</script>
+
+<script>
+/* ── Typewriter no balão do personagem ── */
+(function() {
+  const texto = 'Relatos de caso\npublicáveis\nem minutos.\n\nScience starts\nwith one case.';
+  const el    = document.getElementById('loginBubbleText');
+  const cursor= document.getElementById('loginBubbleCursor');
+  if (!el) return;
+  let i = 0;
+  function type() {
+    if (i < texto.length) {
+      el.textContent += texto[i++];
+      const delay = texto[i - 1] === '\n' ? 260 : (Math.random() < 0.12 ? 110 : 45);
+      setTimeout(type, delay);
+    } else {
+      // Blink cursor after done
+      setTimeout(() => { if (cursor) cursor.style.display = 'none'; }, 1800);
+    }
+  }
+  setTimeout(type, 700);
+})();
 </script>
 
 <!-- Overlay: API acordando -->

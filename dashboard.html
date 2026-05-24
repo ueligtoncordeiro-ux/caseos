@@ -2948,54 +2948,6 @@ tbody td {
       </button>
     </div>
 
-    <!-- Tools -->
-    <div class="section-header">
-      <span class="section-title">Ferramentas</span>
-    </div>
-    <div class="tools-grid">
-      <div class="tools-card">
-        <div class="tools-copy">
-          <img class="tools-logo" src="assets/logo-voando-na-ia.png" alt="">
-          <div>
-            <div class="tools-badge">EBOOK</div>
-            <div class="tools-title">+200 Prompts para Mestrado e Doutorado</div>
-            <div class="tools-sub">
-              Acesse o ebook com prompts para escrever projetos acadêmicos usando inteligência artificial.
-            </div>
-          </div>
-        </div>
-        <div class="tools-actions">
-          <a class="btn btn-primary" href="https://docs.google.com/document/d/1_oPKF0P3cDEGtg5h5nPHmTaAxuNcpV-js0nz8bwUzBk/edit" target="_blank" rel="noopener">
-            Abrir ebook
-          </a>
-          <a class="btn btn-secondary" href="https://membros.voandonaia.com/dashboard" target="_blank" rel="noopener">
-            Área do usuário
-          </a>
-        </div>
-      </div>
-
-      <div class="tools-card">
-        <div class="tools-copy">
-          <img class="tools-logo" src="assets/logo-voando-na-ia.png" alt="">
-          <div>
-            <div class="tools-badge">EBOOK</div>
-            <div class="tools-title">Meus 200 Prompts Secretos</div>
-            <div class="tools-sub">
-              Abra o material secreto de prompts para planejar, escrever e lapidar seu projeto de pesquisa.
-            </div>
-          </div>
-        </div>
-        <div class="tools-actions">
-          <a class="btn btn-primary" href="https://docs.google.com/document/d/1vyxkGeriv6JwAaW3w1lNZHDUZrqvQZSYXhD0qAo987I/edit" target="_blank" rel="noopener">
-            Abrir ebook
-          </a>
-          <a class="btn btn-secondary" href="https://membros.voandonaia.com/dashboard" target="_blank" rel="noopener">
-            Área do usuário
-          </a>
-        </div>
-      </div>
-    </div>
-
     <!-- Articles table -->
     <div id="tabelaSection">
       <div class="section-header">
@@ -3055,6 +3007,54 @@ tbody td {
         <div class="pagination" id="paginationBar" style="display:none">
           <span class="pagination-info" id="paginacaoInfo"></span>
           <div class="pagination-btns" id="paginacaoBtns"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tools -->
+    <div class="section-header" style="margin-top:32px">
+      <span class="section-title">Ferramentas</span>
+    </div>
+    <div class="tools-grid">
+      <div class="tools-card">
+        <div class="tools-copy">
+          <img class="tools-logo" src="assets/logo-voando-na-ia.png" alt="">
+          <div>
+            <div class="tools-badge">EBOOK</div>
+            <div class="tools-title">+200 Prompts para Mestrado e Doutorado</div>
+            <div class="tools-sub">
+              Acesse o ebook com prompts para escrever projetos acadêmicos usando inteligência artificial.
+            </div>
+          </div>
+        </div>
+        <div class="tools-actions">
+          <a class="btn btn-primary" href="https://membros.voandonaia.com/dashboard" target="_blank" rel="noopener">
+            Abrir ebook
+          </a>
+          <a class="btn btn-secondary" href="https://membros.voandonaia.com/dashboard" target="_blank" rel="noopener">
+            Área do usuário
+          </a>
+        </div>
+      </div>
+
+      <div class="tools-card">
+        <div class="tools-copy">
+          <img class="tools-logo" src="assets/logo-voando-na-ia.png" alt="">
+          <div>
+            <div class="tools-badge">EBOOK</div>
+            <div class="tools-title">Meus 200 Prompts Secretos</div>
+            <div class="tools-sub">
+              Abra o material secreto de prompts para planejar, escrever e lapidar seu projeto de pesquisa.
+            </div>
+          </div>
+        </div>
+        <div class="tools-actions">
+          <a class="btn btn-primary" href="https://membros.voandonaia.com/dashboard" target="_blank" rel="noopener">
+            Abrir ebook
+          </a>
+          <a class="btn btn-secondary" href="https://membros.voandonaia.com/dashboard" target="_blank" rel="noopener">
+            Área do usuário
+          </a>
         </div>
       </div>
     </div>
@@ -4303,8 +4303,8 @@ async function excluirConta() {
 const _NOTIF_LS_KEY = 'caseos_notif_lidas_v1';
 
 const notificacoes = [
-  { id: 1, texto: 'Bem-vindo ao CaseOS! Explore todas as funcionalidades.', tempo: 'agora' },
-  { id: 2, texto: 'Adicione créditos para gerar mais relatos.', tempo: '5 min atrás' },
+  { id: 1, texto: 'Seu relato está sendo preparado no CaseOS.', tempo: 'agora' },
+  { id: 2, texto: 'Lembre-se de não inserir dados identificáveis do paciente.', tempo: '5 min atrás' },
 ];
 
 function _notifLidasIds() {
@@ -4351,7 +4351,8 @@ function toggleNotifDropdown() {
   fecharDropdowns();
   if (!wasOpen) {
     dd.classList.add('open');
-    renderNotificacoes();
+    // Auto-mark all as read when the bell is opened
+    marcarTodasLidas();
   }
 }
 
