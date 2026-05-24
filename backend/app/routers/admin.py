@@ -811,3 +811,161 @@ async def enviar_email_manual(
     logger.info("ADMIN email manual → user=%s assunto='%s' by admin=%s",
                 u.id, body.assunto, admin.id)
     return {"ok": True, "destinatario": u.email}
+
+
+# ── Métricas de retenção ──────────────────────────────────────────────────────
+
+@router.get("/retention")
+async def metricas_retencao(
+    admin: Usuario = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Retenção mensal de publicadores:
+    Compara usuários que publicaram no mês anterior vs. no mês atual.
+    """
+    from datetime import timedelta
+    from sqlalchemy import distinct
+
+    agora = datetime.now(timezone.utc)
+    # Início do mês atual
+    mes_inicio = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    # Início do mês anterior
+    if agora.month == 1:
+        mes_anterior_inicio = agora.replace(year=agora.year - 1, month=12, day=1,
+                                            hour=0, minute=0, second=0, microsecond=0)
+    else:
+        mes_anterior_inicio = agora.replace(month=agora.month - 1, day=1,
+                                            hour=0, minute=0, second=0, microsecond=0)
+
+    def _query_publicadores(start, end=None):
+        stmt = select(distinct(Sessao.user_id)).where(
+            Sessao.status == "concluido",
+            Sessao.user_id.isnot(None),
+            Sessao.created_at >= start,
+        )
+        if end:
+            stmt = stmt.where(Sessao.created_at < end)
+        return stmt
+
+    rows_atual    = (await db.execute(_query_publicadores(mes_inicio))).scalars().all()
+    rows_anterior = (await db.execute(_query_publicadores(mes_anterior_inicio, mes_inicio))).scalars().all()
+
+    ativos_atual    = set(rows_atual)
+    ativos_anterior = set(rows_anterior)
+
+    retidos  = ativos_atual & ativos_anterior       # publicou nos dois meses
+    churned  = ativos_anterior - ativos_atual        # publicou mês passado, não este
+    novos    = ativos_atual - ativos_anterior        # primeiro artigo este mês
+
+    def taxa(n, d):
+        return round(n / d * 100, 1) if d else 0.0
+
+    return {
+        "mes_atual":           mes_inicio.strftime("%Y-%m"),
+        "mes_anterior":        mes_anterior_inicio.strftime("%Y-%m"),
+        "ativos_mes_atual":    len(ativos_atual),
+        "ativos_mes_anterior": len(ativos_anterior),
+        "retidos":             len(retidos),
+        "churned":             len(churned),
+        "novos_publicadores":  len(novos),
+        "taxa_retencao":       taxa(len(retidos), len(ativos_anterior)),
+        "taxa_churn":          taxa(len(churned), len(ativos_anterior)),
+    }
+
+
+# ── Broadcast (e-mail em lote) ────────────────────────────────────────────────
+
+class BroadcastRequest(BaseModel):
+    assunto:   str
+    mensagem:  str
+    cta_url:   Optional[str] = None
+    cta_label: Optional[str] = "Acessar o CaseOS"
+    planos:    list[str] = []          # [] = todos os planos
+    apenas_verificados: bool = True
+    apenas_ativos:      bool = True
+
+
+@router.get("/broadcast/preview")
+async def preview_broadcast(
+    planos:             str  = Query("", description="Planos separados por vírgula (vazio = todos)"),
+    apenas_verificados: bool = Query(True),
+    apenas_ativos:      bool = Query(True),
+    admin: Usuario = Depends(get_admin_user),
+    db:    AsyncSession = Depends(get_db),
+):
+    """Retorna o número de destinatários que seriam atingidos pelo broadcast."""
+    from sqlalchemy import and_
+
+    conditions = []
+    if planos:
+        pl = [p.strip() for p in planos.split(",") if p.strip() in _PLANOS_VALIDOS]
+        if pl:
+            conditions.append(Usuario.plano.in_(pl))
+    if apenas_verificados:
+        conditions.append(Usuario.is_verified == True)  # noqa: E712
+    if apenas_ativos:
+        conditions.append(Usuario.is_active == True)  # noqa: E712
+
+    stmt = select(func.count(Usuario.id))
+    if conditions:
+        stmt = stmt.where(and_(*conditions))
+    count = (await db.execute(stmt)).scalar() or 0
+    return {"count": count}
+
+
+@router.post("/broadcast")
+async def enviar_broadcast(
+    body:  BroadcastRequest,
+    admin: Usuario = Depends(get_admin_user),
+    db:    AsyncSession = Depends(get_db),
+):
+    """Envia e-mail em lote para usuários filtrados por plano/status."""
+    from sqlalchemy import and_
+    from app.services.email import enviar_email_admin
+
+    conditions = []
+    if body.planos:
+        pl = [p for p in body.planos if p in _PLANOS_VALIDOS]
+        if pl:
+            conditions.append(Usuario.plano.in_(pl))
+    if body.apenas_verificados:
+        conditions.append(Usuario.is_verified == True)  # noqa: E712
+    if body.apenas_ativos:
+        conditions.append(Usuario.is_active == True)  # noqa: E712
+
+    stmt = select(Usuario)
+    if conditions:
+        stmt = stmt.where(and_(*conditions))
+    result = await db.execute(stmt)
+    users = result.scalars().all()
+
+    if not users:
+        raise HTTPException(400, "Nenhum usuário encontrado com os filtros especificados.")
+
+    # Semáforo limita envios simultâneos → evita rate-limit do Resend
+    sem = asyncio.Semaphore(5)
+
+    async def _send_one(u: Usuario):
+        async with sem:
+            try:
+                await enviar_email_admin(
+                    destinatario=u.email,
+                    nome=u.nome,
+                    assunto=body.assunto,
+                    mensagem=body.mensagem,
+                    cta_url=body.cta_url or "",
+                    cta_label=body.cta_label or "Acessar o CaseOS",
+                )
+            except Exception as e:
+                logger.warning("Broadcast: falha ao enviar para %s: %s", u.email, e)
+
+    asyncio.create_task(
+        asyncio.gather(*[_send_one(u) for u in users], return_exceptions=True)
+    )
+
+    logger.warning(
+        "ADMIN BROADCAST → %d destinatários, assunto='%s' by admin=%s",
+        len(users), body.assunto, admin.id,
+    )
+    return {"ok": True, "enviando_para": len(users)}

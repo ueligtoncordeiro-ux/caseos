@@ -712,6 +712,56 @@ tbody td.mono { font-family: ui-monospace, monospace; font-size: 11px; }
         </div>
       </div>
 
+      <!-- ── Retenção Mensal ──────────────────────────────────────── -->
+      <div class="section-header" style="margin-top:4px;">
+        <h2>📈 Retenção de Publicadores</h2>
+        <button class="btn btn-ghost btn-sm" onclick="loadRetention()">↺ Atualizar</button>
+      </div>
+      <div id="retention-wrap" style="margin-bottom:28px;">
+        <div class="stats-grid" id="retention-grid">
+          <div class="stat-card" style="border-top:2px solid var(--green);">
+            <div class="stat-label">Taxa de Retenção</div>
+            <div class="stat-value" id="ret-taxa" style="color:var(--green);">—</div>
+            <div class="stat-sub">publicadores ativos nos 2 meses</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Ativos Este Mês</div>
+            <div class="stat-value" id="ret-atual">—</div>
+            <div class="stat-sub" id="ret-mes-atual">publicadores</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Ativos Mês Anterior</div>
+            <div class="stat-value" id="ret-anterior">—</div>
+            <div class="stat-sub" id="ret-mes-anterior">publicadores</div>
+          </div>
+          <div class="stat-card" style="border-top:2px solid var(--blue);">
+            <div class="stat-label">Novos Publicadores</div>
+            <div class="stat-value" id="ret-novos" style="color:var(--blue);">—</div>
+            <div class="stat-sub">1ª publicação este mês</div>
+          </div>
+          <div class="stat-card" style="border-top:2px solid var(--red);">
+            <div class="stat-label">Churned</div>
+            <div class="stat-value" id="ret-churned" style="color:var(--red);">—</div>
+            <div class="stat-sub" id="ret-taxa-churn">publicaram só mês passado</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Retidos</div>
+            <div class="stat-value" id="ret-retidos">—</div>
+            <div class="stat-sub">publicaram nos 2 meses</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Campanha em Lote ──────────────────────────────────── -->
+      <div class="section-header" style="margin-top:4px;">
+        <h2>📢 Campanha de E-mail</h2>
+        <button class="btn btn-primary btn-sm" onclick="openBroadcastModal()">+ Nova Campanha</button>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--card-bdr);border-radius:var(--radius);padding:16px 20px;margin-bottom:28px;font-size:13px;color:var(--t3);">
+        Envie e-mails em lote para segmentos de usuários (por plano, verificação ou status).
+        Use <strong style="color:var(--t1);">+ Nova Campanha</strong> para compor e enviar.
+      </div>
+
       <!-- ── Stripe Revenue ─────────────────────────────────────── -->
       <div class="section-header" style="margin-top: 8px;">
         <h2>💳 Receita (Stripe)</h2>
@@ -938,6 +988,75 @@ tbody td.mono { font-family: ui-monospace, monospace; font-size: 11px; }
     </div>
 
   </main>
+</div>
+
+<!-- ── Modal: Campanha de E-mail ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="broadcast-modal">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-header">
+      <h3>📢 Nova Campanha de E-mail</h3>
+      <button class="modal-close" onclick="closeModal('broadcast-modal')">✕</button>
+    </div>
+
+    <!-- Filtros de segmento -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--t3);margin-bottom:10px;">Segmento</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="bc-plano-free" value="free" onchange="previewBroadcast()" style="accent-color:var(--acid)"> Free
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="bc-plano-starter" value="starter" checked onchange="previewBroadcast()" style="accent-color:var(--acid)"> Starter
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="bc-plano-pro" value="pro" checked onchange="previewBroadcast()" style="accent-color:var(--acid)"> Pro
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="bc-plano-inst" value="institucional" checked onchange="previewBroadcast()" style="accent-color:var(--acid)"> Institucional
+      </label>
+    </div>
+    <div style="display:flex;gap:20px;margin-bottom:16px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="bc-verificados" checked onchange="previewBroadcast()" style="accent-color:var(--acid)"> Apenas verificados
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="bc-ativos" checked onchange="previewBroadcast()" style="accent-color:var(--acid)"> Apenas ativos
+      </label>
+    </div>
+
+    <!-- Preview de destinatários -->
+    <div style="background:var(--input-bg);border:1px solid var(--card-bdr);border-radius:7px;padding:10px 14px;margin-bottom:16px;font-size:13px;display:flex;align-items:center;gap:8px;">
+      <span style="color:var(--t3);">Destinatários:</span>
+      <strong id="bc-preview-count" style="color:var(--acid);">—</strong>
+      <span id="bc-preview-spinner" style="display:none;"><div class="spinner" style="width:12px;height:12px;"></div></span>
+    </div>
+
+    <!-- Conteúdo do e-mail -->
+    <div class="field">
+      <label>Assunto</label>
+      <input type="text" id="bc-assunto" placeholder="Ex: Novidade importante no CaseOS">
+    </div>
+    <div class="field">
+      <label>Mensagem (cada linha vira um parágrafo)</label>
+      <textarea id="bc-mensagem" rows="5"
+        style="width:100%;background:var(--input-bg);border:1px solid var(--card-bdr);border-radius:7px;color:var(--t1);font-family:var(--sans);font-size:13.5px;padding:9px 12px;outline:none;resize:vertical;transition:border-color 0.15s;"
+        placeholder="Olá! Temos uma novidade importante para você..."></textarea>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Link do botão (opcional)</label>
+        <input type="url" id="bc-cta-url" placeholder="https://caseos.voandonaia.com/...">
+      </div>
+      <div class="field">
+        <label>Rótulo do botão</label>
+        <input type="text" id="bc-cta-label" value="Acessar o CaseOS">
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('broadcast-modal')">Cancelar</button>
+      <button class="btn btn-primary" id="bc-send-btn" onclick="sendBroadcast()">📢 Enviar Campanha</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── Modal: Detalhe de Erro ──────────────────────────────────────────────── -->
@@ -1205,9 +1324,100 @@ async function loadOverview() {
   document.getElementById('status-rascunho').textContent    = st.rascunho || 0;
   document.getElementById('status-erro').textContent        = st.erro || 0;
 
-  // Carrega funil e alertas em paralelo (não bloqueiam o overview principal)
+  // Carrega seções secundárias em paralelo (não bloqueiam o overview principal)
   loadFunnel();
   loadQuotaAlerts();
+  loadRetention();
+}
+
+/* ── Retenção ─────────────────────────────────────────────────────────────── */
+async function loadRetention() {
+  const data = await apiJSON('/admin/retention');
+  if (!data) return;
+
+  document.getElementById('ret-taxa').textContent    = `${data.taxa_retencao}%`;
+  document.getElementById('ret-atual').textContent   = data.ativos_mes_atual;
+  document.getElementById('ret-anterior').textContent = data.ativos_mes_anterior;
+  document.getElementById('ret-novos').textContent   = data.novos_publicadores;
+  document.getElementById('ret-churned').textContent = data.churned;
+  document.getElementById('ret-retidos').textContent = data.retidos;
+
+  document.getElementById('ret-mes-atual').textContent   = `${data.mes_atual}`;
+  document.getElementById('ret-mes-anterior').textContent = `${data.mes_anterior}`;
+  document.getElementById('ret-taxa-churn').textContent   = `${data.taxa_churn}% churn`;
+
+  // Cor dinâmica da taxa de retenção
+  const taxa = data.taxa_retencao;
+  const el = document.getElementById('ret-taxa');
+  el.style.color = taxa >= 70 ? 'var(--green)' : taxa >= 40 ? 'var(--amber)' : 'var(--red)';
+}
+
+/* ── Broadcast ────────────────────────────────────────────────────────────── */
+let _bcPreviewTimeout;
+
+function openBroadcastModal() {
+  document.getElementById('bc-assunto').value   = '';
+  document.getElementById('bc-mensagem').value  = '';
+  document.getElementById('bc-cta-url').value   = '';
+  document.getElementById('bc-cta-label').value = 'Acessar o CaseOS';
+  previewBroadcast();
+  openModal('broadcast-modal');
+}
+
+function _getBcPlanos() {
+  const checks = ['free','starter','pro','institucional'];
+  return checks.filter(p => document.getElementById(`bc-plano-${p === 'institucional' ? 'inst' : p}`)?.checked);
+}
+
+async function previewBroadcast() {
+  clearTimeout(_bcPreviewTimeout);
+  _bcPreviewTimeout = setTimeout(async () => {
+    const spinner = document.getElementById('bc-preview-spinner');
+    const countEl = document.getElementById('bc-preview-count');
+    spinner.style.display = '';
+    countEl.textContent = '...';
+
+    const planos = _getBcPlanos().join(',');
+    const ver    = document.getElementById('bc-verificados').checked ? 'true' : 'false';
+    const ativ   = document.getElementById('bc-ativos').checked ? 'true' : 'false';
+
+    const data = await apiJSON(`/admin/broadcast/preview?planos=${encodeURIComponent(planos)}&apenas_verificados=${ver}&apenas_ativos=${ativ}`);
+    spinner.style.display = 'none';
+    countEl.textContent = data ? `${data.count} usuários` : 'erro';
+  }, 400);
+}
+
+async function sendBroadcast() {
+  const assunto  = document.getElementById('bc-assunto').value.trim();
+  const mensagem = document.getElementById('bc-mensagem').value.trim();
+  if (!assunto || !mensagem) { toast('Preencha assunto e mensagem.', 'error'); return; }
+
+  const countText = document.getElementById('bc-preview-count').textContent;
+  const count     = parseInt(countText) || 0;
+  if (!count) { toast('Nenhum destinatário com os filtros selecionados.', 'error'); return; }
+
+  if (!confirm(`Enviar campanha para ${count} usuários? Esta ação não pode ser desfeita.`)) return;
+
+  const btn = document.getElementById('bc-send-btn');
+  btn.disabled = true; btn.textContent = `⏳ Enviando para ${count}...`;
+
+  const data = await apiJSON('/admin/broadcast', {
+    method: 'POST',
+    body: JSON.stringify({
+      assunto,
+      mensagem,
+      cta_url:   document.getElementById('bc-cta-url').value.trim() || null,
+      cta_label: document.getElementById('bc-cta-label').value.trim() || 'Acessar o CaseOS',
+      planos:    _getBcPlanos(),
+      apenas_verificados: document.getElementById('bc-verificados').checked,
+      apenas_ativos:      document.getElementById('bc-ativos').checked,
+    }),
+  });
+
+  btn.disabled = false; btn.textContent = '📢 Enviar Campanha';
+  if (!data) return;
+  toast(`✅ Campanha disparada para ${data.enviando_para} usuários!`, 'success');
+  closeModal('broadcast-modal');
 }
 
 /* ── Users ────────────────────────────────────────────────────────────────── */

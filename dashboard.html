@@ -823,6 +823,42 @@ body {
 
 .dropdown-divider { height: 1px; background: var(--card-bdr); margin: 4px 0; }
 
+/* ── Quota Banner ────────────────────────────────────────────────────── */
+.quota-banner {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-size: 13.5px;
+  font-weight: 500;
+  flex-wrap: wrap;
+}
+.quota-banner.warn {
+  background: var(--amber-dim);
+  color: #92400E;
+  border: 1px solid rgba(217,119,6,0.25);
+}
+.quota-banner.crit {
+  background: var(--red-dim);
+  color: #991B1B;
+  border: 1px solid rgba(220,38,38,0.25);
+}
+.quota-banner .qb-icon { font-size: 18px; flex-shrink: 0; }
+.quota-banner .qb-msg  { flex: 1; min-width: 0; }
+.quota-banner .qb-msg a { color: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.quota-banner .qb-dismiss {
+  background: none; border: none; font-size: 16px; cursor: pointer;
+  color: inherit; opacity: 0.6; padding: 2px 4px; border-radius: 4px; flex-shrink: 0;
+}
+.quota-banner .qb-dismiss:hover { opacity: 1; }
+.quota-banner .qb-bar {
+  width: 100%; height: 4px; border-radius: 99px;
+  background: rgba(0,0,0,0.12); margin-top: 6px; overflow: hidden;
+}
+.quota-banner .qb-bar-fill { height: 100%; border-radius: 99px; }
+
 /* Page content */
 .page-content {
   flex: 1;
@@ -2600,6 +2636,17 @@ tbody td {
   <!-- Page content -->
   <main class="page-content" id="pageContent">
 
+    <!-- Quota alert banner (shown when artigos_mes ≥ 80% of plan limit) -->
+    <div class="quota-banner" id="quota-banner" role="alert">
+      <span class="qb-icon" id="qb-icon">⚡</span>
+      <div class="qb-msg">
+        <span id="qb-text"></span>
+        <a onclick="abrirModalPlanos(); dismissQuotaBanner()">Fazer upgrade agora</a>
+        <div class="qb-bar"><div class="qb-bar-fill" id="qb-bar-fill"></div></div>
+      </div>
+      <button class="qb-dismiss" onclick="dismissQuotaBanner()" aria-label="Fechar">✕</button>
+    </div>
+
     <!-- Greeting -->
     <div class="greeting">
       <div class="greeting-text">
@@ -3221,6 +3268,56 @@ function _renderUser(user) {
 
   // Highlight current plan in modal
   _destacarPlanoAtual(plano);
+
+  // Quota banner (artigos, não tokens)
+  _checkQuotaBanner(user);
+}
+
+/* ── Quota Banner ──────────────────────────────────────────────────────────── */
+function _checkQuotaBanner(user) {
+  const limiteArtigos = { free: 1, starter: 6, pro: 12 };
+  const plano = (user.plano || 'free').toLowerCase();
+  const limite = limiteArtigos[plano];
+  if (!limite) return;                 // institucional = ilimitado
+
+  const usados = user.artigos_mes || 0;
+  const pct    = Math.round(usados / limite * 100);
+  if (pct < 80) return;               // abaixo do threshold — sem banner
+
+  // Verificar se foi dispensado nesta sessão
+  const dismissKey = `qb_${plano}_${usados}_${limite}`;
+  if (sessionStorage.getItem(dismissKey)) return;
+
+  const banner  = document.getElementById('quota-banner');
+  const icon    = document.getElementById('qb-icon');
+  const text    = document.getElementById('qb-text');
+  const fill    = document.getElementById('qb-bar-fill');
+  if (!banner || !text || !fill) return;
+
+  const nextMap = { free: 'Starter', starter: 'Pro', pro: 'Institucional' };
+  const next    = nextMap[plano] || 'Pro';
+
+  if (usados >= limite) {
+    banner.className = 'quota-banner crit';
+    icon.textContent = '🚫';
+    text.textContent = `Limite atingido! Você usou ${usados} de ${limite} relato${limite > 1 ? 's' : ''} do plano ${plano.toUpperCase()} este mês. `;
+    fill.style.cssText = 'width:100%;background:#DC2626;';
+  } else {
+    banner.className = 'quota-banner warn';
+    icon.textContent = '⚡';
+    text.textContent = `Você usou ${usados} de ${limite} relato${limite > 1 ? 's' : ''} este mês (${pct}%). Considere o upgrade para ${next}. `;
+    fill.style.cssText = `width:${pct}%;background:#D97706;`;
+  }
+
+  banner._dismissKey = dismissKey;
+  banner.style.display = 'flex';
+}
+
+function dismissQuotaBanner() {
+  const banner = document.getElementById('quota-banner');
+  if (!banner) return;
+  if (banner._dismissKey) sessionStorage.setItem(banner._dismissKey, '1');
+  banner.style.display = 'none';
 }
 
 function _fmtTok(n) {
