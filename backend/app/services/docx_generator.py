@@ -147,6 +147,7 @@ def _add_secao(doc: Document, titulo: str, paragrafos: list[str]):
 
 
 def _add_referencias(doc: Document, artigo: ArtigoGerado):
+    import re
     _add_heading(doc, "Referências")
     for ref in artigo.referencias:
         p = doc.add_paragraph()
@@ -156,9 +157,38 @@ def _add_referencias(doc: Document, artigo: ArtigoGerado):
         p.paragraph_format.space_after = Pt(6)
         p.paragraph_format.first_line_indent = Cm(0)
         p.paragraph_format.left_indent = Cm(0)
-        run = p.add_run(f"{ref.numero}. {ref.formatada}")
+
+        # Avoid duplicate numbering: if `formatada` already starts with
+        # a number followed by a dot (e.g. "1. Marx RE..."), do NOT
+        # prepend the number again.
+        formatada = ref.formatada or ""
+        if re.match(r"^\d+\.", formatada.lstrip()):
+            texto_ref = formatada
+        else:
+            texto_ref = f"{ref.numero}. {formatada}"
+
+        run = p.add_run(texto_ref)
         run.font.name = "Times New Roman"
         run.font.size = Pt(12)
+
+        # DOI handling
+        doi = ref.doi if ref.doi else ""
+        doi = doi.strip()
+        if doi:
+            # Normalise: ensure it is displayed as a full URL
+            if not doi.startswith("https://"):
+                doi_url = f"https://doi.org/{doi}"
+            else:
+                doi_url = doi
+            doi_run = p.add_run(f" doi: {doi_url}")
+            doi_run.font.name = "Times New Roman"
+            doi_run.font.size = Pt(12)
+        else:
+            # No DOI — add a red warning
+            no_doi_run = p.add_run(" [DOI não localizado — verifique manualmente]")
+            no_doi_run.font.name = "Times New Roman"
+            no_doi_run.font.size = Pt(12)
+            no_doi_run.font.color.rgb = RGBColor(204, 0, 0)
 
 
 def _add_disclaimer(doc: Document):

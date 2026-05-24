@@ -2437,22 +2437,23 @@ tbody td {
   align-items: center;
 }
 
-/* Área superior: astronauta + balão lado a lado */
+/* Área superior: balão acima, astronauta abaixo — coluna centralizada */
 .empty-scene {
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
+  align-items: center;
   gap: 0;
   margin-bottom: 28px;
   position: relative;
 }
 
 .empty-char {
-  width: 130px;
+  width: 200px;
   height: auto;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   animation: float-char 3.5s ease-in-out infinite;
-  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.12));
+  filter: drop-shadow(0 8px 20px rgba(0,0,0,0.15));
   flex-shrink: 0;
   position: relative;
   z-index: 1;
@@ -2462,17 +2463,17 @@ tbody td {
   50%      { transform: translateY(-8px); }
 }
 
-/* Balão de fala pixel art */
+/* Balão de fala pixel art — acima do astronauta */
 .empty-bubble {
   position: relative;
   background: var(--card);
   border: 3px solid var(--t1);
   border-radius: 0;
   padding: 14px 18px 14px 16px;
-  margin-bottom: 18px;
-  max-width: 220px;
+  margin-bottom: 16px;
+  max-width: 240px;
   text-align: left;
-  /* Pixel corners — remove corner pixels via clip-path trick */
+  /* Pixel corners */
   box-shadow:
     -3px 0 0 0 var(--t1),
      3px 0 0 0 var(--t1),
@@ -2480,28 +2481,30 @@ tbody td {
      0  3px 0 0 var(--t1);
   image-rendering: pixelated;
 }
-/* Cauda esquerda do balão */
+/* Cauda inferior do balão — aponta para o astronauta abaixo */
 .empty-bubble::before {
   content: '';
   position: absolute;
-  left: -14px;
-  bottom: 22px;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
   width: 0;
   height: 0;
-  border-top: 6px solid transparent;
-  border-bottom: 6px solid transparent;
-  border-right: 12px solid var(--t1);
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 13px solid var(--t1);
 }
 .empty-bubble::after {
   content: '';
   position: absolute;
-  left: -8px;
-  bottom: 24px;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
   width: 0;
   height: 0;
-  border-top: 4px solid transparent;
-  border-bottom: 4px solid transparent;
-  border-right: 8px solid var(--card);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 9px solid var(--card);
 }
 
 /* Texto com efeito de digitação pixel */
