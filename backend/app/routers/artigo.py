@@ -637,7 +637,7 @@ async def editar_secao(
 
     secao = body.get("secao")
     conteudo = body.get("conteudo")
-    SECOES_VALIDAS = {"introducao", "caso_clinico", "discussao", "conclusao", "palavras_chave", "resumo"}
+    SECOES_VALIDAS = {"introducao", "caso_clinico", "discussao", "conclusao", "palavras_chave", "resumo", "referencias"}
     if secao not in SECOES_VALIDAS:
         raise HTTPException(status_code=400, detail=f"Seção inválida.")
 
@@ -651,6 +651,9 @@ async def editar_secao(
     elif secao == "resumo":
         if not isinstance(conteudo, dict):
             raise HTTPException(status_code=400, detail="conteudo deve ser um dicionário {introducao, caso, discussao, conclusao}.")
+    elif secao == "referencias":
+        if not isinstance(conteudo, list):
+            raise HTTPException(status_code=400, detail="conteudo deve ser uma lista de referências.")
 
     resultado = dict(sessao.resultado)
     resultado[secao] = conteudo

@@ -831,6 +831,52 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 .p-step-detail { font-size: 11.5px; color: var(--t3); margin-top: 3px; }
 .p-step-status { font-size: 16px; }
 .modal-actions { margin-top: 24px; display: flex; gap: 10px; justify-content: flex-end; }
+
+/* ── Rocket progress track ── */
+.rocket-track-wrap {
+  margin-top: 20px;
+  padding: 0 4px;
+}
+.rocket-track {
+  position: relative;
+  height: 16px;
+  background: var(--light);
+  border-radius: 99px;
+  border: 1.5px solid var(--border);
+  overflow: visible;
+}
+.rocket-track-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: linear-gradient(90deg, #C8FF00 0%, #8FA800 100%);
+  border-radius: 99px;
+  transition: width 1s cubic-bezier(.4,0,.2,1);
+  width: 0%;
+}
+.rocket-icon {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 40px;
+  height: auto;
+  transform: translateY(-50%) rotate(90deg);
+  transition: left 1s cubic-bezier(.4,0,.2,1);
+  z-index: 2;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.22));
+  pointer-events: none;
+}
+.rocket-track-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--t3);
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
 .btn-modal-ok {
   padding: 10px 24px; border-radius: 8px; background: var(--obsidian); color: #fff;
   border: none; font-size: 14px; font-weight: 600; cursor: pointer;
@@ -1976,6 +2022,19 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
       </div>
     </div>
 
+    <!-- Rocket progress bar -->
+    <div class="rocket-track-wrap">
+      <div class="rocket-track">
+        <div class="rocket-track-fill" id="rocketFill"></div>
+        <img class="rocket-icon" id="rocketIcon" src="assets/pixel-rocket.svg" alt="">
+      </div>
+      <div class="rocket-track-labels">
+        <span>Início</span>
+        <span id="rocketStepLabel">Etapa 0/6</span>
+        <span>Concluído</span>
+      </div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn-modal-ok" id="btnModalOk" onclick="location.href='dashboard.html'" style="display:none">Ver no Dashboard →</button>
     </div>
@@ -2747,6 +2806,14 @@ function _resetPipelineUI(demoMode) {
   }
   document.getElementById('btnModalOk').style.display = 'none';
   setPipelineChar(1, false);
+  // Reset rocket to start position
+  updateRocketProgress(1, false);
+  const fill = document.getElementById('rocketFill');
+  if (fill) fill.style.width = '0%';
+  const rocket = document.getElementById('rocketIcon');
+  if (rocket) rocket.style.left = '0%';
+  const lbl = document.getElementById('rocketStepLabel');
+  if (lbl) lbl.textContent = 'Etapa 0/6';
 }
 
 function _abrirPipelineWS(endpoint, dados, autenticado) {
@@ -2847,6 +2914,20 @@ function setPipelineChar(step, done) {
   }
 }
 
+const TOTAL_STEPS = 6;
+function updateRocketProgress(etapa, done) {
+  const fill   = document.getElementById('rocketFill');
+  const rocket = document.getElementById('rocketIcon');
+  const lbl    = document.getElementById('rocketStepLabel');
+  if (!fill || !rocket) return;
+  const pct = done ? 100 : Math.max(0, Math.min(((etapa - 1) / TOTAL_STEPS) * 100, 96));
+  fill.style.width = pct + '%';
+  // Rocket position: clamp so the icon doesn't overflow the track
+  const rocketPct = done ? 'calc(100% - 20px)' : `calc(${pct}% - 20px)`;
+  rocket.style.left = rocketPct;
+  if (lbl) lbl.textContent = done ? '✓ Concluído!' : `Etapa ${etapa}/${TOTAL_STEPS}`;
+}
+
 function handlePipelineMessage(msg) {
   const tipo = msg.tipo || '';
 
@@ -2881,6 +2962,7 @@ function handlePipelineMessage(msg) {
       el6.querySelector('.p-step-detail').textContent = 'Documento gerado!';
     }
     setPipelineChar(6, true);
+    updateRocketProgress(6, true);
     document.getElementById('pipelineStatusMsg').textContent = '✅ Relato gerado com sucesso!';
     document.getElementById('btnModalOk').style.display = 'inline-flex';
     if (msg.resultado && msg.resultado.care_score) {
@@ -2931,6 +3013,7 @@ function handlePipelineMessage(msg) {
   }
 
   setPipelineChar(etapa, false);
+  updateRocketProgress(etapa, false);
   document.getElementById('pipelineStatusMsg').textContent = `Agente: ${msg.nome || 'Processando'} — aguarde...`;
 }
 
@@ -2966,6 +3049,7 @@ async function httpFallbackDemo() {
   document.getElementById('pipelineStatusMsg').textContent = 'Gerando prévia…';
   for (let i = 1; i <= 4; i++) {
     setPipelineChar(i, false);
+    updateRocketProgress(i, false);
     const el = document.getElementById('ps-' + i);
     if (!el) continue;
     el.className = 'p-step active';
@@ -2989,6 +3073,7 @@ async function httpFallback() {
   document.getElementById('pipelineStatusMsg').textContent = 'Processando…';
   for (let i = 1; i <= 6; i++) {
     setPipelineChar(i, false);
+    updateRocketProgress(i, false);
     const el = document.getElementById('ps-' + i);
     if (!el) continue;
     el.className = 'p-step active';
@@ -2999,6 +3084,7 @@ async function httpFallback() {
     el.querySelector('.p-step-status').textContent = '✅';
   }
   setPipelineChar(6, true);
+  updateRocketProgress(6, true);
   document.getElementById('pipelineStatusMsg').textContent = '✅ Relato gerado com sucesso!';
   document.getElementById('btnModalOk').style.display = 'inline-flex';
 }

@@ -1455,18 +1455,24 @@ tbody td {
 .sec-textarea {
   width: 100%;
   min-height: 180px;
-  padding: 12px;
-  border: 1.5px solid var(--indigo, #4F46E5);
+  padding: 12px 14px;
+  border: 1.5px solid var(--card-bdr);
   border-radius: 8px;
-  font-family: 'Georgia', serif;
+  font-family: var(--sans);
   font-size: 13.5px;
   line-height: 1.7;
   color: var(--t1);
   resize: vertical;
   box-sizing: border-box;
   outline: none;
-  background: #FAFEFF;
+  background: var(--input-bg);
   margin-top: 10px;
+  transition: border-color .15s;
+}
+.sec-textarea:focus {
+  border-color: #8FA800;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(200,255,0,0.18);
 }
 .sec-edit-actions {
   display: flex;
@@ -1505,7 +1511,8 @@ tbody td {
   letter-spacing: .02em; margin-left: 6px;
 }
 .relato-refs { list-style: none; padding: 0; margin: 0; }
-.relato-refs li { font-size: 13px; color: var(--t2); line-height: 1.6; margin-bottom: 6px; padding-left: 20px; text-indent: -20px; }
+.relato-refs li { font-size: 13px; color: var(--t2); line-height: 1.6; margin-bottom: 8px; display: flex; gap: 6px; }
+.ref-num { flex-shrink: 0; font-weight: 600; color: var(--t3); min-width: 22px; }
 .care-banner { display: flex; align-items: center; gap: 14px; background: var(--row-hover); border: 1px solid var(--card-bdr); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px; }
 .care-banner .score-num { font-size: 22px; font-weight: 700; color: #2563EB; }
 .care-banner-info { font-size: 13px; color: var(--t2); }
@@ -3489,7 +3496,7 @@ tbody td {
   <div class="modal modal-relato" onclick="event.stopPropagation()">
     <div class="modal-header">
       <div class="modal-title" id="modalRelatoTitulo">Relato de Caso</div>
-      <button class="btn-editar-secao" id="btnEditarTitulo" onclick="editarTitulo()" style="flex-shrink:0;margin-left:8px" title="Editar título">✏</button>
+      <button class="btn-editar-secao" id="btnEditarTitulo" onclick="editarTitulo()" style="flex-shrink:0;margin-left:8px">✏ Editar</button>
       <button class="modal-close" onclick="fecharModalRelato()">✕</button>
     </div>
     <div class="modal-body" id="modalRelatoBody">
@@ -4241,9 +4248,37 @@ function _renderModalRelato(d) {
   const refsHtml = (() => {
     const refs = r.referencias || [];
     if (!refs.length) return '';
-    return `<div class="relato-secao">
-      <div class="relato-secao-titulo">Referências</div>
-      <ol class="relato-refs">${refs.map(ref => `<li>${ref}</li>`).join('')}</ol>
+    // refs may be objects {numero, formatada, ...} or plain strings
+    const refTexts = refs.map(ref =>
+      typeof ref === 'string' ? ref
+      : (ref.formatada || [ref.autores, ref.titulo, ref.periodico, ref.ano].filter(Boolean).join('. '))
+    );
+    const refsViewHtml = refs.map((ref, i) => {
+      const num = typeof ref === 'object' && ref.numero ? ref.numero : (i + 1);
+      return `<li data-ref-idx="${i}"><span class="ref-num">${num}.</span> ${refTexts[i]}</li>`;
+    }).join('');
+    // textarea: one formatted ref per line (without leading number if already present)
+    const refsTextarea = refTexts.map((t, i) => {
+      const num = (typeof refs[i] === 'object' && refs[i].numero) ? refs[i].numero : (i + 1);
+      return `${num}. ${t.replace(/^\d+\.\s*/, '')}`;
+    }).join('\n');
+    const refsTextareaEsc = refsTextarea.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<div class="relato-secao" id="sec-wrap-referencias">
+      <div class="relato-secao-titulo">
+        Referências
+        <button class="btn-editar-secao" onclick="toggleEditarSecao('referencias')">✏ Editar</button>
+      </div>
+      <div id="sec-view-referencias">
+        <ol class="relato-refs">${refsViewHtml}</ol>
+      </div>
+      <div id="sec-edit-referencias" style="display:none">
+        <p style="font-size:12px;color:var(--t3);margin:8px 0 4px">Uma referência por linha. O número no início será preservado.</p>
+        <textarea class="sec-textarea" id="sec-ta-referencias" rows="12" style="font-size:12.5px;line-height:1.6">${refsTextareaEsc}</textarea>
+        <div class="sec-edit-actions">
+          <button class="btn-sec-salvar" onclick="salvarSecao('referencias')">💾 Salvar</button>
+          <button class="btn-sec-cancelar" onclick="cancelarEdicaoSecao('referencias')">Cancelar</button>
+        </div>
+      </div>
     </div>`;
   })();
 
@@ -4319,7 +4354,13 @@ async function salvarSecao(chave) {
   if (!sessaoId) return;
   const ta = document.getElementById(`sec-ta-${chave}`);
   let conteudo;
-  if (chave === 'palavras_chave') {
+  if (chave === 'referencias') {
+    // Each non-empty line is a reference; rebuild as objects with numero + formatada
+    conteudo = ta.value.split('\n').map(l => l.trim()).filter(Boolean).map((linha, i) => {
+      const m = linha.match(/^(\d+)\.\s*([\s\S]*)/);
+      return { numero: m ? parseInt(m[1]) : (i + 1), formatada: m ? m[2].trim() : linha };
+    });
+  } else if (chave === 'palavras_chave') {
     conteudo = ta.value.split(/[;,]/).map(p => p.trim()).filter(Boolean);
   } else if (chave === 'resumo') {
     // Parse labeled sections
@@ -4351,7 +4392,9 @@ async function salvarSecao(chave) {
     const data = await res.json();
     // Update view
     const view = document.getElementById(`sec-view-${chave}`);
-    if (chave === 'palavras_chave') {
+    if (chave === 'referencias') {
+      if (view) view.innerHTML = `<ol class="relato-refs">${conteudo.map((ref, i) => `<li data-ref-idx="${i}"><span class="ref-num">${ref.numero}.</span> ${ref.formatada}</li>`).join('')}</ol>`;
+    } else if (chave === 'palavras_chave') {
       if (view) view.innerHTML = `<p class="relato-paragrafo">${conteudo.join(' · ')}</p>`;
     } else if (chave === 'resumo') {
       const partes = [
