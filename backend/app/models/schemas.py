@@ -445,6 +445,48 @@ class RevisaoCorpusBuildRequest(BaseModel):
     somente_aprovadas: bool = True
 
 
+class RevisaoCorpusPerguntaRequest(BaseModel):
+    pergunta: str = Field(..., min_length=3, max_length=2000)
+    max_chunks: int = Field(10, ge=3, le=20)
+
+
+SECOES_RASCUNHO_REVISAO = {
+    "resumo",
+    "introducao",
+    "metodo",
+    "metodos",
+    "resultados",
+    "discussao",
+    "conclusao",
+    "protocolo",
+    "matriz",
+}
+
+
+class RevisaoRascunhoRequest(BaseModel):
+    secao: str = Field(..., max_length=80)
+    instrucao: Optional[str] = Field(None, max_length=2000)
+    max_chunks: int = Field(14, ge=5, le=25)
+
+    @field_validator("secao")
+    @classmethod
+    def secao_valida(cls, v: str) -> str:
+        valor = (v or "").strip().lower()
+        valor = (
+            valor.replace("ção", "cao")
+            .replace("ç", "c")
+            .replace("ã", "a")
+            .replace("á", "a")
+            .replace("é", "e")
+            .replace("í", "i")
+            .replace("ó", "o")
+            .replace("ú", "u")
+        )
+        if valor not in SECOES_RASCUNHO_REVISAO:
+            raise ValueError("Seção de rascunho inválida.")
+        return valor
+
+
 class RevisaoFonteChunkPublico(BaseModel):
     id: str
     fonte_id: str

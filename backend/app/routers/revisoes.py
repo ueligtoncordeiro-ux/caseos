@@ -1,5 +1,6 @@
 from io import BytesIO
 from pathlib import Path
+import re
 from typing import Optional
 from uuid import uuid4
 
@@ -19,6 +20,7 @@ from app.models.database import (
 from app.models.schemas import (
     RevisaoBuscarFontesRequest,
     RevisaoCorpusBuildRequest,
+    RevisaoCorpusPerguntaRequest,
     RevisaoCreateRequest,
     RevisaoFonteCreateRequest,
     RevisaoFonteChunkPublico,
@@ -26,9 +28,17 @@ from app.models.schemas import (
     RevisaoFontePublica,
     RevisaoImportarFontesRequest,
     RevisaoPublica,
+    RevisaoRascunhoRequest,
     RevisaoUpdateRequest,
 )
 from app.services.auth import get_verified_user
+from app.services.llm_router import (
+    Complexidade,
+    chamar,
+    iniciar_contagem_tokens,
+    mensagem_usuario_erro,
+    obter_tokens_usados,
+)
 from app.services.review_corpus import reconstruir_corpus_fechado
 from app.services.scientific_search import buscar_literatura
 
@@ -184,6 +194,198 @@ def _fonte_publica(fonte: RevisaoFonte) -> RevisaoFontePublica:
     metadados.pop("texto_extraido", None)
     payload.metadados = metadados
     return payload
+
+
+def _termos_busca(texto: str) -> set[str]:
+    return {
+        termo
+        for termo in re.findall(r"[a-zA-ZÀ-ÿ0-9]{3,}", (texto or "").lower())
+        if termo not in {"para", "com", "uma", "que", "por", "dos", "das", "the", "and", "with"}
+    }
+
+
+def _score_chunk(chunk: RevisaoFonteChunk, fonte: RevisaoFonte, termos: set[str]) -> int:
+    if not termos:
+        return 0
+    texto = f"{chunk.texto or ''} {fonte.titulo or ''} {fonte.autores or ''}".lower()
+    score = 0
+    titulo = (fonte.titulo or "").lower()
+    for termo in termos:
+        ocorrencias = texto.count(termo)
+        if ocorrencias:
+            score += ocorrencias
+        if termo in titulo:
+            score += 3
+    if fonte.fonte_base and fonte.fonte_base.lower() == "pubmed":
+        score += 1
+    return score
+
+
+async def _selecionar_chunks_corpus(
+    revisao_id: str,
+    query: str,
+    max_chunks: int,
+    db: AsyncSession,
+) -> list[RevisaoFonteChunk]:
+    filtros = [
+        RevisaoFonte.revisao_id == revisao_id,
+        RevisaoFonte.aprovada_para_escrita.is_(True),
+    ]
+
+    async def _carregar() -> list[RevisaoFonteChunk]:
+        result = await db.execute(
+            select(RevisaoFonteChunk)
+            .join(RevisaoFonte, RevisaoFonte.id == RevisaoFonteChunk.fonte_id)
+            .where(*filtros)
+            .order_by(RevisaoFonteChunk.ordem)
+        )
+        return result.scalars().all()
+
+    chunks = await _carregar()
+    if not chunks:
+        await reconstruir_corpus_fechado(revisao_id, db, somente_aprovadas=True)
+        chunks = await _carregar()
+
+    if not chunks:
+        return []
+
+    fontes_result = await db.execute(
+        select(RevisaoFonte).where(
+            RevisaoFonte.id.in_({chunk.fonte_id for chunk in chunks})
+        )
+    )
+    fontes = {fonte.id: fonte for fonte in fontes_result.scalars().all()}
+    termos = _termos_busca(query)
+    def _ranking(chunk: RevisaoFonteChunk) -> tuple[int, int]:
+        fonte = fontes.get(chunk.fonte_id)
+        if not fonte:
+            return (0, -(chunk.ordem or 0))
+        return (_score_chunk(chunk, fonte, termos), -(chunk.ordem or 0))
+
+    ranqueados = sorted(chunks, key=_ranking, reverse=True)
+    return ranqueados[:max_chunks]
+
+
+async def _fontes_dos_chunks(
+    chunks: list[RevisaoFonteChunk],
+    db: AsyncSession,
+) -> dict[str, RevisaoFonte]:
+    if not chunks:
+        return {}
+    result = await db.execute(
+        select(RevisaoFonte).where(RevisaoFonte.id.in_({chunk.fonte_id for chunk in chunks}))
+    )
+    return {fonte.id: fonte for fonte in result.scalars().all()}
+
+
+def _formatar_contexto(
+    chunks: list[RevisaoFonteChunk],
+    fontes: dict[str, RevisaoFonte],
+) -> tuple[str, list[dict]]:
+    partes: list[str] = []
+    fontes_usadas: list[dict] = []
+    for idx, chunk in enumerate(chunks, start=1):
+        fonte = fontes.get(chunk.fonte_id)
+        if not fonte:
+            continue
+        ref = f"F{idx}"
+        metadados = fonte.metadados or {}
+        identificadores = []
+        if fonte.pmid:
+            identificadores.append(f"PMID: {fonte.pmid}")
+        if fonte.doi:
+            identificadores.append(f"DOI: {fonte.doi}")
+        if fonte.fonte_base:
+            identificadores.append(f"Base: {fonte.fonte_base}")
+
+        cabecalho = "; ".join(
+            parte
+            for parte in [
+                fonte.titulo,
+                fonte.autores,
+                fonte.ano,
+                fonte.periodico,
+                " | ".join(identificadores),
+            ]
+            if parte
+        )
+        partes.append(f"[{ref}] {cabecalho}\nTrecho: {chunk.texto.strip()}")
+        fontes_usadas.append(
+            {
+                "ref": ref,
+                "fonte_id": fonte.id,
+                "chunk_id": chunk.id,
+                "ordem": chunk.ordem,
+                "titulo": fonte.titulo,
+                "autores": fonte.autores,
+                "ano": fonte.ano,
+                "periodico": fonte.periodico,
+                "doi": fonte.doi,
+                "pmid": fonte.pmid,
+                "url": fonte.url,
+                "fonte_base": fonte.fonte_base,
+                "origem": fonte.origem,
+                "texto_extraido_chars": metadados.get("texto_extraido_chars"),
+            }
+        )
+    return "\n\n".join(partes), fontes_usadas
+
+
+def _system_corpus_fechado() -> str:
+    return (
+        "Você é o assistente científico do CaseOS para revisão de literatura. "
+        "Responda exclusivamente com base no corpus fechado fornecido pelo usuário. "
+        "Não use conhecimento externo, não invente autores, achados, estatísticas, links ou citações. "
+        "Quando o corpus não sustentar uma afirmação, diga claramente que as fontes aprovadas não trazem "
+        "evidência suficiente. Cite as fontes no texto como [F1], [F2]. Seja direto, técnico e útil."
+    )
+
+
+def _prompt_pergunta(revisao: Revisao, pergunta: str, contexto: str) -> str:
+    return f"""
+Revisão:
+- Tipo: {revisao.tipo}
+- Título: {revisao.titulo or "não definido"}
+- Tema: {revisao.tema or "não definido"}
+- Pergunta: {revisao.pergunta or "não definida"}
+- Objetivo: {revisao.objetivo or "não definido"}
+- Formato de referências: {revisao.formato_ref}
+- Guideline: {revisao.guideline or "não definida"}
+
+Pergunta do usuário:
+{pergunta}
+
+Corpus fechado aprovado:
+{contexto}
+
+Responda em português, com 1 a 4 parágrafos ou bullets curtos. Sempre cite as fontes usadas.
+""".strip()
+
+
+def _prompt_rascunho(revisao: Revisao, body: RevisaoRascunhoRequest, contexto: str) -> str:
+    instrucao = body.instrucao or "Gerar um rascunho científico claro, conciso e editável."
+    return f"""
+Revisão:
+- Tipo: {revisao.tipo}
+- Título: {revisao.titulo or "não definido"}
+- Tema: {revisao.tema or "não definido"}
+- Pergunta: {revisao.pergunta or "não definida"}
+- Objetivo: {revisao.objetivo or "não definido"}
+- Formato de referências: {revisao.formato_ref}
+- Guideline: {revisao.guideline or "não definida"}
+
+Seção solicitada:
+{body.secao}
+
+Instrução do usuário:
+{instrucao}
+
+Corpus fechado aprovado:
+{contexto}
+
+Gere apenas a seção solicitada. Use tom científico, cite no corpo como [F1], [F2] e não crie referências não presentes no corpus.
+Se as fontes forem insuficientes, entregue um rascunho parcial e liste objetivamente o que falta.
+""".strip()
 
 
 def _fonte_payload(revisao_id: str, artigo: dict, query: str) -> RevisaoFonte:
@@ -595,6 +797,98 @@ async def listar_corpus(
         "por_pagina": por_pagina,
         "paginas": (total + por_pagina - 1) // por_pagina,
         "items": [RevisaoFonteChunkPublico.model_validate(chunk) for chunk in chunks],
+    }
+
+
+@router.post("/{revisao_id}/corpus/perguntar")
+async def perguntar_ao_corpus(
+    revisao_id: str,
+    body: RevisaoCorpusPerguntaRequest,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    revisao = await _get_revisao_ou_404(revisao_id, user.id, db)
+    chunks = await _selecionar_chunks_corpus(revisao_id, body.pergunta, body.max_chunks, db)
+    if not chunks:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Corpus fechado vazio. Aprove fontes para escrita ou envie arquivos "
+                "antes de perguntar à revisão."
+            ),
+        )
+
+    fontes = await _fontes_dos_chunks(chunks, db)
+    contexto, fontes_usadas = _formatar_contexto(chunks, fontes)
+    iniciar_contagem_tokens()
+    try:
+        resposta = await chamar(
+            _system_corpus_fechado(),
+            _prompt_pergunta(revisao, body.pergunta, contexto),
+            complexidade=Complexidade.MEDIA,
+            max_tokens=1400,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=mensagem_usuario_erro(exc))
+
+    revisao.tokens_usados = (revisao.tokens_usados or 0) + obter_tokens_usados()
+    await db.commit()
+
+    return {
+        "revisao_id": revisao_id,
+        "modo": "corpus_fechado",
+        "resposta": resposta,
+        "fontes_usadas": fontes_usadas,
+        "chunks_usados": len(chunks),
+    }
+
+
+@router.post("/{revisao_id}/rascunho")
+async def gerar_rascunho_revisao(
+    revisao_id: str,
+    body: RevisaoRascunhoRequest,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    revisao = await _get_revisao_ou_404(revisao_id, user.id, db)
+    consulta = " ".join(
+        parte
+        for parte in [body.secao, body.instrucao, revisao.pergunta, revisao.objetivo, revisao.tema]
+        if parte
+    )
+    chunks = await _selecionar_chunks_corpus(revisao_id, consulta, body.max_chunks, db)
+    if not chunks:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Corpus fechado vazio. Aprove fontes para escrita ou envie arquivos "
+                "antes de gerar rascunhos."
+            ),
+        )
+
+    fontes = await _fontes_dos_chunks(chunks, db)
+    contexto, fontes_usadas = _formatar_contexto(chunks, fontes)
+    iniciar_contagem_tokens()
+    try:
+        rascunho = await chamar(
+            _system_corpus_fechado(),
+            _prompt_rascunho(revisao, body, contexto),
+            complexidade=Complexidade.MEDIA,
+            max_tokens=2400,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=mensagem_usuario_erro(exc))
+
+    revisao.tokens_usados = (revisao.tokens_usados or 0) + obter_tokens_usados()
+    await db.commit()
+
+    return {
+        "revisao_id": revisao_id,
+        "secao": body.secao,
+        "modo": "corpus_fechado",
+        "rascunho": rascunho,
+        "fontes_usadas": fontes_usadas,
+        "chunks_usados": len(chunks),
     }
 
 
