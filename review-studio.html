@@ -13,6 +13,7 @@
 :root {
   --acid:#C8FF00;
   --acid-dim:rgba(200,255,0,.10);
+  --blue-soft:#DDF0FF;
   --obsidian:#0A0A0B;
   --bg:#FFFFFF;
   --sidebar-bg:#FFFFFF;
@@ -32,27 +33,17 @@
   --sidebar-collapsed-w:64px;
   --shadow-xs:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
   --shadow-sm:0 2px 8px rgba(0,0,0,.07),0 1px 3px rgba(0,0,0,.04);
+  --shadow-lg:0 18px 55px rgba(0,0,0,.10);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:16px;scroll-behavior:smooth}
-body{font-family:var(--sans);background:var(--bg);color:var(--t1);min-height:100vh;overflow:hidden;-webkit-font-smoothing:antialiased}
+body{font-family:var(--sans);background:#fff;color:var(--t1);min-height:100vh;overflow:hidden;-webkit-font-smoothing:antialiased}
 a{color:inherit}
 button,input,textarea,select{font:inherit}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-thumb{background:#D8D8D6;border-radius:99px}
 
-.topbar{
-  position:fixed;top:0;left:0;right:0;height:var(--topbar-h);z-index:300;
-  display:flex;align-items:center;justify-content:space-between;gap:20px;
-  padding:0 28px 0 34px;background:#fff;border-bottom:1px solid var(--border);
-}
-.topbar-left{display:flex;align-items:center;gap:18px;min-width:0}
-.topbar-brand{display:flex;align-items:center;flex-shrink:0;text-decoration:none}
-.topbar-brand img{width:104px;height:auto;display:block}
-.topbar-page{padding-left:18px;border-left:1px solid var(--border);min-width:0}
-.topbar-title{font-family:var(--head);font-size:16px;font-weight:700;color:var(--t1)}
-.topbar-subtitle{font-size:11.5px;color:var(--t3);margin-top:1px}
-.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.app-actions{position:fixed;top:18px;right:22px;z-index:380;display:flex;align-items:center;gap:8px}
 .notif-btn{
   width:34px;height:34px;border:1px solid var(--border);border-radius:8px;background:#fff;
   display:grid;place-items:center;cursor:pointer;position:relative;color:var(--t2);
@@ -79,40 +70,46 @@ button,input,textarea,select{font:inherit}
 .dropdown-item:hover{background:var(--muted);color:var(--t1)}
 .dropdown-item.danger{color:var(--red)}
 
-.sidebar{
-  position:fixed;top:var(--topbar-h);left:0;bottom:0;width:var(--sidebar-collapsed-w);
-  background:#fff;border-right:1px solid var(--border);z-index:200;display:flex;flex-direction:column;
-  transition:width .22s ease;overflow:hidden;
+.side-rail{
+  position:fixed;left:0;top:0;bottom:0;width:56px;background:#fff;border-right:1px solid var(--border);
+  z-index:310;display:flex;flex-direction:column;align-items:center;padding:18px 8px 14px;gap:14px;
 }
-.sidebar:hover,.sidebar:focus-within{width:var(--sidebar-w);box-shadow:18px 0 40px rgba(0,0,0,.08)}
-.sidebar-control{padding:10px 12px 6px;display:flex;justify-content:flex-end}
-.sidebar-collapse-btn{
-  width:34px;height:34px;border:1px solid var(--border);border-radius:10px;background:#fff;box-shadow:var(--shadow-xs);
-  cursor:pointer;color:var(--t2);
+.caseos-symbol,.rail-btn{
+  width:36px;height:36px;border:0;border-radius:12px;background:#fff;display:grid;place-items:center;cursor:pointer;color:#111;
 }
-.nav{padding:12px 10px;overflow:auto;flex:1}
-.nav-label{
-  padding:10px 12px 7px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);
-  white-space:nowrap;opacity:0;transition:opacity .18s ease;
+.caseos-symbol{position:relative}
+.caseos-symbol img{width:26px;height:26px;object-fit:contain}
+.caseos-symbol::after{
+  content:"Abrir barra lateral";position:absolute;left:46px;top:50%;transform:translateY(-50%);
+  background:#080808;color:#fff;border-radius:11px;padding:10px 14px;font-size:13px;font-weight:700;white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .16s ease;box-shadow:var(--shadow-sm);
 }
-.sidebar:hover .nav-label,.sidebar:focus-within .nav-label{opacity:1}
-.nav-divider{height:1px;background:var(--border);margin:10px 14px}
-.nav-item{
-  min-height:40px;border:0;background:transparent;text-decoration:none;color:var(--t2);display:flex;align-items:center;
-  gap:10px;border-radius:10px;padding:5px 8px;cursor:pointer;width:100%;font-weight:600;font-size:13px;
+.caseos-symbol:hover::after{opacity:1}
+.rail-btn:hover,.rail-btn.active{background:var(--muted)}
+.rail-btn.active{box-shadow:inset 3px 0 0 var(--acid)}
+.rail-btn svg{width:17px;height:17px}
+.rail-spacer{flex:1}
+.sidebar-drawer{
+  position:fixed;left:56px;top:0;bottom:0;width:320px;background:#fff;border-right:1px solid var(--border);
+  z-index:300;transform:translateX(-102%);transition:transform .22s ease;box-shadow:18px 0 45px rgba(0,0,0,.08);
+  display:flex;flex-direction:column;padding:18px 12px;
 }
-.nav-item:hover{background:var(--muted);color:var(--t1)}
-.nav-item.active{background:var(--acid-dim);color:var(--t1)}
-.nav-icon{
-  width:28px;height:28px;border-radius:8px;background:#EFEFED;display:grid;place-items:center;flex:0 0 28px;color:currentColor;
+body.sidebar-open .sidebar-drawer,.side-rail:hover + .sidebar-drawer,.sidebar-drawer:hover{transform:translateX(0)}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.drawer-brand{display:flex;align-items:center;gap:10px;font-family:var(--head);font-weight:800}
+.drawer-brand img{width:28px;height:28px}
+.drawer-close{width:32px;height:32px;border:0;border-radius:9px;background:var(--muted);cursor:pointer}
+.conversation-list{display:grid;gap:6px;margin:8px 0 18px}
+.conversation-item{
+  border:0;background:transparent;border-radius:10px;text-align:left;padding:10px 11px;font-size:13px;color:var(--t2);
+  cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.nav-item.active .nav-icon{background:var(--acid)}
-.nav-icon svg{width:14px;height:14px;image-rendering:pixelated}
-.nav-text{white-space:nowrap;opacity:0;width:0;overflow:hidden;transition:opacity .18s ease}
-.sidebar:hover .nav-text,.sidebar:focus-within .nav-text{opacity:1;width:auto}
-.sidebar-footer{padding:10px;border-top:1px solid var(--border)}
-.usage-mini{display:none;margin-bottom:10px}
-.sidebar:hover .usage-mini,.sidebar:focus-within .usage-mini{display:block}
+.conversation-item:hover,.conversation-item.active{background:var(--muted);color:var(--t1);font-weight:700}
+.drawer-section{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin:14px 10px 6px}
+.drawer-link{display:flex;align-items:center;gap:10px;text-decoration:none;border-radius:10px;padding:10px 11px;font-size:13px;font-weight:700;color:var(--t2)}
+.drawer-link:hover,.drawer-link.active{background:var(--muted);color:var(--t1)}
+.drawer-link svg{width:15px;height:15px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
 .usage-label{font-size:11px;color:var(--t3);font-weight:700;margin-bottom:5px}
 .usage-track{height:6px;background:#E5E5E5;border-radius:99px;overflow:hidden}
 .usage-fill{height:100%;background:var(--acid);width:0}
@@ -120,33 +117,50 @@ button,input,textarea,select{font:inherit}
   width:100%;border:0;background:var(--acid);color:#111;border-radius:10px;height:38px;font-weight:800;cursor:pointer;
   display:flex;align-items:center;justify-content:center;gap:8px;
 }
-.btn-upgrade svg{width:15px;height:15px}.btn-upgrade span{display:none}.sidebar:hover .btn-upgrade span{display:inline}
+.btn-upgrade svg{width:15px;height:15px}.btn-upgrade span{display:inline}
 
 .main{
-  margin-left:var(--sidebar-collapsed-w);padding-top:var(--topbar-h);height:100vh;overflow:auto;background:#fff;
+  margin-left:56px;height:100vh;overflow:auto;background:
+    radial-gradient(circle at 54% 50%, rgba(159,214,255,.46) 0, rgba(221,240,255,.58) 21%, rgba(255,255,255,0) 47%),
+    #fff;
 }
-.page{padding:32px 40px 54px;max-width:1480px;margin:0 auto}
-.hero{
-  display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:22px;
+.page{min-height:100vh;padding:54px 34px 70px;max-width:1320px;margin:0 auto}
+.review-hero{
+  min-height:430px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px 0 38px;
 }
-.hero-title{font-family:var(--head);font-size:30px;line-height:1.05;font-weight:800;color:var(--t1)}
-.hero-stage{display:flex;align-items:flex-end;gap:14px}
-.hero-char{width:74px;height:74px;object-fit:contain;image-rendering:pixelated}
-.pixel-speech{
-  position:relative;max-width:390px;border:1px solid var(--border);border-radius:8px;background:#fff;padding:12px 14px;
-  box-shadow:var(--shadow-sm);font-size:13px;line-height:1.45;color:var(--t2);
+.review-title{font-family:var(--head);font-size:42px;font-weight:600;letter-spacing:0;color:#1B1B1E;margin-bottom:34px}
+.command-card{width:min(860px,100%);background:#fff;border:1px solid var(--border);border-radius:26px;box-shadow:var(--shadow-lg);overflow:hidden;text-align:left}
+.prompt-intro{padding:18px 22px 0;color:var(--t2);font-size:14px;line-height:1.45}
+.prompt-intro strong{color:var(--t1)}
+.chat-thread{min-height:245px;max-height:430px;overflow:auto;padding:18px 22px 10px;display:grid;align-content:start;gap:14px}
+.chat-message{display:flex;gap:10px;align-items:flex-start;max-width:86%}
+.chat-message.user{margin-left:auto;flex-direction:row-reverse}
+.chat-avatar{width:28px;height:28px;border-radius:999px;background:var(--acid);display:grid;place-items:center;flex:0 0 28px;overflow:hidden;font-size:11px;font-weight:800}
+.chat-avatar img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
+.chat-bubble{border:1px solid var(--border);border-radius:14px;background:#fff;padding:11px 13px;font-size:14px;line-height:1.55;color:var(--t1);box-shadow:var(--shadow-xs);white-space:pre-wrap}
+.chat-message.user .chat-bubble{background:#080808;color:#fff;border-color:#080808}
+.chat-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.choice-chip{
+  border:1px solid var(--border);background:#fff;border-radius:999px;padding:9px 13px;font-size:13px;font-weight:800;cursor:pointer;color:var(--t1);
+  transition:background .16s ease,border-color .16s ease,transform .16s ease;
 }
-.pixel-speech::after{
-  content:"";position:absolute;right:-7px;bottom:18px;width:12px;height:12px;background:#fff;border-right:1px solid var(--border);
-  border-bottom:1px solid var(--border);transform:rotate(-45deg);
-}
-.pixel-caret{display:inline-block;width:7px;height:15px;background:var(--acid);margin-left:3px;vertical-align:-2px;animation:blink 1s steps(1) infinite}
-@keyframes blink{50%{opacity:0}}
+.choice-chip:hover{background:var(--acid-dim);border-color:var(--acid);transform:translateY(-1px)}
+.inline-card{border:1px solid var(--border);border-radius:14px;background:#fff;padding:12px;margin-top:10px;display:grid;gap:9px}
+.inline-card input,.inline-card textarea{width:100%;border:1px solid var(--border);border-radius:10px;background:var(--muted);padding:11px 12px;font-size:13.5px;outline:none;resize:vertical}
+.inline-card textarea{min-height:84px}
+.chat-refs{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.chat-input-wrap{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;border-top:1px solid var(--border);padding:14px 16px;background:#fff}
+.chat-plus{width:38px;height:38px;border:0;border-radius:999px;background:var(--muted);font-size:26px;line-height:1;cursor:pointer;color:#111}
+.chat-input{min-height:42px;max-height:130px;resize:none;border:0;background:transparent;outline:none;font-size:15px;line-height:1.45;padding:8px 0}
+.chat-send{width:42px;height:42px;border-radius:12px;border:0;background:#080808;color:#fff;font-weight:900;cursor:pointer}
+.setup-summary{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+.summary-pill{border:1px solid var(--border);background:rgba(255,255,255,.76);backdrop-filter:blur(8px);border-radius:999px;padding:7px 10px;font-size:12px;color:var(--t2)}
 .section-header{display:flex;align-items:center;gap:10px;margin:18px 0 12px}
 .section-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--t3)}
 
-.studio-shell{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:start}
-.studio-main{display:grid;gap:16px;min-width:0}
+.context-panels{display:none;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start;margin-top:14px}
+.context-panels.show{display:grid}
+.config-panel{display:none}
 .review-card{background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-sm);padding:16px}
 .review-card-title{font-family:var(--head);font-size:16px;font-weight:800;color:var(--t1);margin-bottom:4px}
 .review-card-sub{font-size:12.5px;color:var(--t3);line-height:1.5;margin-bottom:14px}
@@ -176,7 +190,7 @@ button,input,textarea,select{font:inherit}
 .review-status-item{border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--muted)}
 .review-status-value{font-family:var(--head);font-size:18px;font-weight:800;color:var(--t1)}
 .review-status-label{font-size:10.5px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em}
-.sources-panel{position:sticky;top:calc(var(--topbar-h) + 18px);display:grid;gap:12px}
+.sources-panel{position:sticky;top:24px;display:grid;gap:12px}
 .source-search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
 .source-search-wrap{position:relative}
 .source-search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--t3)}
@@ -193,19 +207,6 @@ button,input,textarea,select{font:inherit}
 .review-chunk-title{font-size:12px;font-weight:800;color:var(--t1);margin-bottom:5px}
 .review-chunk-text{font-size:12.5px;color:var(--t2);line-height:1.5}
 .review-small-note{font-size:11.5px;color:var(--t3);line-height:1.45}
-.review-chat-card{min-height:430px;display:grid;grid-template-rows:auto minmax(260px,1fr) auto;gap:12px}
-.chat-thread{border:1px solid var(--border);border-radius:8px;background:linear-gradient(180deg,#fff 0%,#FBFBFA 100%);padding:16px;overflow:auto;display:grid;align-content:start;gap:12px}
-.chat-message{display:flex;gap:9px;align-items:flex-start;max-width:82%}
-.chat-message.user{margin-left:auto;flex-direction:row-reverse}
-.chat-avatar{width:28px;height:28px;border-radius:999px;background:var(--acid);display:grid;place-items:center;flex:0 0 28px;overflow:hidden;font-size:11px;font-weight:800}
-.chat-avatar img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
-.chat-bubble{border:1px solid var(--border);border-radius:12px;background:#fff;padding:10px 12px;font-size:13.5px;line-height:1.55;color:var(--t1);box-shadow:var(--shadow-xs);white-space:pre-wrap}
-.chat-message.user .chat-bubble{background:#080808;color:#fff;border-color:#080808}
-.chat-refs{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
-.chat-input-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end}
-.chat-input{min-height:58px;max-height:150px;resize:vertical;border:1px solid var(--border);border-radius:12px;padding:14px;background:#fff;outline:none;font-size:14px;line-height:1.45}
-.chat-input:focus{border-color:var(--acid);box-shadow:0 0 0 3px var(--acid-dim)}
-.chat-send{width:52px;height:52px;border-radius:12px;border:0;background:#080808;color:#fff;font-weight:900;cursor:pointer}
 .drafts-mini{display:grid;gap:8px}
 .draft-mini{border:1px solid var(--border);border-radius:8px;padding:9px;background:#fff;font-size:12px;color:var(--t2);line-height:1.45}
 .section-builder{display:grid;gap:12px}
@@ -221,80 +222,69 @@ button,input,textarea,select{font:inherit}
 .toast.error{border-left-color:var(--red)}.toast.success{border-left-color:var(--green)}
 
 @media(max-width:1120px){
-  .studio-shell,.config-grid,.review-split,.section-grid{grid-template-columns:1fr}
+  .context-panels,.config-grid,.review-split,.section-grid{grid-template-columns:1fr}
   .sources-panel{position:static}
   .review-status{grid-template-columns:repeat(2,minmax(0,1fr))}
   .page{padding:22px 18px 42px}
 }
 @media(max-width:720px){
-  .topbar{padding:0 14px;gap:10px}
-  .topbar-brand img{width:88px}
-  .topbar-page{padding-left:10px}
-  .topbar-title{font-size:14px}.topbar-subtitle{display:none}
-  .hero{align-items:flex-start}.hero-title{font-size:24px}.hero-stage{align-items:flex-start}.pixel-speech{max-width:260px}.hero-char{width:58px;height:58px}
+  .page{padding:30px 14px 44px}
+  .review-title{font-size:30px;margin-bottom:24px}
+  .review-hero{min-height:calc(100vh - 80px);justify-content:center}
+  .command-card{border-radius:20px}
   .chat-message{max-width:96%}
+  .sidebar-drawer{width:calc(100vw - 56px)}
 }
 </style>
 </head>
 <body>
-<header class="topbar">
-  <div class="topbar-left">
-    <a href="https://caseos.voandonaia.com/dashboard" class="topbar-brand" aria-label="CaseOS Dashboard">
-      <img src="assets/logo-caseos-light.png" alt="CaseOS">
-    </a>
-    <div class="topbar-page">
-      <div class="topbar-title">Review Studio</div>
-      <div class="topbar-subtitle" id="topbarDate">Carregando...</div>
+<div class="app-actions">
+  <button class="notif-btn" aria-label="Notificações" title="Notificações">
+    <svg style="width:16px;height:16px"><use href="assets/pixel-icons.svg#px-bell"/></svg>
+    <span class="notif-badge">2</span>
+  </button>
+  <div class="user-avatar" id="userAvatar" onclick="toggleUserDropdown()">?</div>
+  <div class="user-dropdown" id="userDropdown">
+    <div class="user-dropdown-header">
+      <div class="user-dropdown-name" id="userNomeDropdown">Usuário</div>
+      <div class="user-dropdown-plan" id="userPlanoDropdown">GRATUITO</div>
     </div>
+    <button class="dropdown-item" onclick="location.href='https://caseos.voandonaia.com/dashboard'">Dashboard</button>
+    <button class="dropdown-item danger" onclick="logout()">Sair</button>
   </div>
-  <div class="topbar-right">
-    <button class="notif-btn" aria-label="Notificações" title="Notificações">
-      <svg style="width:16px;height:16px"><use href="assets/pixel-icons.svg#px-bell"/></svg>
-      <span class="notif-badge">2</span>
-    </button>
-    <div class="user-avatar" id="userAvatar" onclick="toggleUserDropdown()">?</div>
-    <div class="user-dropdown" id="userDropdown">
-      <div class="user-dropdown-header">
-        <div class="user-dropdown-name" id="userNomeDropdown">Usuário</div>
-        <div class="user-dropdown-plan" id="userPlanoDropdown">GRATUITO</div>
-      </div>
-      <button class="dropdown-item" onclick="location.href='https://caseos.voandonaia.com/dashboard'">Dashboard</button>
-      <button class="dropdown-item danger" onclick="logout()">Sair</button>
-    </div>
-  </div>
-</header>
+</div>
 
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-control">
-    <button class="sidebar-collapse-btn" aria-label="Menu">›</button>
+<aside class="side-rail" aria-label="Navegação principal">
+  <button class="caseos-symbol" id="caseosSidebarTrigger" onclick="toggleSidebar()" aria-label="Abrir barra lateral">
+    <img src="assets/favicon.svg" alt="">
+  </button>
+  <button class="rail-btn active" title="Nova revisão" onclick="novaRevisaoForm()"><svg><use href="assets/pixel-icons.svg#px-docstar"/></svg></button>
+  <button class="rail-btn" title="Fontes" onclick="mostrarPaineis('fontes')"><svg><use href="assets/pixel-icons.svg#px-magnify"/></svg></button>
+  <button class="rail-btn" title="Seções" onclick="mostrarPaineis('secoes')"><svg><use href="assets/pixel-icons.svg#px-list"/></svg></button>
+  <a class="rail-btn" title="Dashboard" href="https://caseos.voandonaia.com/dashboard"><svg><use href="assets/pixel-icons.svg#px-home"/></svg></a>
+  <div class="rail-spacer"></div>
+  <button class="rail-btn" title="Planos" onclick="location.href='https://caseos.voandonaia.com/dashboard#planos'"><svg><use href="assets/pixel-icons.svg#px-crown"/></svg></button>
+</aside>
+
+<aside class="sidebar-drawer" id="sidebarDrawer">
+  <div class="drawer-head">
+    <div class="drawer-brand"><img src="assets/favicon.svg" alt=""> Review Studio</div>
+    <button class="drawer-close" onclick="toggleSidebar(false)" aria-label="Fechar">‹</button>
   </div>
-  <nav class="nav">
-    <div class="nav-label">Principal</div>
-    <a class="nav-item" href="https://caseos.voandonaia.com/dashboard">
-      <span class="nav-icon"><svg><use href="assets/pixel-icons.svg#px-home"/></svg></span>
-      <span class="nav-text">Dashboard</span>
-    </a>
-    <a class="nav-item" href="https://caseos.voandonaia.com/novo-relato">
-      <span class="nav-icon"><svg><use href="assets/pixel-icons.svg#px-pencil"/></svg></span>
-      <span class="nav-text">Novo Relato</span>
-    </a>
-    <a class="nav-item active" href="https://reviewstudio.voandonaia.com">
-      <span class="nav-icon"><svg><use href="assets/pixel-icons.svg#px-docstar"/></svg></span>
-      <span class="nav-text">Revisão científica</span>
-    </a>
-    <div class="nav-divider"></div>
-    <div class="nav-label">Pesquisa</div>
-    <a class="nav-item" href="https://caseos.voandonaia.com/dashboard#busca-cientifica">
-      <span class="nav-icon"><svg><use href="assets/pixel-icons.svg#px-magnify"/></svg></span>
-      <span class="nav-text">Buscar artigos</span>
-    </a>
-  </nav>
+  <button class="btn btn-primary" onclick="novaRevisaoForm()">Nova conversa</button>
+  <div class="drawer-section">Conversas</div>
+  <div class="conversation-list" id="reviewConversationList">
+    <button class="conversation-item active">Revisão atual</button>
+  </div>
+  <div class="drawer-section">CaseOS</div>
+  <a class="drawer-link" href="https://caseos.voandonaia.com/dashboard"><svg><use href="assets/pixel-icons.svg#px-home"/></svg> Dashboard</a>
+  <a class="drawer-link" href="https://caseos.voandonaia.com/novo-relato"><svg><use href="assets/pixel-icons.svg#px-pencil"/></svg> Novo relato</a>
+  <a class="drawer-link" href="https://caseos.voandonaia.com/dashboard#busca-cientifica"><svg><use href="assets/pixel-icons.svg#px-magnify"/></svg> Buscar artigos</a>
+  <a class="drawer-link active" href="https://reviewstudio.voandonaia.com"><svg><use href="assets/pixel-icons.svg#px-docstar"/></svg> Revisão científica</a>
   <div class="sidebar-footer">
-    <div class="usage-mini">
-      <div class="usage-label" id="sidebarUsageLabel">Tokens usados - Plano gratuito</div>
-      <div class="usage-track"><div class="usage-fill" id="sidebarUsageFill"></div></div>
-    </div>
-    <button class="btn-upgrade" onclick="location.href='https://caseos.voandonaia.com/dashboard#planos'">
+    <div class="usage-label" id="sidebarUsageLabel">Tokens usados - Plano gratuito</div>
+    <div class="usage-track"><div class="usage-fill" id="sidebarUsageFill"></div></div>
+    <button class="btn-upgrade" style="margin-top:12px" onclick="location.href='https://caseos.voandonaia.com/dashboard#planos'">
       <svg><use href="assets/pixel-icons.svg#px-crown"/></svg><span>Fazer Upgrade</span>
     </button>
   </div>
@@ -302,117 +292,65 @@ button,input,textarea,select{font:inherit}
 
 <main class="main">
   <div class="page">
-    <div class="hero">
+    <section class="review-hero">
+      <h1 class="review-title" id="reviewGreeting">Vamos lá</h1>
+      <div class="command-card">
+        <div class="prompt-intro">
+          <strong>Organize fontes e gere sua revisão com base nos artigos selecionados.</strong> Comece por aqui.
+        </div>
+        <div id="reviewChatThread" class="chat-thread"></div>
+        <div class="chat-input-wrap">
+          <button class="chat-plus" onclick="mostrarPaineis('fontes')" title="Adicionar fontes">+</button>
+          <textarea id="reviewChatInput" class="chat-input" placeholder="Converse com o Review Studio..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMensagemReviewChat()}"></textarea>
+          <button class="chat-send" id="reviewChatSendBtn" onclick="enviarMensagemReviewChat()">➤</button>
+        </div>
+      </div>
+      <div class="setup-summary" id="reviewSetupSummary"></div>
+    </section>
+
+    <section class="context-panels" id="reviewContextPanels">
       <div>
-        <h1 class="hero-title">Revisão científica</h1>
-      </div>
-      <div class="hero-stage">
-        <div class="pixel-speech">Organize fontes e gere sua revisão com base nos artigos selecionados<span class="pixel-caret"></span></div>
-        <img class="hero-char" src="assets/pixel-researcher.png" alt="" aria-hidden="true">
-      </div>
-    </div>
-
-    <div class="studio-shell">
-      <section class="studio-main">
-        <div class="review-card">
-          <div class="review-card-title">Configurações básicas</div>
-          <div class="review-card-sub">Defina o projeto, salve a revisão e ajuste campos com IA quando precisar.</div>
-          <div class="review-form">
-            <div class="config-grid">
-              <div class="review-field">
-                <label for="reviewSelect">Revisão ativa</label>
-                <select id="reviewSelect" onchange="selecionarRevisaoAtiva(this.value)">
-                  <option value="">Carregando...</option>
-                </select>
-              </div>
-              <div class="review-field">
-                <label for="reviewTipo">Tipo</label>
-                <select id="reviewTipo">
-                  <option value="narrativa">Narrativa</option>
-                  <option value="integrativa">Integrativa</option>
-                  <option value="escopo">Escopo</option>
-                  <option value="estado_da_arte">Estado da arte</option>
-                </select>
-              </div>
-              <div class="review-field">
-                <label for="reviewFormato">Formato</label>
-                <select id="reviewFormato">
-                  <option value="vancouver">Vancouver</option>
-                  <option value="abnt">ABNT</option>
-                  <option value="apa">APA</option>
-                </select>
-              </div>
-            </div>
-            <div class="review-field">
-              <label for="reviewTitulo">Título</label>
-              <input id="reviewTitulo" type="text" placeholder="Ex: Revisão integrativa sobre..." maxlength="200">
-              <div class="field-ai-row">
-                <input id="reviewTituloInstrucao" type="text" placeholder="Digite a instrução: limitar palavras, melhorar clareza, deixar mais científico...">
-                <button class="btn mini-ai-btn" onclick="ajustarCampoReviewIA('reviewTitulo','título da revisão')">IA</button>
-              </div>
-            </div>
-            <div class="review-split">
-              <div class="review-field">
-                <label for="reviewTema">Tema</label>
-                <textarea id="reviewTema" placeholder="Tema, população, contexto ou problema clínico"></textarea>
-                <div class="field-ai-row">
-                  <input id="reviewTemaInstrucao" type="text" placeholder="Digite a instrução personalizada">
-                  <button class="btn mini-ai-btn" onclick="ajustarCampoReviewIA('reviewTema','tema da revisão')">IA</button>
-                </div>
-              </div>
-              <div class="review-field">
-                <label for="reviewPergunta">Pergunta norteadora</label>
-                <textarea id="reviewPergunta" placeholder="Qual pergunta a revisão deve responder?"></textarea>
-                <div class="field-ai-row">
-                  <input id="reviewPerguntaInstrucao" type="text" placeholder="Digite a instrução personalizada">
-                  <button class="btn mini-ai-btn" onclick="ajustarCampoReviewIA('reviewPergunta','pergunta norteadora')">IA</button>
-                </div>
-              </div>
-            </div>
-            <div class="review-field">
-              <label for="reviewObjetivo">Objetivo</label>
-              <textarea id="reviewObjetivo" placeholder="Objetivo principal da revisão"></textarea>
-              <div class="field-ai-row">
-                <input id="reviewObjetivoInstrucao" type="text" placeholder="Digite a instrução personalizada">
-                <button class="btn mini-ai-btn" onclick="ajustarCampoReviewIA('reviewObjetivo','objetivo da revisão')">IA</button>
-              </div>
-            </div>
-            <div class="review-toolbar">
-              <button class="btn btn-primary" id="reviewSaveBtn" onclick="salvarRevisaoAtual()">Salvar revisão</button>
-              <button class="btn btn-ghost" onclick="novaRevisaoForm()">Nova</button>
-            </div>
-          </div>
+        <div class="config-panel" id="reviewConfigPanel">
+          <select id="reviewSelect" onchange="selecionarRevisaoAtiva(this.value)"><option value="">Carregando...</option></select>
+          <select id="reviewTipo">
+            <option value="narrativa">Narrativa</option>
+            <option value="integrativa">Integrativa</option>
+            <option value="escopo">Escopo</option>
+            <option value="estado_da_arte">Estado da arte</option>
+          </select>
+          <select id="reviewFormato">
+            <option value="vancouver">Vancouver</option>
+            <option value="abnt">ABNT</option>
+            <option value="apa">APA</option>
+          </select>
+          <input id="reviewTitulo" type="text" maxlength="200">
+          <input id="reviewTituloInstrucao" type="text">
+          <textarea id="reviewTema"></textarea>
+          <input id="reviewTemaInstrucao" type="text">
+          <textarea id="reviewPergunta"></textarea>
+          <input id="reviewPerguntaInstrucao" type="text">
+          <textarea id="reviewObjetivo"></textarea>
+          <input id="reviewObjetivoInstrucao" type="text">
+          <button id="reviewSaveBtn" onclick="salvarRevisaoAtual()">Salvar revisão</button>
         </div>
 
-        <div class="review-card review-chat-card">
-          <div>
-            <div class="review-card-title">Chat da revisão</div>
-            <div class="review-card-sub">Use o chat para orientar a revisão. Respostas sobre evidências dependem das fontes aprovadas.</div>
-          </div>
-          <div id="reviewChatThread" class="chat-thread"></div>
-          <div class="chat-input-wrap">
-            <textarea id="reviewChatInput" class="chat-input" placeholder="Pergunte sobre as fontes ou peça um rascunho orientado..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMensagemReviewChat()}"></textarea>
-            <button class="chat-send" id="reviewChatSendBtn" onclick="enviarMensagemReviewChat()">➤</button>
-          </div>
-        </div>
-
-        <div class="section-builder">
+        <div class="section-builder" id="reviewSectionsPanel">
           <div class="section-header">
             <span class="section-title">Rascunhos por seção</span>
           </div>
           <div class="section-grid" id="reviewSectionGrid"></div>
           <button class="final-docx" onclick="gerarVersaoFinalReview()">Gerar versão final da revisão em DOCX</button>
         </div>
-      </section>
+      </div>
 
-      <aside class="sources-panel">
+      <aside class="sources-panel" id="reviewSourcesPanel">
         <div class="review-card">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
             <div>
               <div class="review-card-title">Base da revisão</div>
-              <div class="review-card-sub" style="margin-bottom:0">Fontes aprovadas definem o que a IA pode usar.</div>
+              <div class="review-card-sub" style="margin-bottom:0">A IA usa apenas fontes aprovadas.</div>
             </div>
-            <button class="btn btn-secondary" onclick="reconstruirCorpusReview()">Atualizar base</button>
+            <button class="btn btn-secondary" onclick="reconstruirCorpusReview()">Atualizar</button>
           </div>
           <div class="review-status">
             <div class="review-status-item"><div class="review-status-value" id="reviewFontesTotal">—</div><div class="review-status-label">Fontes</div></div>
@@ -448,7 +386,6 @@ button,input,textarea,select{font:inherit}
             </div>
           </div>
         </div>
-
         <div class="review-card">
           <div class="review-card-title">Rascunhos salvos</div>
           <div id="reviewSavedDrafts" class="drafts-mini">
@@ -456,7 +393,7 @@ button,input,textarea,select{font:inherit}
           </div>
         </div>
       </aside>
-    </div>
+    </section>
   </div>
 </main>
 
@@ -477,6 +414,8 @@ function renderUser(){
   const user=getUser();
   if(!user)return;
   _setText('userAvatar',_getInitials(user.nome));
+  const firstName=(user.nome||'').trim().split(/\s+/)[0]||'';
+  _setText('reviewGreeting',firstName?`Vamos lá, ${firstName}`:'Vamos lá');
   _setText('userNomeDropdown',user.nome||'Usuário');
   const plano=(user.plano||'free').toLowerCase();
   _setText('userPlanoDropdown',plano==='free'?'GRATUITO':plano.toUpperCase());
@@ -488,6 +427,15 @@ function renderizarData(){
   el.textContent=str.charAt(0).toUpperCase()+str.slice(1);
 }
 function toggleUserDropdown(){document.getElementById('userDropdown')?.classList.toggle('open')}
+function toggleSidebar(force){
+  if(typeof force==='boolean')document.body.classList.toggle('sidebar-open',force);
+  else document.body.classList.toggle('sidebar-open');
+}
+function mostrarPaineis(alvo){
+  document.getElementById('reviewContextPanels')?.classList.add('show');
+  if(alvo==='fontes')document.getElementById('reviewSourcesPanel')?.scrollIntoView({behavior:'smooth',block:'start'});
+  if(alvo==='secoes')document.getElementById('reviewSectionsPanel')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
 async function logout(){try{await fetch(`${API}/auth/logout`,{method:'POST',credentials:'include'})}catch{}sessionStorage.removeItem('rccs_token');sessionStorage.removeItem('rccs_user');location.href='login.html'}
 function mostrarToast(mensagem,tipo='info',icone='ℹ️',duracao=4000){
   const container=document.getElementById('toastContainer');if(!container)return;
@@ -507,6 +455,7 @@ let reviewCache=[];
 let reviewCorpusStats={fontes_total:0,fontes_aprovadas:0,chunks_total:0,caracteres_indexados:0};
 let reviewChatHistory=[];
 let reviewSavedDrafts=[];
+let reviewFlowStage='tipo';
 const reviewSections=[
   {id:'resumo',label:'Resumo'},
   {id:'introducao',label:'Introdução'},
@@ -523,14 +472,38 @@ function _saveReviewWorkspace(){
   reviewSections.forEach(s=>{sections[s.id]=document.getElementById(`reviewSection_${s.id}`)?.value||''});
   localStorage.setItem(_reviewKey('sections'),JSON.stringify(sections));
   localStorage.setItem(_reviewKey('drafts'),JSON.stringify(reviewSavedDrafts.slice(0,12)));
+  localStorage.setItem(_reviewKey('chat'),JSON.stringify(reviewChatHistory.slice(-80)));
+  localStorage.setItem(_reviewKey('stage'),reviewFlowStage||'tipo');
 }
 function _loadReviewWorkspace(){
   reviewSavedDrafts=[];
   try{reviewSavedDrafts=JSON.parse(localStorage.getItem(_reviewKey('drafts'))||'[]')}catch{reviewSavedDrafts=[]}
+  try{reviewChatHistory=JSON.parse(localStorage.getItem(_reviewKey('chat'))||'[]')}catch{reviewChatHistory=[]}
+  reviewFlowStage=localStorage.getItem(_reviewKey('stage'))||'tipo';
   let sections={};
   try{sections=JSON.parse(localStorage.getItem(_reviewKey('sections'))||'{}')}catch{sections={}}
   reviewSections.forEach(s=>{const el=document.getElementById(`reviewSection_${s.id}`);if(el)el.value=sections[s.id]||''});
   renderSavedDrafts();
+  renderChatHistory();
+  atualizarResumoReview();
+}
+function atualizarResumoReview(){
+  const el=document.getElementById('reviewSetupSummary');if(!el)return;
+  const tipo=document.getElementById('reviewTipo')?.selectedOptions?.[0]?.textContent||'Tipo não definido';
+  const formato=document.getElementById('reviewFormato')?.selectedOptions?.[0]?.textContent||'Formato não definido';
+  const tema=document.getElementById('reviewTema')?.value?.trim();
+  const fontes=Number(reviewCorpusStats.fontes_aprovadas||0);
+  el.innerHTML=[
+    `<span class="summary-pill">${_esc(tipo)}</span>`,
+    `<span class="summary-pill">${_esc(formato)}</span>`,
+    `<span class="summary-pill">${fontes} fonte${fontes===1?'':'s'} aprovada${fontes===1?'':'s'}</span>`,
+    tema?`<span class="summary-pill">${_esc(tema.slice(0,70))}${tema.length>70?'...':''}</span>`:''
+  ].join('');
+}
+function renderConversationList(){
+  const box=document.getElementById('reviewConversationList');if(!box)return;
+  if(!reviewCache.length){box.innerHTML='<button class="conversation-item active">Nova revisão</button>';return}
+  box.innerHTML=reviewCache.map(r=>`<button class="conversation-item ${String(r.id)===String(reviewAtivaId)?'active':''}" onclick="selecionarRevisaoAtiva('${_esc(r.id)}')">${_esc(r.titulo||r.tema||'Revisão sem título')}</button>`).join('');
 }
 function renderReviewSections(){
   const grid=document.getElementById('reviewSectionGrid');if(!grid)return;
@@ -551,22 +524,90 @@ function renderReviewSections(){
       </div>
     </article>`).join('');
 }
-function appendReviewChat(role,text,fontes=[]){
+function appendReviewChat(role,text,fontes=[],actions=[]){
   const thread=document.getElementById('reviewChatThread');if(!thread)return;
-  const idx=reviewChatHistory.push({role,text,fontes})-1;
-  const avatar=role==='user'?_getInitials(getUser()?.nome||'Usuário'):`<img src="assets/pixel-researcher.png" alt="">`;
+  const idx=reviewChatHistory.push({role,text,fontes,actions})-1;
+  const avatar=role==='user'?_getInitials(getUser()?.nome||'Usuário'):'RS';
   const refs=_renderReviewRefs(fontes);
+  const buttons=Array.isArray(actions)&&actions.length?`<div class="chat-actions">${actions.map(a=>`<button class="choice-chip" onclick="${_esc(a.onclick)}">${_esc(a.label)}</button>`).join('')}</div>`:'';
   const save=role==='assistant'&&text?`<div class="review-toolbar" style="margin-top:8px"><button class="btn btn-ghost" onclick="salvarChatComoRascunho(${idx})">Salvar rascunho</button></div>`:'';
   const item=document.createElement('div');
   item.className=`chat-message ${role==='user'?'user':'assistant'}`;
-  item.innerHTML=`<div class="chat-avatar">${avatar}</div><div><div class="chat-bubble">${_formatReviewText(text)}</div>${refs}${save}</div>`;
+  item.innerHTML=`<div class="chat-avatar">${avatar}</div><div><div class="chat-bubble">${_formatReviewText(text)}</div>${refs}${buttons}${save}</div>`;
   thread.appendChild(item);
   thread.scrollTop=thread.scrollHeight;
+  _saveReviewWorkspace();
+}
+function renderChatHistory(){
+  const thread=document.getElementById('reviewChatThread');if(!thread)return;
+  const saved=[...reviewChatHistory];
+  thread.innerHTML='';reviewChatHistory=[];
+  saved.forEach(m=>appendReviewChat(m.role,m.text,m.fontes||[],m.actions||[]));
 }
 function renderInitialChat(){
   const thread=document.getElementById('reviewChatThread');if(!thread)return;
   thread.innerHTML='';reviewChatHistory=[];
-  appendReviewChat('assistant','Comece descrevendo o tema, a pergunta ou o trecho que quer organizar. Quando houver fontes aprovadas, respondo usando apenas a base da revisão.');
+  reviewFlowStage='tipo';
+  appendReviewChat('assistant','Organize fontes e gere sua revisão com base nos artigos selecionados.\n\nVamos começar pelo tipo de revisão?',[],[
+    {label:'Narrativa',onclick:"selecionarOpcaoReview('tipo','narrativa','Revisão narrativa')"},
+    {label:'Integrativa',onclick:"selecionarOpcaoReview('tipo','integrativa','Revisão integrativa')"},
+    {label:'Escopo',onclick:"selecionarOpcaoReview('tipo','escopo','Revisão de escopo')"},
+    {label:'Estado da arte',onclick:"selecionarOpcaoReview('tipo','estado_da_arte','Estado da arte')"}
+  ]);
+  atualizarResumoReview();
+}
+function selecionarOpcaoReview(campo,value,label){
+  appendReviewChat('user',label);
+  if(campo==='tipo'){
+    const tipo=document.getElementById('reviewTipo');if(tipo)tipo.value=value;
+    const titulo=document.getElementById('reviewTitulo');if(titulo&&!titulo.value.trim())titulo.value=label;
+    reviewFlowStage='tema';
+    appendReviewChat('assistant','Perfeito. Agora me diga o tema da revisão em uma frase. Você pode escrever livremente no campo abaixo.');
+    salvarRevisaoAtual().then(()=>{renderConversationList();_saveReviewWorkspace()}).catch(console.error);
+  }
+  if(campo==='formato'){
+    const formato=document.getElementById('reviewFormato');if(formato)formato.value=value;
+    reviewFlowStage='fontes';
+    appendReviewChat('assistant','Agora precisamos montar a Base da revisão. Você pode buscar artigos nas bases científicas ou enviar fontes manualmente.',[],[
+      {label:'Buscar artigos',onclick:"mostrarPaineis('fontes')"},
+      {label:'Enviar arquivo',onclick:"mostrarPaineis('fontes')"}
+    ]);
+    mostrarPaineis('fontes');
+  }
+  atualizarResumoReview();_saveReviewWorkspace();
+}
+async function gerarPerguntaObjetivoReview(){
+  const tema=document.getElementById('reviewTema')?.value?.trim();
+  if(!tema){appendReviewChat('assistant','Me diga o tema primeiro para eu estruturar a pergunta e o objetivo.');return}
+  appendReviewChat('user','Gerar pergunta e objetivo');
+  try{
+    const res=await fetch(`${API}/chat/assist-texto`,{method:'POST',headers:authHeaders(),body:JSON.stringify({
+      texto:tema,
+      acao:'melhorar',
+      contexto_campo:'tema de revisão científica',
+      instrucao:'Crie uma pergunta norteadora e um objetivo geral para uma revisão científica. Retorne em duas linhas, começando com "Pergunta:" e "Objetivo:".'
+    })});
+    const data=await _safeJson(res);
+    if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
+    const resposta=data.resposta||'';
+    const pergunta=(resposta.match(/Pergunta:\s*(.+)/i)||[])[1]||resposta.split('\n')[0]||'';
+    const objetivo=(resposta.match(/Objetivo:\s*(.+)/i)||[])[1]||resposta.split('\n').slice(1).join(' ')||'';
+    const perguntaEl=document.getElementById('reviewPergunta');if(perguntaEl)perguntaEl.value=pergunta.trim();
+    const objetivoEl=document.getElementById('reviewObjetivo');if(objetivoEl)objetivoEl.value=objetivo.trim();
+    appendReviewChat('assistant',`${resposta}\n\nEscolha agora o formato de referências.`,[],[
+      {label:'Vancouver',onclick:"selecionarOpcaoReview('formato','vancouver','Vancouver')"},
+      {label:'ABNT',onclick:"selecionarOpcaoReview('formato','abnt','ABNT')"},
+      {label:'APA',onclick:"selecionarOpcaoReview('formato','apa','APA')"}
+    ]);
+    reviewFlowStage='formato';atualizarResumoReview();_saveReviewWorkspace();
+  }catch(err){
+    console.error('[CaseOS] Erro ao gerar pergunta/objetivo:',err);
+    appendReviewChat('assistant','Não consegui gerar agora. Você pode digitar a pergunta manualmente e seguir para o formato.',[],[
+      {label:'Vancouver',onclick:"selecionarOpcaoReview('formato','vancouver','Vancouver')"},
+      {label:'ABNT',onclick:"selecionarOpcaoReview('formato','abnt','ABNT')"},
+      {label:'APA',onclick:"selecionarOpcaoReview('formato','apa','APA')"}
+    ]);
+  }
 }
 function salvarChatComoRascunho(index){
   const msg=reviewChatHistory[index];if(!msg?.text)return;
@@ -609,6 +650,7 @@ async function carregarRevisoes(){
   }
   if(reviewAtivaId&&!reviewCache.some(r=>String(r.id)===String(reviewAtivaId)))reviewAtivaId=null;
   if(!reviewAtivaId&&reviewCache.length)reviewAtivaId=reviewCache[0].id;
+  renderConversationList();
   if(reviewAtivaId)selecionarRevisaoAtiva(reviewAtivaId,{silent:true});else _resetReviewCorpusUI();
 }
 
@@ -621,7 +663,8 @@ function selecionarRevisaoAtiva(id,opts={}){
   carregarReviewSources().catch(console.error);
   carregarResumoCorpusReview().catch(console.error);
   _loadReviewWorkspace();
-  renderInitialChat();
+  if(!reviewChatHistory.length)renderInitialChat();
+  renderConversationList();
   if(!opts.silent)mostrarToast('Revisão ativa selecionada.','success','✓');
 }
 
@@ -679,6 +722,7 @@ async function carregarResumoCorpusReview(){
   _setText('reviewFontesAprovadas',stats.fontes_aprovadas??0);
   _setText('reviewChunksTotal',stats.chunks_total??0);
   _setText('reviewCharsTotal',_fmtTok(stats.caracteres_indexados??0));
+  atualizarResumoReview();
 }
 async function _safeJson(res){
   try{return await res.json()}catch{return null}
@@ -726,6 +770,10 @@ async function buscarFontesReview(){
     if(!res.ok)throw new Error(`HTTP ${res.status}`);
     const data=await res.json();
     await carregarReviewSources();await carregarResumoCorpusReview();
+    mostrarPaineis('fontes');
+    appendReviewChat('assistant',`${data.importadas??data.total??'Fontes'} importadas. Aprove as fontes que devem entrar na Base da revisão.`,[],[
+      {label:'Ver seções editáveis',onclick:"mostrarPaineis('secoes')"}
+    ]);
     mostrarToast(`${data.importadas??data.total??'Fontes'} importadas para triagem.`,'success','✓');
   }catch(err){console.error('[CaseOS] Erro ao importar fontes:',err);mostrarToast('Não foi possível importar fontes agora.','error','⚠️')}
   finally{_setReviewBusy(btn,false)}
@@ -739,7 +787,10 @@ async function uploadFonteReview(){
   try{
     const res=await fetch(`${API}/revisoes/${id}/fontes/upload`,{method:'POST',headers:authBearerHeaders(),body:form});
     if(!res.ok)throw new Error(`HTTP ${res.status}`);
-    input.value='';await carregarReviewSources();await reconstruirCorpusReview({silent:true});
+    input.value='';await carregarReviewSources();await reconstruirCorpusReview({silent:true});mostrarPaineis('fontes');
+    appendReviewChat('assistant','Fonte enviada e aprovada. Abaixo do chat, os cards por seção estão disponíveis para edição.',[],[
+      {label:'Abrir seções',onclick:"mostrarPaineis('secoes')"}
+    ]);
     mostrarToast('Fonte enviada e aprovada para a base.','success','✓');
   }catch(err){console.error('[CaseOS] Erro ao enviar fonte:',err);mostrarToast('Não foi possível enviar a fonte.','error','⚠️')}
   finally{_setReviewBusy(btn,false)}
@@ -763,7 +814,13 @@ async function decidirFonteReview(fonteId,decisao){
   try{
     const res=await fetch(`${API}/revisoes/${reviewAtivaId}/fontes/${fonteId}/decisao`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({decisao})});
     if(!res.ok)throw new Error(`HTTP ${res.status}`);
-    await carregarReviewSources();await reconstruirCorpusReview({silent:true});
+    await carregarReviewSources();await reconstruirCorpusReview({silent:true});mostrarPaineis('fontes');
+    if(decisao==='incluida'){
+      appendReviewChat('assistant','Fonte aprovada. Quando terminar a seleção, você pode gerar rascunhos nas seções abaixo.',[],[
+        {label:'Abrir seções',onclick:"mostrarPaineis('secoes')"},
+        {label:'Ver base',onclick:"carregarPreviewCorpusReview()"}
+      ]);
+    }
     mostrarToast(decisao==='incluida'?'Fonte aprovada.':'Fonte excluída da escrita.','success','✓');
   }catch(err){console.error('[CaseOS] Erro ao decidir fonte:',err);mostrarToast('Não foi possível atualizar a fonte.','error','⚠️')}
 }
@@ -828,6 +885,28 @@ async function enviarMensagemReviewChat(){
   const pergunta=input?.value?.trim();if(!pergunta)return;
   appendReviewChat('user',pergunta);input.value='';
   const id=await _garantirRevisaoAtiva();if(!id){appendReviewChat('assistant','Salve a revisão para começar.');return}
+  if(reviewFlowStage==='tema'){
+    const tema=document.getElementById('reviewTema');if(tema)tema.value=pergunta;
+    const titulo=document.getElementById('reviewTitulo');if(titulo&&!titulo.value.trim())titulo.value=`Revisão sobre ${pergunta}`.slice(0,200);
+    reviewFlowStage='pergunta';
+    atualizarResumoReview();
+    await salvarRevisaoAtual();
+    appendReviewChat('assistant','Ótimo. Posso transformar esse tema em pergunta norteadora e objetivo, ou você pode escrever manualmente no chat.',[],[
+      {label:'Gerar pergunta e objetivo',onclick:'gerarPerguntaObjetivoReview()'},
+      {label:'Escolher formato agora',onclick:"selecionarOpcaoReview('formato','vancouver','Vancouver')"}
+    ]);
+    return;
+  }
+  if(reviewFlowStage==='pergunta'){
+    const perguntaEl=document.getElementById('reviewPergunta');if(perguntaEl&&!perguntaEl.value.trim())perguntaEl.value=pergunta;
+    reviewFlowStage='formato';atualizarResumoReview();await salvarRevisaoAtual();
+    appendReviewChat('assistant','Perfeito. Agora escolha o formato das referências.',[],[
+      {label:'Vancouver',onclick:"selecionarOpcaoReview('formato','vancouver','Vancouver')"},
+      {label:'ABNT',onclick:"selecionarOpcaoReview('formato','abnt','ABNT')"},
+      {label:'APA',onclick:"selecionarOpcaoReview('formato','apa','APA')"}
+    ]);
+    return;
+  }
   const textLower=pergunta.toLowerCase();
   const pareceEvidencia=/fonte|artigo|estudo|evid[êe]ncia|resultado|achado|literatura|refer[êe]ncia|base/.test(textLower);
   if(Number(reviewCorpusStats.fontes_aprovadas||0)===0&&pareceEvidencia){
