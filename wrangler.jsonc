@@ -9,6 +9,7 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
+    "html_handling": "none",
     "run_worker_first": ["/", "/landing", "/review-studio", "/review-studio/"]
   },
   "compatibility_flags": [
