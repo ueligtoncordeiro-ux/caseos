@@ -80,8 +80,20 @@ def _add_heading(doc: Document, text: str, level: int = 1):
     return p
 
 
-def _add_paragraph(doc: Document, text: str, first_line_indent: bool = True):
-    p = doc.add_paragraph(text)
+def _safe_str(value) -> str:
+    """Converte qualquer valor para string de forma segura."""
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        # dict inesperado — usa 'formatada' ou 'texto' se disponível
+        return str(value.get("formatada") or value.get("texto") or "")
+    return str(value)
+
+
+def _add_paragraph(doc: Document, text, first_line_indent: bool = True):
+    p = doc.add_paragraph(_safe_str(text))
     p.style = doc.styles["Normal"]
     p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     p.paragraph_format.line_spacing = Pt(18)
@@ -184,7 +196,7 @@ def _add_title_page(doc: Document, artigo: ArtigoGerado, cko: CKO):
             orc_run.font.size = Pt(9)
             orc_run.font.color.rgb = RGBColor(80, 80, 80)
 
-    # Palavras-chave
+    # Palavras-chave (garante que cada item é string)
     doc.add_paragraph()
     kw_para = doc.add_paragraph()
     kw_para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
@@ -192,7 +204,8 @@ def _add_title_page(doc: Document, artigo: ArtigoGerado, cko: CKO):
     kw_run.font.bold = True
     kw_run.font.size = Pt(12)
     kw_run.font.name = "Times New Roman"
-    kw_val = kw_para.add_run("; ".join(artigo.palavras_chave) + ".")
+    kws = "; ".join(_safe_str(k) for k in artigo.palavras_chave if k) + "."
+    kw_val = kw_para.add_run(kws)
     kw_val.font.size = Pt(12)
     kw_val.font.name = "Times New Roman"
 
@@ -209,6 +222,9 @@ def _add_resumo(doc: Document, artigo: ArtigoGerado):
         ("Discussão", res.discussao),
         ("Conclusão", res.conclusao),
     ]:
+        texto_str = _safe_str(texto)
+        if not texto_str:
+            continue  # pula subseções vazias em vez de gerar linha em branco
         p = doc.add_paragraph()
         p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         p.paragraph_format.line_spacing = Pt(12)  # simples
@@ -216,7 +232,7 @@ def _add_resumo(doc: Document, artigo: ArtigoGerado):
         bold_run.font.bold = True
         bold_run.font.name = "Times New Roman"
         bold_run.font.size = Pt(12)
-        text_run = p.add_run(texto)
+        text_run = p.add_run(texto_str)
         text_run.font.name = "Times New Roman"
         text_run.font.size = Pt(12)
 

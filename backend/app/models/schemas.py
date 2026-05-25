@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field, field_validator, EmailStr
-from typing import Optional
+from pydantic import BaseModel, Field, field_validator, EmailStr, ConfigDict
+from typing import Optional, Any
 from datetime import datetime
 
 
@@ -146,21 +146,33 @@ class Referencia(BaseModel):
 
 
 class Resumo(BaseModel):
-    introducao: str
-    caso: str
-    discussao: str
-    conclusao: str
+    """
+    Todos os campos são opcionais com default "" para tolerar resumos
+    parcialmente editados (regex falhou em alguma seção) sem ValidationError.
+    """
+    model_config = ConfigDict(extra="ignore")
+
+    introducao: str = ""
+    caso: str = ""
+    discussao: str = ""
+    conclusao: str = ""
 
 
 class ArtigoGerado(BaseModel):
-    titulo: str
-    palavras_chave: list[str]
-    resumo: Resumo
-    introducao: list[str]
-    caso_clinico: list[str]
-    discussao: list[str]
-    conclusao: list[str]
-    referencias: list[Referencia]
+    """
+    Campos com defaults seguros para tolerar resultados em qualquer estado
+    (recém gerado, parcialmente editado, importado de versão antiga).
+    """
+    model_config = ConfigDict(extra="ignore")
+
+    titulo: str = ""
+    palavras_chave: list[Any] = []   # Any → normalizado para str no download
+    resumo: Resumo = Field(default_factory=Resumo)
+    introducao: list[Any] = []       # Any → normalizado para str no download
+    caso_clinico: list[Any] = []
+    discussao: list[Any] = []
+    conclusao: list[Any] = []
+    referencias: list[Referencia] = []
 
 
 class RelatorioGerado(BaseModel):

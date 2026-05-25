@@ -4164,7 +4164,12 @@ async function downloadRelato(sessaoId, _tentativa) {
       headers: authHeaders(),
     });
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      // Extrai o detalhe real do erro para exibir mensagem diagnóstica
+      let detalhe = `HTTP ${res.status}`;
+      try { const j = await res.clone().json(); if (j?.detail) detalhe = j.detail; } catch(_) {}
+      throw new Error(detalhe);
+    }
 
     const blob = await res.blob();
     const url  = URL.createObjectURL(blob);
@@ -4188,12 +4193,13 @@ async function downloadRelato(sessaoId, _tentativa) {
       return downloadRelato(sessaoId, tentativa + 1);
     }
 
-    /* Todas as tentativas falharam — mostra toast com botão de retry */
+    /* Todas as tentativas falharam — mostra detalhe real + botão de retry */
+    const msg = err?.message || 'Erro desconhecido';
     mostrarToast(
-      `Falha ao baixar. <button onclick="downloadRelato('${sessaoId}')" ` +
+      `Falha: ${msg} <button onclick="downloadRelato('${sessaoId}')" ` +
       `style="background:var(--acid);color:#000;border:none;border-radius:6px;padding:2px 10px;cursor:pointer;font-weight:700;margin-left:8px">` +
       `Tentar novamente</button>`,
-      'error', '⚠️', 8000
+      'error', '⚠️', 12000
     );
   } finally {
     /* Sempre restaura o botão do modal */

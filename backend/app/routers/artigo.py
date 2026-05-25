@@ -326,25 +326,65 @@ async def download_resultado(
     try:
         res = copy.deepcopy(sessao.resultado)
 
-        # ── Normalização defensiva ──────────────────────────────────────────────
+        # ══════════════════════════════════════════════════════════════════════
+        # NORMALIZAÇÃO DEFENSIVA COMPLETA
+        # Objetivo: aceitar qualquer estrutura que o resultado possa ter
+        # (recém gerado, editado parcialmente, importado de versão antiga).
+        # ══════════════════════════════════════════════════════════════════════
 
-        # Remove chaves extras que não pertencem ao schema ArtigoGerado
-        for chave_extra in ("versao_edicao",):
-            res.pop(chave_extra, None)
+        def _to_str(v) -> str:
+            if v is None: return ""
+            if isinstance(v, str): return v
+            if isinstance(v, dict): return str(v.get("formatada") or v.get("texto") or "")
+            return str(v)
+
+        def _to_str_list(v) -> list:
+            """Garante list[str] independente do tipo armazenado."""
+            if v is None: return []
+            if isinstance(v, str): return [v] if v.strip() else []
+            if isinstance(v, list): return [_to_str(i) for i in v if i not in (None, "")]
+            return [str(v)]
+
+        # Chaves extras que não pertencem ao schema (não causam erro em Pydantic
+        # com extra="ignore", mas melhor limpar explicitamente)
+        SCHEMA_KEYS = {"titulo","palavras_chave","resumo","introducao",
+                       "caso_clinico","discussao","conclusao","referencias"}
+        for k in list(res.keys()):
+            if k not in SCHEMA_KEYS:
+                res.pop(k, None)
+
+        # titulo
+        res["titulo"] = _to_str(res.get("titulo")) or "Relato de Caso"
+
+        # palavras_chave — pode ser str "a; b; c" ou lista
+        pck = res.get("palavras_chave", [])
+        if isinstance(pck, str):
+            res["palavras_chave"] = [p.strip() for p in pck.replace(";",",").split(",") if p.strip()]
+        else:
+            res["palavras_chave"] = [_to_str(p) for p in (pck or []) if p]
 
         # caso_clinico (importações antigas usam relato_caso)
         if "caso_clinico" not in res and "relato_caso" in res:
             res["caso_clinico"] = res.pop("relato_caso")
 
-        # resumo: campo "relato" → "caso"
-        if isinstance(res.get("resumo"), dict):
-            rs = res["resumo"]
-            if "caso" not in rs and "relato" in rs:
-                rs["caso"] = rs.pop("relato")
+        # seções de texto → list[str] garantida
+        for campo in ("introducao", "caso_clinico", "discussao", "conclusao"):
+            res[campo] = _to_str_list(res.get(campo))
 
-        # Referências: aceita strings, dicts parciais {numero,formatada}
-        # ou dicts completos. Garante todos os campos requeridos por Referencia.
-        refs_raw = res.get("referencias", [])
+        # resumo — normaliza campos internos
+        rs_raw = res.get("resumo") or {}
+        if not isinstance(rs_raw, dict):
+            rs_raw = {}
+        # renomeia "relato" → "caso" (formato de versões anteriores do pipeline)
+        if "caso" not in rs_raw and "relato" in rs_raw:
+            rs_raw["caso"] = rs_raw.pop("relato")
+        # garante que todos os 4 campos existem como string
+        for campo_rs in ("introducao", "caso", "discussao", "conclusao"):
+            rs_raw[campo_rs] = _to_str(rs_raw.get(campo_rs))
+        res["resumo"] = rs_raw
+
+        # referências — aceita strings, dicts parciais ou completos
+        refs_raw = res.get("referencias") or []
         refs_norm = []
         for i, ref in enumerate(refs_raw, start=1):
             if isinstance(ref, str):
@@ -353,27 +393,29 @@ async def download_resultado(
                     "periodico": "", "ano": "", "formatada": ref,
                 })
             elif isinstance(ref, dict):
-                # Garante formatada (campo mais importante para o DOCX)
                 if not ref.get("formatada"):
                     ref["formatada"] = ref.get("titulo", "")
-                # Garante campos requeridos pelo schema com defaults seguros
                 ref.setdefault("numero", i)
                 ref.setdefault("autores", "")
-                ref.setdefault("titulo", ref.get("formatada", ""))
+                ref.setdefault("titulo", _to_str(ref.get("formatada")))
                 ref.setdefault("periodico", "")
                 ref.setdefault("ano", "")
                 refs_norm.append(ref)
-            # Ignora silenciosamente entradas de tipo inesperado
+            # outros tipos (None, int…) são ignorados silenciosamente
         res["referencias"] = refs_norm
+
+        log.info("Resultado normalizado para sessão %s: titulo=%r refs=%d",
+                 sessao_id, res["titulo"][:40], len(refs_norm))
 
         # ── Parse do ArtigoGerado ───────────────────────────────────────────────
         try:
             artigo = ArtigoGerado(**res)
         except Exception as val_exc:
-            log.error("Falha ao parsear ArtigoGerado para sessão %s: %s", sessao_id, val_exc)
+            log.error("Falha ao parsear ArtigoGerado para sessão %s: %s\nres=%r",
+                      sessao_id, val_exc, res)
             raise HTTPException(
                 status_code=500,
-                detail=f"Estrutura do artigo inválida: {val_exc}",
+                detail=f"Estrutura do artigo inválida após normalização: {val_exc}",
             )
 
         # ── CKO (fallback total se dados estiverem corrompidos) ─────────────────
@@ -416,6 +458,53 @@ async def download_resultado(
         import traceback
         log.error("Erro inesperado ao gerar DOCX (sessão %s):\n%s", sessao_id, traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Erro ao gerar DOCX: {str(exc)}")
+
+
+@router.get("/{sessao_id}/diagnostico")
+async def diagnostico_resultado(
+    sessao_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    """
+    Endpoint de diagnóstico (owner-only).
+    Retorna o raw resultado + o que o parser consegue extrair + qualquer erro.
+    Útil para depurar falhas de download sem precisar de acesso ao servidor.
+    """
+    import copy
+    from app.models.schemas import ArtigoGerado
+
+    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
+    sessao = result.scalar_one_or_none()
+    if not sessao or sessao.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+
+    raw = sessao.resultado or {}
+    erros = []
+    parsed_ok = False
+
+    # tenta parsear diretamente sem normalização
+    try:
+        from app.models.schemas import ArtigoGerado
+        ArtigoGerado(**copy.deepcopy(raw))
+        parsed_ok = True
+    except Exception as e:
+        erros.append(f"parse_direto: {e}")
+
+    return {
+        "sessao_id": sessao_id,
+        "status": sessao.status,
+        "parsed_sem_normalizacao": parsed_ok,
+        "erros": erros,
+        "chaves_resultado": list(raw.keys()) if raw else [],
+        "tipos_campos": {
+            k: type(v).__name__ for k, v in raw.items()
+        } if raw else {},
+        "resumo_chaves": list(raw.get("resumo", {}).keys()) if isinstance(raw.get("resumo"), dict) else str(type(raw.get("resumo"))),
+        "referencias_count": len(raw.get("referencias", [])),
+        "referencias_sample": (raw.get("referencias") or [])[:2],
+        "palavras_chave_tipo": type(raw.get("palavras_chave")).__name__,
+    }
 
 
 @router.post("/{sessao_id}/confirmar-flags")
