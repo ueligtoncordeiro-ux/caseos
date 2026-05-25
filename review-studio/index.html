@@ -94,7 +94,7 @@ button,input,textarea,select{font:inherit}
   z-index:300;transform:translateX(-102%);transition:transform .22s ease;box-shadow:18px 0 45px rgba(0,0,0,.08);
   display:flex;flex-direction:column;padding:18px 12px;
 }
-body.sidebar-open .sidebar-drawer,.side-rail:hover + .sidebar-drawer,.sidebar-drawer:hover{transform:translateX(0)}
+body.sidebar-open .sidebar-drawer{transform:translateX(0)}
 .drawer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
 .drawer-brand{display:flex;align-items:center;gap:10px;font-family:var(--head);font-weight:800}
 .drawer-brand img{width:28px;height:28px}
@@ -126,10 +126,22 @@ body.sidebar-open .sidebar-drawer,.side-rail:hover + .sidebar-drawer,.sidebar-dr
 }
 .page{min-height:100vh;padding:54px 34px 70px;max-width:1320px;margin:0 auto}
 .review-hero{
-  min-height:430px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px 0 38px;
+  min-height:calc(100vh - 120px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px 0 38px;
+  transition:min-height .22s ease,justify-content .22s ease,padding .22s ease;
 }
+.review-hero.conversation{min-height:560px;justify-content:flex-start;padding-top:72px}
 .review-title{font-family:var(--head);font-size:42px;font-weight:600;letter-spacing:0;color:#1B1B1E;margin-bottom:34px}
-.command-card{width:min(860px,100%);background:#fff;border:1px solid var(--border);border-radius:26px;box-shadow:var(--shadow-lg);overflow:hidden;text-align:left}
+.review-hero.conversation .review-title{font-size:34px;margin-bottom:22px}
+.command-card{
+  width:min(860px,100%);background:#fff;border:1px solid var(--border);border-radius:999px;box-shadow:var(--shadow-lg);overflow:hidden;text-align:left;
+  transition:border-radius .22s ease,width .22s ease,box-shadow .22s ease;
+}
+.command-card.active{width:min(920px,100%);border-radius:26px}
+.command-card.compact .prompt-intro,.command-card.compact .chat-thread{display:none}
+.command-card.compact .chat-input-wrap{border-top:0;padding:12px 16px}
+.command-card.compact .chat-input{min-height:40px}
+.command-card.compact .chat-plus{background:#fff;font-size:30px}
+.command-card.compact .chat-send{border-radius:999px}
 .prompt-intro{padding:18px 22px 0;color:var(--t2);font-size:14px;line-height:1.45}
 .prompt-intro strong{color:var(--t1)}
 .chat-thread{min-height:245px;max-height:430px;overflow:auto;padding:18px 22px 10px;display:grid;align-content:start;gap:14px}
@@ -231,7 +243,10 @@ body.sidebar-open .sidebar-drawer,.side-rail:hover + .sidebar-drawer,.sidebar-dr
   .page{padding:30px 14px 44px}
   .review-title{font-size:30px;margin-bottom:24px}
   .review-hero{min-height:calc(100vh - 80px);justify-content:center}
+  .review-hero.conversation{min-height:calc(100vh - 80px);padding-top:34px}
+  .review-hero.conversation .review-title{font-size:26px}
   .command-card{border-radius:20px}
+  .command-card.compact{border-radius:999px}
   .chat-message{max-width:96%}
   .sidebar-drawer{width:calc(100vw - 56px)}
 }
@@ -292,16 +307,16 @@ body.sidebar-open .sidebar-drawer,.side-rail:hover + .sidebar-drawer,.sidebar-dr
 
 <main class="main">
   <div class="page">
-    <section class="review-hero">
+    <section class="review-hero" id="reviewHero">
       <h1 class="review-title" id="reviewGreeting">Vamos lá</h1>
-      <div class="command-card">
+      <div class="command-card compact" id="reviewCommandCard">
         <div class="prompt-intro">
           <strong>Organize fontes e gere sua revisão com base nos artigos selecionados.</strong> Comece por aqui.
         </div>
         <div id="reviewChatThread" class="chat-thread"></div>
         <div class="chat-input-wrap">
           <button class="chat-plus" onclick="mostrarPaineis('fontes')" title="Adicionar fontes">+</button>
-          <textarea id="reviewChatInput" class="chat-input" placeholder="Converse com o Review Studio..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMensagemReviewChat()}"></textarea>
+          <textarea id="reviewChatInput" class="chat-input" placeholder="Organize fontes e gere sua revisão com base nos artigos selecionados. Comece por aqui." onfocus="startReviewConversation()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMensagemReviewChat()}"></textarea>
           <button class="chat-send" id="reviewChatSendBtn" onclick="enviarMensagemReviewChat()">➤</button>
         </div>
       </div>
@@ -456,6 +471,7 @@ let reviewCorpusStats={fontes_total:0,fontes_aprovadas:0,chunks_total:0,caracter
 let reviewChatHistory=[];
 let reviewSavedDrafts=[];
 let reviewFlowStage='tipo';
+let reviewConversationStarted=false;
 const reviewSections=[
   {id:'resumo',label:'Resumo'},
   {id:'introducao',label:'Introdução'},
@@ -543,6 +559,25 @@ function renderChatHistory(){
   const saved=[...reviewChatHistory];
   thread.innerHTML='';reviewChatHistory=[];
   saved.forEach(m=>appendReviewChat(m.role,m.text,m.fontes||[],m.actions||[]));
+}
+function startReviewConversation(){
+  const card=document.getElementById('reviewCommandCard');
+  const hero=document.getElementById('reviewHero');
+  card?.classList.remove('compact');
+  card?.classList.add('active');
+  hero?.classList.add('conversation');
+  if(!reviewConversationStarted){
+    reviewConversationStarted=true;
+    if(!reviewChatHistory.length)renderInitialChat();
+  }
+}
+function resetReviewConversationView(){
+  const card=document.getElementById('reviewCommandCard');
+  const hero=document.getElementById('reviewHero');
+  reviewConversationStarted=false;
+  card?.classList.add('compact');
+  card?.classList.remove('active');
+  hero?.classList.remove('conversation');
 }
 function renderInitialChat(){
   const thread=document.getElementById('reviewChatThread');if(!thread)return;
@@ -633,7 +668,9 @@ function novaRevisaoForm(){
   const tipo=document.getElementById('reviewTipo');const formato=document.getElementById('reviewFormato');const select=document.getElementById('reviewSelect');
   if(tipo)tipo.value='narrativa';if(formato)formato.value='vancouver';if(select)select.value='';
   _resetReviewCorpusUI();
-  renderInitialChat();
+  const thread=document.getElementById('reviewChatThread');if(thread)thread.innerHTML='';
+  reviewChatHistory=[];reviewFlowStage='tipo';
+  resetReviewConversationView();
   renderSavedDrafts();
   mostrarToast('Nova revisão pronta para preencher.','info','ℹ️');
 }
@@ -663,7 +700,7 @@ function selecionarRevisaoAtiva(id,opts={}){
   carregarReviewSources().catch(console.error);
   carregarResumoCorpusReview().catch(console.error);
   _loadReviewWorkspace();
-  if(!reviewChatHistory.length)renderInitialChat();
+  if(reviewChatHistory.length&&!opts.silent)startReviewConversation();else resetReviewConversationView();
   renderConversationList();
   if(!opts.silent)mostrarToast('Revisão ativa selecionada.','success','✓');
 }
@@ -883,6 +920,7 @@ function _renderReviewRefs(fontes){
 async function enviarMensagemReviewChat(){
   const input=document.getElementById('reviewChatInput');const btn=document.getElementById('reviewChatSendBtn');
   const pergunta=input?.value?.trim();if(!pergunta)return;
+  startReviewConversation();
   appendReviewChat('user',pergunta);input.value='';
   const id=await _garantirRevisaoAtiva();if(!id){appendReviewChat('assistant','Salve a revisão para começar.');return}
   if(reviewFlowStage==='tema'){
@@ -970,12 +1008,15 @@ window.addEventListener('DOMContentLoaded',()=>{
   renderizarData();
   renderUser();
   renderReviewSections();
-  renderInitialChat();
+  resetReviewConversationView();
   carregarRevisoes().catch(err=>{console.error(err);mostrarToast('Não foi possível carregar suas revisões.','error','⚠️')});
 });
 document.addEventListener('click',(ev)=>{
   const dd=document.getElementById('userDropdown');
   if(dd&&!ev.target.closest('.user-avatar')&&!ev.target.closest('.user-dropdown'))dd.classList.remove('open');
+  if(document.body.classList.contains('sidebar-open')&&!ev.target.closest('.side-rail')&&!ev.target.closest('.sidebar-drawer')){
+    toggleSidebar(false);
+  }
 });
 </script>
 </body>
