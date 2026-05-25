@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
 
 from app.models.schemas import CKO, IniciarResponse, StatusResponse
-from app.models.database import PesquisaSalva, Sessao, get_db, Usuario
+from app.models.database import PesquisaSalva, Sessao, VersaoDocx, get_db, Usuario
 from app.agents.orchestrator import executar_pipeline, executar_pipeline_demo
 from app.services.auth import get_verified_user, check_quota
 
@@ -538,6 +538,137 @@ async def diagnostico_resultado(
         "referencias_sample": (raw.get("referencias") or [])[:2],
         "palavras_chave_tipo": type(raw.get("palavras_chave")).__name__,
     }
+
+
+# ── Versões DOCX ──────────────────────────────────────────────────────────────
+
+@router.post("/{sessao_id}/versao")
+async def criar_versao(
+    sessao_id: str,
+    body: dict = {},
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    """
+    Cria uma nova versão DOCX a partir do estado atual do artigo.
+    Cada versão é imutável e fica disponível para download posterior.
+    """
+    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
+    sessao = result.scalar_one_or_none()
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    if sessao.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+    if sessao.status != "concluido":
+        raise HTTPException(status_code=425, detail="Artigo ainda não concluído.")
+
+    # Gera o DOCX a partir do estado atual do resultado
+    try:
+        docx_bytes = await _gerar_bytes_do_resultado(sessao)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar DOCX: {e}")
+
+    # Descobre o próximo número de versão
+    from sqlalchemy import func as sqlfunc
+    count_q = await db.execute(
+        select(sqlfunc.count()).select_from(VersaoDocx).where(
+            VersaoDocx.sessao_external_id == sessao_id
+        )
+    )
+    total_versoes = count_q.scalar() or 0
+    numero = total_versoes + 1
+
+    descricao = str(body.get("descricao", "")).strip()[:200] or None
+
+    nova_versao = VersaoDocx(
+        sessao_external_id=sessao_id,
+        numero=numero,
+        docx_bytes=docx_bytes,
+        descricao=descricao,
+    )
+    db.add(nova_versao)
+    await db.commit()
+    await db.refresh(nova_versao)
+
+    _log.info("Nova versão DOCX criada: sessao=%s versao=%d bytes=%d",
+              sessao_id, numero, len(docx_bytes))
+
+    return {
+        "id": nova_versao.id,
+        "numero": nova_versao.numero,
+        "descricao": nova_versao.descricao,
+        "created_at": nova_versao.created_at.isoformat(),
+        "size_kb": round(len(docx_bytes) / 1024, 1),
+    }
+
+
+@router.get("/{sessao_id}/versoes")
+async def listar_versoes(
+    sessao_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    """Lista todas as versões DOCX salvas pelo usuário para este relato."""
+    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
+    sessao = result.scalar_one_or_none()
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    if sessao.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+
+    versoes_q = await db.execute(
+        select(VersaoDocx)
+        .where(VersaoDocx.sessao_external_id == sessao_id)
+        .order_by(VersaoDocx.numero)
+    )
+    versoes = versoes_q.scalars().all()
+
+    return {
+        "total": len(versoes),
+        "versoes": [
+            {
+                "id": v.id,
+                "numero": v.numero,
+                "descricao": v.descricao,
+                "created_at": v.created_at.isoformat(),
+                "size_kb": round(len(v.docx_bytes) / 1024, 1) if v.docx_bytes else 0,
+            }
+            for v in versoes
+        ],
+    }
+
+
+@router.get("/{sessao_id}/versao/{versao_id}/resultado")
+async def download_versao(
+    sessao_id: str,
+    versao_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    """Download de uma versão DOCX específica."""
+    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
+    sessao = result.scalar_one_or_none()
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    if sessao.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+
+    versao_q = await db.execute(
+        select(VersaoDocx).where(
+            VersaoDocx.id == versao_id,
+            VersaoDocx.sessao_external_id == sessao_id,
+        )
+    )
+    versao = versao_q.scalar_one_or_none()
+    if not versao:
+        raise HTTPException(status_code=404, detail="Versão não encontrada.")
+
+    filename = f"CaseOS_{sessao_id[:8]}_v{versao.numero}.docx"
+    return StreamingResponse(
+        content=io.BytesIO(versao.docx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("/{sessao_id}/confirmar-flags")

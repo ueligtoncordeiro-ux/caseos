@@ -133,6 +133,27 @@ class Sessao(Base):
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     error_stage:   Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
+    versoes_docx: Mapped[List["VersaoDocx"]] = relationship(
+        "VersaoDocx", back_populates="sessao", lazy="noload",
+        order_by="VersaoDocx.numero",
+    )
+
+
+class VersaoDocx(Base):
+    __tablename__ = "versoes_docx"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True,
+                                    default=lambda: str(uuid.uuid4()))
+    sessao_external_id: Mapped[str] = mapped_column(
+        String, ForeignKey("sessoes.external_id"), nullable=False, index=True
+    )
+    numero: Mapped[int] = mapped_column(Integer, nullable=False)
+    docx_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    descricao: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    sessao: Mapped["Sessao"] = relationship("Sessao", back_populates="versoes_docx")
+
 
 class PesquisaSalva(Base):
     __tablename__ = "pesquisas_salvas"

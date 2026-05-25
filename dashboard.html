@@ -4235,41 +4235,152 @@ async function visualizarRelato(sessaoId) {
     titulo.textContent = d.titulo || 'Relato de Caso';
     body.innerHTML = _renderModalRelato(d);
 
-    // Atualiza botões de download com informação de versões
+    // Carrega área de versões completa
     window.__docxOriginalGerado = !!d.docx_original_gerado;
     window.__docxTemEditado     = !!d.tem_versao_editada;
-    _renderBotoesDocx(sessaoId, window.__docxOriginalGerado, window.__docxTemEditado);
+    carregarVersoes(sessaoId);
   } catch (err) {
     body.innerHTML = `<div style="text-align:center;padding:40px;color:var(--red)">❌ Não foi possível carregar o relato.<br><small>${err.message}</small></div>`;
   }
 }
 
+/* ── Versões DOCX ─────────────────────────────────────────────────────────── */
+
 function _renderBotoesDocx(sessaoId, temOriginal, temEditado) {
+  // Compatibilidade: carrega a área de versões completa
+  carregarVersoes(sessaoId);
+}
+
+async function carregarVersoes(sessaoId) {
   const wrap = document.getElementById('docxVersionBtns');
   if (!wrap) return;
 
-  if (temEditado) {
-    /* Duas versões disponíveis */
-    wrap.innerHTML = `
-      <button class="btn btn-sm" id="btnDownloadOriginal"
-        style="background:var(--card-bg);border:1.5px solid var(--card-bdr);color:var(--t2);
-               font-size:11px;font-family:var(--mono);letter-spacing:.05em;padding:6px 14px;
-               border-radius:6px;cursor:pointer;transition:border-color .15s"
-        onmouseover="this.style.borderColor='var(--acid)'" onmouseout="this.style.borderColor='var(--card-bdr)'"
-        onclick="downloadRelato('${sessaoId}','original')" title="Baixar versão original gerada pelo pipeline">
-        📄 Original
-      </button>
-      <button class="btn btn-primary btn-sm" id="btnDownloadModal"
-        onclick="downloadRelato('${sessaoId}','editado')" title="Baixar versão com suas edições">
-        <span class="px-icon px-download" style="margin-right:6px;background:currentColor"></span>Versão Editada
-      </button>`;
+  // Skeleton enquanto carrega
+  wrap.innerHTML = `<span style="font-size:12px;color:var(--t3)">⏳ Carregando versões…</span>`;
+
+  try {
+    const [resDetalhe, resVersoes] = await Promise.all([
+      fetch(`${API}/artigo/${sessaoId}`, { headers: authHeaders() }),
+      fetch(`${API}/artigo/${sessaoId}/versoes`, { headers: authHeaders() }),
+    ]);
+    const detalhe = resDetalhe.ok ? await resDetalhe.json() : {};
+    const versoes  = resVersoes.ok ? (await resVersoes.json()).versoes || [] : [];
+    _renderAreaVersoes(sessaoId, detalhe, versoes);
+  } catch (e) {
+    wrap.innerHTML = `<span style="font-size:12px;color:var(--red)">Erro ao carregar versões</span>`;
+  }
+}
+
+function _renderAreaVersoes(sessaoId, detalhe, versoes) {
+  const wrap = document.getElementById('docxVersionBtns');
+  if (!wrap) return;
+
+  const temOriginal = !!detalhe.docx_original_gerado;
+
+  // Data formatting helper (inline)
+  const fmtDate = iso => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' }) +
+           ' ' + d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  };
+
+  const btnStyle = `
+    display:inline-flex;align-items:center;gap:5px;
+    padding:5px 11px;border-radius:6px;font-size:11px;font-weight:500;
+    cursor:pointer;border:1.5px solid var(--card-bdr);
+    background:var(--card-bg);color:var(--t2);
+    transition:border-color .15s,background .15s;white-space:nowrap;
+  `;
+  const btnPrimStyle = `
+    display:inline-flex;align-items:center;gap:5px;
+    padding:5px 13px;border-radius:6px;font-size:11px;font-weight:600;
+    cursor:pointer;border:none;
+    background:var(--obsidian);color:#fff;
+    transition:opacity .15s;white-space:nowrap;
+  `;
+
+  let html = `<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%">`;
+
+  // Botão original (pipeline)
+  if (temOriginal) {
+    html += `<button style="${btnStyle}"
+      onmouseover="this.style.borderColor='var(--acid)'" onmouseout="this.style.borderColor='var(--card-bdr)'"
+      onclick="downloadRelato('${sessaoId}','original')" title="Versão original gerada pelo pipeline">
+      📄 Original
+    </button>`;
   } else {
-    /* Apenas versão original (ou sessão antiga) */
-    wrap.innerHTML = `
-      <button class="btn btn-primary btn-sm" id="btnDownloadModal"
-        onclick="downloadRelato('${sessaoId}','editado')">
-        <span class="px-icon px-download" style="margin-right:6px;background:currentColor"></span>Baixar DOCX
-      </button>`;
+    html += `<button style="${btnStyle}"
+      onclick="downloadRelato('${sessaoId}','editado')" title="Baixar DOCX">
+      ↓ Baixar DOCX
+    </button>`;
+  }
+
+  // Versões salvas pelo usuário
+  if (versoes.length > 0) {
+    html += versoes.map(v => `
+      <button style="${btnStyle}"
+        onmouseover="this.style.borderColor='var(--acid)'" onmouseout="this.style.borderColor='var(--card-bdr)'"
+        onclick="downloadVersao('${sessaoId}','${v.id}',${v.numero})"
+        title="${v.descricao ? v.descricao + ' — ' : ''}${fmtDate(v.created_at)} · ${v.size_kb} KB">
+        ↓ v${v.numero}${v.descricao ? ' · ' + v.descricao.substring(0,15) : ''}
+      </button>`).join('');
+  }
+
+  // Botão para salvar nova versão
+  html += `<button id="btnSalvarVersao" style="${btnPrimStyle}"
+    onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'"
+    onclick="salvarNovaVersao('${sessaoId}')">
+    + Nova Versão
+  </button>`;
+
+  html += `</div>`;
+  wrap.innerHTML = html;
+}
+
+async function salvarNovaVersao(sessaoId) {
+  const btn = document.getElementById('btnSalvarVersao');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando…'; }
+  try {
+    const res = await fetch(`${API}/artigo/${sessaoId}/versao`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    mostrarToast(`✅ Versão v${data.numero} salva! (${data.size_kb} KB)`, 'success', '💾');
+    // Recarrega a área de versões
+    await carregarVersoes(sessaoId);
+  } catch (err) {
+    mostrarToast(`Erro ao salvar versão: ${err.message}`, 'error', '⚠️');
+    if (btn) { btn.disabled = false; btn.textContent = '+ Nova Versão'; }
+  }
+}
+
+async function downloadVersao(sessaoId, versaoId, numero) {
+  mostrarToast(`⬇ Baixando v${numero}…`, 'info', '📄');
+  try {
+    const res = await fetch(`${API}/artigo/${sessaoId}/versao/${versaoId}/resultado`, {
+      headers: authHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `CaseOS_${sessaoId.substring(0,8)}_v${numero}.docx`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
+  } catch (err) {
+    mostrarToast(`Erro ao baixar v${numero}: ${err.message}`, 'error', '⚠️');
   }
 }
 
@@ -4485,10 +4596,9 @@ async function salvarSecao(chave) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
-    // Atualiza botões de versão se o DOCX editado foi gerado
-    if (data.docx_editado_gerado && !window.__docxTemEditado) {
+    // Marca que há edições não salvas como versão (o footer já tem o botão "+ Nova Versão")
+    if (data.docx_editado_gerado) {
       window.__docxTemEditado = true;
-      _renderBotoesDocx(sessaoId, window.__docxOriginalGerado, true);
     }
 
     // Update view
