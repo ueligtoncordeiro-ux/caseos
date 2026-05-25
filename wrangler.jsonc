@@ -9,14 +9,15 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
-    "run_worker_first": ["/", "/landing"]
+    "run_worker_first": ["/", "/landing", "/review-studio"]
   },
   "compatibility_flags": [
     "nodejs_compat"
   ],
   "workers_dev": true,
   "routes": [
-    { "pattern": "caseos.voandonaia.com", "custom_domain": true }
+    { "pattern": "caseos.voandonaia.com", "custom_domain": true },
+    { "pattern": "reviewstudio.voandonaia.com", "custom_domain": true }
   ],
   "triggers": {
     "crons": ["*/5 * * * *"]

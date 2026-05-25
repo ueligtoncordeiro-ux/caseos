@@ -17,6 +17,7 @@
 const BACKEND_HEALTH = 'https://caseos-api-bhdx.onrender.com/health';
 const BACKEND_ORIGIN = 'https://caseos-api-bhdx.onrender.com';
 const ASSETS_ORIGIN  = 'https://caseos.voandonaia.com';
+const REVIEW_ORIGIN  = 'https://reviewstudio.voandonaia.com';
 
 /**
  * Content-Security-Policy cuidadosamente construída para o CaseOS:
@@ -36,7 +37,7 @@ const CSP = [
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
-  `img-src 'self' data: https://lh3.googleusercontent.com ${ASSETS_ORIGIN}`,
+  `img-src 'self' data: https://lh3.googleusercontent.com ${ASSETS_ORIGIN} ${REVIEW_ORIGIN}`,
   `connect-src 'self' ${BACKEND_ORIGIN} ${BACKEND_ORIGIN.replace('https://', 'wss://')}`,
   "frame-src 'none'",
   "frame-ancestors 'none'",
@@ -72,6 +73,13 @@ export default {
   // ── Requisições HTTP normais → serve assets estáticos + security headers ──
   async fetch(request, env) {
     const url = new URL(request.url);
+    const isReviewStudioHost = url.hostname === 'reviewstudio.voandonaia.com';
+
+    if (isReviewStudioHost && (url.pathname === '/' || url.pathname === '/review-studio')) {
+      url.pathname = '/review-studio.html';
+      const response = await env.ASSETS.fetch(new Request(url.toString(), request));
+      return _addSecurityHeaders(response);
+    }
 
     // Redireciona raiz e /landing → dashboard (sem security headers no redirect)
     if (url.pathname === '/' || url.pathname === '/landing') {
