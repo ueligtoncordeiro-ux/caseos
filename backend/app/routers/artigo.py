@@ -562,11 +562,26 @@ async def criar_versao(
     if sessao.status != "concluido":
         raise HTTPException(status_code=425, detail="Artigo ainda não concluído.")
 
-    # Gera o DOCX a partir do estado atual do resultado
-    try:
-        docx_bytes = await _gerar_bytes_do_resultado(sessao)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao gerar DOCX: {e}")
+    # ── Obtém os bytes do DOCX ────────────────────────────────────────────────
+    # Preferência: docx_editado_bytes — gerado por editar_secao diretamente do
+    # resultado atualizado em memória, garantindo que todas as edições salvas
+    # estejam refletidas. Só regenera do JSON se não houver versão editada.
+    if sessao.docx_editado_bytes:
+        docx_bytes = sessao.docx_editado_bytes
+        fonte = "editado"
+    elif sessao.docx_original_bytes:
+        # Nenhuma edição salva ainda → snapshot do original
+        docx_bytes = sessao.docx_original_bytes
+        fonte = "original"
+    else:
+        # Sessão antiga sem bytes no banco → regenera do JSON
+        try:
+            docx_bytes = await _gerar_bytes_do_resultado(sessao)
+            fonte = "regenerado"
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Erro ao gerar DOCX: {e}")
+
+    _log.info("Versão DOCX fonte=%s sessao=%s bytes=%d", fonte, sessao_id, len(docx_bytes))
 
     # Descobre o próximo número de versão
     from sqlalchemy import func as sqlfunc
