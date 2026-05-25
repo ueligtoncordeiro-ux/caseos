@@ -9,7 +9,7 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
-    "run_worker_first": ["/", "/landing", "/review-studio"]
+    "run_worker_first": ["/", "/landing", "/review-studio", "/review-studio/"]
   },
   "compatibility_flags": [
     "nodejs_compat"

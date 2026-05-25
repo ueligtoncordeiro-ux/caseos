@@ -18,6 +18,7 @@ const BACKEND_HEALTH = 'https://caseos-api-bhdx.onrender.com/health';
 const BACKEND_ORIGIN = 'https://caseos-api-bhdx.onrender.com';
 const ASSETS_ORIGIN  = 'https://caseos.voandonaia.com';
 const REVIEW_ORIGIN  = 'https://reviewstudio.voandonaia.com';
+const REVIEW_PAGE_PATH = '/review-studio/index.html';
 
 /**
  * Content-Security-Policy cuidadosamente construída para o CaseOS:
@@ -75,8 +76,8 @@ export default {
     const url = new URL(request.url);
     const isReviewStudioHost = url.hostname === 'reviewstudio.voandonaia.com';
 
-    if (isReviewStudioHost && (url.pathname === '/' || url.pathname === '/review-studio')) {
-      url.pathname = '/review-studio.html';
+    if (isReviewStudioHost && (url.pathname === '/' || url.pathname === '/review-studio' || url.pathname === '/review-studio/')) {
+      url.pathname = REVIEW_PAGE_PATH;
       const response = await env.ASSETS.fetch(new Request(url.toString(), request));
       return _addSecurityHeaders(response);
     }
@@ -87,8 +88,8 @@ export default {
       return Response.redirect(url.toString(), 302);
     }
 
-    if (url.pathname === '/review-studio') {
-      url.pathname = '/review-studio.html';
+    if (url.pathname === '/review-studio' || url.pathname === '/review-studio/') {
+      url.pathname = REVIEW_PAGE_PATH;
       const response = await env.ASSETS.fetch(new Request(url.toString(), request));
       return _addSecurityHeaders(response);
     }
