@@ -329,19 +329,28 @@ def _add_imagens(doc: Document, cko: CKO, sessao_id: str):
             )
 
 
+async def gerar_docx_bytes(artigo: ArtigoGerado, cko: CKO, sessao_id: str) -> bytes:
+    """Gera o DOCX em memória e retorna os bytes. Não depende de filesystem."""
+    import io
+    loop = asyncio.get_event_loop()
+    buf = io.BytesIO()
+    await loop.run_in_executor(None, _build_docx_to_buffer, buf, artigo, cko, sessao_id)
+    return buf.getvalue()
+
+
+# Mantido por compatibilidade — internamente usa gerar_docx_bytes
 async def gerar_docx(sessao_id: str, artigo: ArtigoGerado, cko: CKO) -> str:
+    import tempfile, io
+    data = await gerar_docx_bytes(artigo, cko, sessao_id)
     output_dir = Path(settings.docx_output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     filepath = output_dir / f"{sessao_id}.docx"
-
-    # Run synchronous python-docx in executor to avoid blocking
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, _build_docx, filepath, artigo, cko, sessao_id)
-
+    filepath.write_bytes(data)
     return str(filepath)
 
 
-def _build_docx(filepath: Path, artigo: ArtigoGerado, cko: CKO, sessao_id: str):
+def _build_docx_to_buffer(buf, artigo: ArtigoGerado, cko: CKO, sessao_id: str):
+    """Constrói o Document e salva no buffer (BytesIO ou Path)."""
     doc = Document()
     _set_margins(doc)
     _configurar_estilos(doc)
@@ -357,4 +366,9 @@ def _build_docx(filepath: Path, artigo: ArtigoGerado, cko: CKO, sessao_id: str):
     _add_referencias(doc, artigo)
     _add_disclaimer(doc)
 
-    doc.save(str(filepath))
+    doc.save(buf)
+
+
+# Alias para compatibilidade com código legado
+def _build_docx(filepath: Path, artigo: ArtigoGerado, cko: CKO, sessao_id: str):
+    _build_docx_to_buffer(filepath, artigo, cko, sessao_id)

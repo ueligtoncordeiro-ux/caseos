@@ -299,11 +299,16 @@ async def download_resultado(
     db: AsyncSession = Depends(get_db),
     user: Usuario = Depends(get_verified_user),
 ):
-    from app.config import settings
+    """
+    Gera o DOCX em memória (BytesIO) e o entrega como StreamingResponse.
+    Não depende de filesystem efêmero — funciona em qualquer ambiente.
+    """
+    import copy, io, logging
     from app.models.schemas import ArtigoGerado, CKO as CKOSchema
-    from app.services.docx_generator import gerar_docx
-    from fastapi.responses import FileResponse
-    import tempfile
+    from app.services.docx_generator import gerar_docx_bytes
+    from fastapi.responses import StreamingResponse
+
+    log = logging.getLogger(__name__)
 
     result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
     sessao = result.scalar_one_or_none()
@@ -315,28 +320,30 @@ async def download_resultado(
     if sessao.status != "concluido":
         raise HTTPException(status_code=425,
                             detail=f"Artigo ainda não concluído. Status: {sessao.status}")
-
-    # Sempre regenera o DOCX a partir do resultado atual (garante edições manuais salvas)
-    # Nota: o cache em docx_path não é usado para evitar servir versão desatualizada
     if not sessao.resultado:
-        raise HTTPException(status_code=404,
-                            detail="Conteúdo do artigo não encontrado.")
+        raise HTTPException(status_code=404, detail="Conteúdo do artigo não encontrado.")
 
     try:
-        import copy
         res = copy.deepcopy(sessao.resultado)
 
-        # Normaliza campo caso_clinico (importações usam relato_caso)
+        # ── Normalização defensiva ──────────────────────────────────────────────
+
+        # Remove chaves extras que não pertencem ao schema ArtigoGerado
+        for chave_extra in ("versao_edicao",):
+            res.pop(chave_extra, None)
+
+        # caso_clinico (importações antigas usam relato_caso)
         if "caso_clinico" not in res and "relato_caso" in res:
             res["caso_clinico"] = res.pop("relato_caso")
 
-        # Normaliza resumo (importações usam "relato" em vez de "caso")
+        # resumo: campo "relato" → "caso"
         if isinstance(res.get("resumo"), dict):
             rs = res["resumo"]
             if "caso" not in rs and "relato" in rs:
                 rs["caso"] = rs.pop("relato")
 
-        # Normaliza referências (podem ser strings ou dicts)
+        # Referências: aceita strings, dicts parciais {numero,formatada}
+        # ou dicts completos. Garante todos os campos requeridos por Referencia.
         refs_raw = res.get("referencias", [])
         refs_norm = []
         for i, ref in enumerate(refs_raw, start=1):
@@ -346,14 +353,30 @@ async def download_resultado(
                     "periodico": "", "ano": "", "formatada": ref,
                 })
             elif isinstance(ref, dict):
-                if "formatada" not in ref:
+                # Garante formatada (campo mais importante para o DOCX)
+                if not ref.get("formatada"):
                     ref["formatada"] = ref.get("titulo", "")
+                # Garante campos requeridos pelo schema com defaults seguros
+                ref.setdefault("numero", i)
+                ref.setdefault("autores", "")
+                ref.setdefault("titulo", ref.get("formatada", ""))
+                ref.setdefault("periodico", "")
+                ref.setdefault("ano", "")
                 refs_norm.append(ref)
+            # Ignora silenciosamente entradas de tipo inesperado
         res["referencias"] = refs_norm
 
-        artigo = ArtigoGerado(**res)
+        # ── Parse do ArtigoGerado ───────────────────────────────────────────────
+        try:
+            artigo = ArtigoGerado(**res)
+        except Exception as val_exc:
+            log.error("Falha ao parsear ArtigoGerado para sessão %s: %s", sessao_id, val_exc)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Estrutura do artigo inválida: {val_exc}",
+            )
 
-        # CKO — tenta parsear, usa mínimo como fallback
+        # ── CKO (fallback total se dados estiverem corrompidos) ─────────────────
         cko_data = sessao.cko or {}
         try:
             cko = CKOSchema(**cko_data)
@@ -376,22 +399,23 @@ async def download_resultado(
                 editorial=Editorial(problemas_clinicos="", diferencial_caso=""),
             )
 
-        docx_path = await gerar_docx(sessao_id, artigo, cko)
+        # ── Geração em memória (sem filesystem) ─────────────────────────────────
+        docx_bytes = await gerar_docx_bytes(artigo, cko, sessao_id)
+        log.info("DOCX gerado em memória para sessão %s (%d bytes)", sessao_id, len(docx_bytes))
 
-        # Persiste o path para evitar regerar sempre
-        sessao.docx_path = docx_path
-        await db.commit()
-
-        return FileResponse(
-            path=str(docx_path),
+        filename = f"CaseOS_{sessao_id[:8]}.docx"
+        return StreamingResponse(
+            content=io.BytesIO(docx_bytes),
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            filename=f"CaseOS_{sessao_id}.docx",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
+
+    except HTTPException:
+        raise  # repassa HTTPExceptions já formatadas
     except Exception as exc:
-        import traceback, logging
-        logging.getLogger(__name__).error(f"Erro ao gerar DOCX: {traceback.format_exc()}")
-        raise HTTPException(status_code=500,
-                            detail=f"Erro ao gerar DOCX: {str(exc)}")
+        import traceback
+        log.error("Erro inesperado ao gerar DOCX (sessão %s):\n%s", sessao_id, traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar DOCX: {str(exc)}")
 
 
 @router.post("/{sessao_id}/confirmar-flags")

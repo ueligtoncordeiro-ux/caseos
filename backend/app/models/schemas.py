@@ -128,11 +128,15 @@ class CKO(BaseModel):
 # ── Responses ──
 
 class Referencia(BaseModel):
-    numero: int
-    autores: str
-    titulo: str
-    periodico: str
-    ano: str
+    """
+    Todos os campos têm default para tolerar referências salvas em formatos parciais
+    (ex: {numero, formatada} editadas pela UI) sem causar ValidationError no download.
+    """
+    numero: int = 0
+    autores: str = ""
+    titulo: str = ""
+    periodico: str = ""
+    ano: str = ""
     volume: Optional[str] = None
     numero_edicao: Optional[str] = None
     paginas: Optional[str] = None
