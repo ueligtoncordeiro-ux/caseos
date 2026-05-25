@@ -128,7 +128,7 @@ def _base(*, char_url: str, headline: str, body_html: str, cta_url: str,
           caseos.voandonaia.com
         </a>
         &nbsp;·&nbsp;
-        <a href="mailto:acessoliberado@voandonaia.com" style="color:{_DIM};text-decoration:none">
+        <a href="mailto:contato@voandonaia.com" style="color:{_DIM};text-decoration:none">
           Suporte
         </a>
       </p>
