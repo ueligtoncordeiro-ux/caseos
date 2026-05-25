@@ -14,7 +14,7 @@ from app.services.websocket_manager import manager
 from app.services.email import enviar_artigo_pronto, enviar_erro_pipeline
 from app.services.llm_router import iniciar_contagem_tokens, obter_tokens_usados
 from app.agents import bibliografico, redator, revisor
-from app.services.docx_generator import gerar_docx
+from app.services.docx_generator import gerar_docx_bytes
 from app.utils.mesh import validar_e_corrigir_palavras_chave
 
 logger = logging.getLogger(__name__)
@@ -104,23 +104,26 @@ async def executar_pipeline(
         await manager.send(sessao_id, {"tipo": "etapa", "etapa": 6, "nome": "Finalização", "agente": "DOCX Generator · ABNT", "detalhe": "Gerando documento final..."})
         await _atualizar_sessao(sessao_id, status="finalizando")
 
-        docx_path = await gerar_docx(
-            sessao_id=sessao_id,
+        # Gera DOCX original em memória (armazenado no banco, sem filesystem)
+        docx_original = await gerar_docx_bytes(
             artigo=artigo_revisado,
             cko=cko,
+            sessao_id=sessao_id,
         )
+        logger.info("DOCX original gerado: %d bytes (sessao=%s)", len(docx_original), sessao_id)
 
         # Apurar tokens consumidos pelo pipeline completo
         tokens_pipeline = obter_tokens_usados()
 
-        # Persistir resultado
+        # Persistir resultado + bytes originais do DOCX
         await _atualizar_sessao(
             sessao_id,
             status="concluido",
             resultado=artigo_revisado.model_dump(),
             relatorio=relatorio.model_dump(),
             flags=relatorio.flags,
-            docx_path=docx_path,
+            docx_original_bytes=docx_original,
+            docx_editado_bytes=None,   # reset — nenhuma edição ainda
             care_score=relatorio.care_score,
             tokens_usados=tokens_pipeline,
         )

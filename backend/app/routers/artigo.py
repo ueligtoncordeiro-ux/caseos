@@ -1,12 +1,15 @@
 import os
 import asyncio
+import copy
+import io
+import logging
 import re
 import time
 from collections import defaultdict
 from pathlib import Path
 from typing import Optional, Any
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
@@ -17,6 +20,126 @@ from app.agents.orchestrator import executar_pipeline, executar_pipeline_demo
 from app.services.auth import get_verified_user, check_quota
 
 router = APIRouter(prefix="/artigo", tags=["artigo"])
+_log = logging.getLogger(__name__)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# HELPERS COMPARTILHADOS — usados por download e editar_secao
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _to_str(v) -> str:
+    """Converte qualquer valor para string de forma segura."""
+    if v is None: return ""
+    if isinstance(v, str): return v
+    if isinstance(v, dict): return str(v.get("formatada") or v.get("texto") or "")
+    return str(v)
+
+
+def _to_str_list(v) -> list:
+    """Garante list[str] independente do tipo armazenado."""
+    if v is None: return []
+    if isinstance(v, str): return [v] if v.strip() else []
+    if isinstance(v, list): return [_to_str(i) for i in v if i not in (None, "")]
+    return [str(v)]
+
+
+def _normalizar_resultado(raw: dict, sessao_id: str) -> dict:
+    """
+    Normaliza o dict resultado para que passe em ArtigoGerado(**res)
+    independente do estado (recém gerado, parcialmente editado, importado).
+    """
+    res = copy.deepcopy(raw)
+
+    SCHEMA_KEYS = {"titulo","palavras_chave","resumo","introducao",
+                   "caso_clinico","discussao","conclusao","referencias"}
+    for k in list(res.keys()):
+        if k not in SCHEMA_KEYS:
+            res.pop(k, None)
+
+    res["titulo"] = _to_str(res.get("titulo")) or "Relato de Caso"
+
+    pck = res.get("palavras_chave", [])
+    if isinstance(pck, str):
+        res["palavras_chave"] = [p.strip() for p in pck.replace(";",",").split(",") if p.strip()]
+    else:
+        res["palavras_chave"] = [_to_str(p) for p in (pck or []) if p]
+
+    if "caso_clinico" not in res and "relato_caso" in res:
+        res["caso_clinico"] = res.pop("relato_caso")
+
+    for campo in ("introducao", "caso_clinico", "discussao", "conclusao"):
+        res[campo] = _to_str_list(res.get(campo))
+
+    rs_raw = res.get("resumo") or {}
+    if not isinstance(rs_raw, dict):
+        rs_raw = {}
+    if "caso" not in rs_raw and "relato" in rs_raw:
+        rs_raw["caso"] = rs_raw.pop("relato")
+    for campo_rs in ("introducao", "caso", "discussao", "conclusao"):
+        rs_raw[campo_rs] = _to_str(rs_raw.get(campo_rs))
+    res["resumo"] = rs_raw
+
+    refs_raw = res.get("referencias") or []
+    refs_norm = []
+    for i, ref in enumerate(refs_raw, start=1):
+        if isinstance(ref, str):
+            refs_norm.append({"numero": i, "autores": "", "titulo": ref,
+                              "periodico": "", "ano": "", "formatada": ref})
+        elif isinstance(ref, dict):
+            if not ref.get("formatada"):
+                ref["formatada"] = ref.get("titulo", "")
+            ref.setdefault("numero", i)
+            ref.setdefault("autores", "")
+            ref.setdefault("titulo", _to_str(ref.get("formatada")))
+            ref.setdefault("periodico", "")
+            ref.setdefault("ano", "")
+            refs_norm.append(ref)
+    res["referencias"] = refs_norm
+    return res
+
+
+def _cko_fallback(sessao_id: str, cko_data: dict):
+    """Tenta parsear CKO, retorna mínimo válido se falhar."""
+    from app.models.schemas import (
+        CKO as CKOSchema, Identificacao, Historia, Achados, Diagnostico,
+        Intervencao, Desfechos, Editorial, IntervencoesAnteriores, Timeline,
+    )
+    try:
+        return CKOSchema(**cko_data)
+    except Exception:
+        return CKOSchema(
+            sessao_id=sessao_id,
+            identificacao=Identificacao(),
+            historia=Historia(queixa_principal="", hda=""),
+            intervencoes_anteriores=IntervencoesAnteriores(),
+            achados=Achados(exame_geral="", achados_especificos=""),
+            timeline=Timeline(),
+            diagnostico=Diagnostico(diagnostico_definitivo=""),
+            intervencao=Intervencao(tipo="", descricao=""),
+            desfechos=Desfechos(desfecho_clinico=""),
+            editorial=Editorial(problemas_clinicos="", diferencial_caso=""),
+        )
+
+
+async def _gerar_bytes_do_resultado(sessao: Sessao) -> bytes:
+    """
+    Normaliza sessao.resultado e gera os bytes do DOCX.
+    Lança exceção descritiva se falhar em qualquer etapa.
+    """
+    from app.models.schemas import ArtigoGerado
+    from app.services.docx_generator import gerar_docx_bytes
+
+    if not sessao.resultado:
+        raise ValueError("sessao.resultado está vazio")
+
+    res = _normalizar_resultado(sessao.resultado, sessao.external_id)
+    try:
+        artigo = ArtigoGerado(**res)
+    except Exception as e:
+        raise ValueError(f"Estrutura do artigo inválida: {e}") from e
+
+    cko = _cko_fallback(sessao.external_id, sessao.cko or {})
+    return await gerar_docx_bytes(artigo, cko, sessao.external_id)
 
 # ── Rate limiting simples para /demo (sem dependência externa) ────────────────
 _DEMO_MAX_POR_HORA = 3          # máximo de demos por IP por hora
@@ -290,26 +413,24 @@ async def detalhe_sessao(
         "relatorio": sessao.relatorio,
         "flags": sessao.flags,
         "tokens_usados": sessao.tokens_usados,
+        # ── Versões DOCX ──────────────────────────────────────────────────────
+        "docx_original_gerado": sessao.docx_original_bytes is not None,
+        "tem_versao_editada":   sessao.docx_editado_bytes is not None,
     }
 
 
 @router.get("/{sessao_id}/resultado")
 async def download_resultado(
     sessao_id: str,
+    versao: str = Query("editado", description="'editado' (padrão) ou 'original'"),
     db: AsyncSession = Depends(get_db),
     user: Usuario = Depends(get_verified_user),
 ):
     """
-    Gera o DOCX em memória (BytesIO) e o entrega como StreamingResponse.
-    Não depende de filesystem efêmero — funciona em qualquer ambiente.
+    Entrega o DOCX como StreamingResponse.
+    Serve direto dos bytes armazenados no banco (gerados pelo pipeline ou ao salvar edições).
+    Fallback: regenera do JSON para sessões antigas sem bytes no banco.
     """
-    import copy, io, logging
-    from app.models.schemas import ArtigoGerado, CKO as CKOSchema
-    from app.services.docx_generator import gerar_docx_bytes
-    from fastapi.responses import StreamingResponse
-
-    log = logging.getLogger(__name__)
-
     result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
     sessao = result.scalar_one_or_none()
 
@@ -320,132 +441,30 @@ async def download_resultado(
     if sessao.status != "concluido":
         raise HTTPException(status_code=425,
                             detail=f"Artigo ainda não concluído. Status: {sessao.status}")
-    if not sessao.resultado:
-        raise HTTPException(status_code=404, detail="Conteúdo do artigo não encontrado.")
 
     try:
-        res = copy.deepcopy(sessao.resultado)
-
-        # ══════════════════════════════════════════════════════════════════════
-        # NORMALIZAÇÃO DEFENSIVA COMPLETA
-        # Objetivo: aceitar qualquer estrutura que o resultado possa ter
-        # (recém gerado, editado parcialmente, importado de versão antiga).
-        # ══════════════════════════════════════════════════════════════════════
-
-        def _to_str(v) -> str:
-            if v is None: return ""
-            if isinstance(v, str): return v
-            if isinstance(v, dict): return str(v.get("formatada") or v.get("texto") or "")
-            return str(v)
-
-        def _to_str_list(v) -> list:
-            """Garante list[str] independente do tipo armazenado."""
-            if v is None: return []
-            if isinstance(v, str): return [v] if v.strip() else []
-            if isinstance(v, list): return [_to_str(i) for i in v if i not in (None, "")]
-            return [str(v)]
-
-        # Chaves extras que não pertencem ao schema (não causam erro em Pydantic
-        # com extra="ignore", mas melhor limpar explicitamente)
-        SCHEMA_KEYS = {"titulo","palavras_chave","resumo","introducao",
-                       "caso_clinico","discussao","conclusao","referencias"}
-        for k in list(res.keys()):
-            if k not in SCHEMA_KEYS:
-                res.pop(k, None)
-
-        # titulo
-        res["titulo"] = _to_str(res.get("titulo")) or "Relato de Caso"
-
-        # palavras_chave — pode ser str "a; b; c" ou lista
-        pck = res.get("palavras_chave", [])
-        if isinstance(pck, str):
-            res["palavras_chave"] = [p.strip() for p in pck.replace(";",",").split(",") if p.strip()]
+        # ── 1. Tenta servir diretamente dos bytes armazenados ──────────────────
+        if versao == "original":
+            docx_bytes = sessao.docx_original_bytes
+            sufixo = "_original"
         else:
-            res["palavras_chave"] = [_to_str(p) for p in (pck or []) if p]
+            # editado → prefere editado, cai para original se não houver edição
+            docx_bytes = sessao.docx_editado_bytes or sessao.docx_original_bytes
+            sufixo = "_editado" if sessao.docx_editado_bytes else ""
 
-        # caso_clinico (importações antigas usam relato_caso)
-        if "caso_clinico" not in res and "relato_caso" in res:
-            res["caso_clinico"] = res.pop("relato_caso")
+        # ── 2. Fallback: sessões antigas sem bytes no banco → regenera do JSON ─
+        if not docx_bytes:
+            if not sessao.resultado:
+                raise HTTPException(status_code=404,
+                                    detail="Conteúdo do artigo não encontrado.")
+            _log.warning("Fallback JSON→DOCX para sessão %s (sem bytes no banco)", sessao_id)
+            docx_bytes = await _gerar_bytes_do_resultado(sessao)
+            # Persiste como original para downloads futuros serem instantâneos
+            sessao.docx_original_bytes = docx_bytes
+            await db.commit()
 
-        # seções de texto → list[str] garantida
-        for campo in ("introducao", "caso_clinico", "discussao", "conclusao"):
-            res[campo] = _to_str_list(res.get(campo))
-
-        # resumo — normaliza campos internos
-        rs_raw = res.get("resumo") or {}
-        if not isinstance(rs_raw, dict):
-            rs_raw = {}
-        # renomeia "relato" → "caso" (formato de versões anteriores do pipeline)
-        if "caso" not in rs_raw and "relato" in rs_raw:
-            rs_raw["caso"] = rs_raw.pop("relato")
-        # garante que todos os 4 campos existem como string
-        for campo_rs in ("introducao", "caso", "discussao", "conclusao"):
-            rs_raw[campo_rs] = _to_str(rs_raw.get(campo_rs))
-        res["resumo"] = rs_raw
-
-        # referências — aceita strings, dicts parciais ou completos
-        refs_raw = res.get("referencias") or []
-        refs_norm = []
-        for i, ref in enumerate(refs_raw, start=1):
-            if isinstance(ref, str):
-                refs_norm.append({
-                    "numero": i, "autores": "", "titulo": ref,
-                    "periodico": "", "ano": "", "formatada": ref,
-                })
-            elif isinstance(ref, dict):
-                if not ref.get("formatada"):
-                    ref["formatada"] = ref.get("titulo", "")
-                ref.setdefault("numero", i)
-                ref.setdefault("autores", "")
-                ref.setdefault("titulo", _to_str(ref.get("formatada")))
-                ref.setdefault("periodico", "")
-                ref.setdefault("ano", "")
-                refs_norm.append(ref)
-            # outros tipos (None, int…) são ignorados silenciosamente
-        res["referencias"] = refs_norm
-
-        log.info("Resultado normalizado para sessão %s: titulo=%r refs=%d",
-                 sessao_id, res["titulo"][:40], len(refs_norm))
-
-        # ── Parse do ArtigoGerado ───────────────────────────────────────────────
-        try:
-            artigo = ArtigoGerado(**res)
-        except Exception as val_exc:
-            log.error("Falha ao parsear ArtigoGerado para sessão %s: %s\nres=%r",
-                      sessao_id, val_exc, res)
-            raise HTTPException(
-                status_code=500,
-                detail=f"Estrutura do artigo inválida após normalização: {val_exc}",
-            )
-
-        # ── CKO (fallback total se dados estiverem corrompidos) ─────────────────
-        cko_data = sessao.cko or {}
-        try:
-            cko = CKOSchema(**cko_data)
-        except Exception:
-            from app.models.schemas import (
-                Identificacao, Historia, Achados, Diagnostico,
-                Intervencao, Desfechos, Editorial,
-                IntervencoesAnteriores, Timeline,
-            )
-            cko = CKOSchema(
-                sessao_id=sessao_id,
-                identificacao=Identificacao(),
-                historia=Historia(queixa_principal="", hda=""),
-                intervencoes_anteriores=IntervencoesAnteriores(),
-                achados=Achados(exame_geral="", achados_especificos=""),
-                timeline=Timeline(),
-                diagnostico=Diagnostico(diagnostico_definitivo=""),
-                intervencao=Intervencao(tipo="", descricao=""),
-                desfechos=Desfechos(desfecho_clinico=""),
-                editorial=Editorial(problemas_clinicos="", diferencial_caso=""),
-            )
-
-        # ── Geração em memória (sem filesystem) ─────────────────────────────────
-        docx_bytes = await gerar_docx_bytes(artigo, cko, sessao_id)
-        log.info("DOCX gerado em memória para sessão %s (%d bytes)", sessao_id, len(docx_bytes))
-
-        filename = f"CaseOS_{sessao_id[:8]}.docx"
+        _log.info("Download DOCX sessão=%s versao=%s bytes=%d", sessao_id, versao, len(docx_bytes))
+        filename = f"CaseOS_{sessao_id[:8]}{sufixo}.docx"
         return StreamingResponse(
             content=io.BytesIO(docx_bytes),
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -453,11 +472,11 @@ async def download_resultado(
         )
 
     except HTTPException:
-        raise  # repassa HTTPExceptions já formatadas
+        raise
     except Exception as exc:
         import traceback
-        log.error("Erro inesperado ao gerar DOCX (sessão %s):\n%s", sessao_id, traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Erro ao gerar DOCX: {str(exc)}")
+        _log.error("Erro ao gerar DOCX sessão %s:\n%s", sessao_id, traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar DOCX: {exc}")
 
 
 @router.get("/{sessao_id}/diagnostico")
@@ -758,15 +777,30 @@ async def editar_secao(
         if not isinstance(conteudo, list):
             raise HTTPException(status_code=400, detail="conteudo deve ser uma lista de referências.")
 
+    from sqlalchemy.orm.attributes import flag_modified
+
     resultado = dict(sessao.resultado)
     resultado[secao] = conteudo
     resultado["versao_edicao"] = resultado.get("versao_edicao", 1) + 1
     sessao.resultado = resultado
-    sessao.docx_path = None   # invalida cache para forçar regeneração do DOCX
-    from sqlalchemy.orm.attributes import flag_modified
+    sessao.docx_path = None
     flag_modified(sessao, "resultado")
+
+    # ── Gera DOCX editado e armazena no banco ─────────────────────────────────
+    docx_bytes_editado: Optional[bytes] = None
+    try:
+        docx_bytes_editado = await _gerar_bytes_do_resultado(sessao)
+        sessao.docx_editado_bytes = docx_bytes_editado
+        _log.info("DOCX editado salvo no banco: sessao=%s bytes=%d", sessao_id, len(docx_bytes_editado))
+    except Exception as e:
+        _log.warning("Falha ao gerar DOCX editado para sessão %s: %s — download usará fallback", sessao_id, e)
+
     await db.commit()
-    return {"ok": True, "versao_edicao": resultado["versao_edicao"]}
+    return {
+        "ok": True,
+        "versao_edicao": resultado["versao_edicao"],
+        "docx_editado_gerado": docx_bytes_editado is not None,
+    }
 
 
 @router.post("/{sessao_id}/melhorar-secao")

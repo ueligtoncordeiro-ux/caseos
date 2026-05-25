@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List
-from sqlalchemy import String, DateTime, JSON, Text, Boolean, Integer, ForeignKey, text
+from sqlalchemy import String, DateTime, JSON, Text, Boolean, Integer, ForeignKey, LargeBinary, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
@@ -123,6 +123,12 @@ class Sessao(Base):
     care_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     tokens_usados: Mapped[int] = mapped_column(Integer, default=0)
 
+    # ── Versões DOCX (bytes armazenados no banco — sem depender de filesystem) ──
+    # Original: gerado pelo pipeline, nunca é sobrescrito.
+    # Editado: regenerado após cada edição manual do usuário.
+    docx_original_bytes: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
+    docx_editado_bytes:  Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
+
     # Diagnóstico de falha — preenchidos apenas quando status="erro"
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     error_stage:   Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -182,8 +188,10 @@ async def init_db():
             ("usuarios", "tokens_mes",    "INTEGER DEFAULT 0",       "INTEGER DEFAULT 0"),
             ("sessoes",  "tokens_usados", "INTEGER DEFAULT 0",       "INTEGER DEFAULT 0"),
             ("usuarios", "is_admin",      "BOOLEAN DEFAULT 0",       "BOOLEAN DEFAULT FALSE"),
-            ("sessoes",  "error_message", "TEXT",                    "TEXT"),
-            ("sessoes",  "error_stage",   "VARCHAR",                 "VARCHAR(100)"),
+            ("sessoes",  "error_message",       "TEXT",    "TEXT"),
+            ("sessoes",  "error_stage",         "VARCHAR", "VARCHAR(100)"),
+            ("sessoes",  "docx_original_bytes", "BLOB",    "BYTEA"),
+            ("sessoes",  "docx_editado_bytes",  "BLOB",    "BYTEA"),
         ]
         for tabela, coluna, tipo_sqlite, tipo_pg in migrations:
             try:

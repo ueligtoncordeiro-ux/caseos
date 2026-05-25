@@ -3519,9 +3519,7 @@ tbody td {
     </div>
     <div class="modal-relato-footer">
       <button class="btn btn-secondary btn-sm" onclick="fecharModalRelato()">Fechar</button>
-      <button class="btn btn-primary btn-sm" id="btnDownloadModal" onclick="downloadRelato(window.__relatoAtualId)">
-        <span class="px-icon px-download" style="margin-right:6px;background:currentColor"></span>Baixar DOCX
-      </button>
+      <div id="docxVersionBtns" style="display:flex;gap:8px;align-items:center"></div>
     </div>
   </div>
 </div>
@@ -4145,22 +4143,24 @@ async function confirmarRenomear() {
   }
 }
 
-async function downloadRelato(sessaoId, _tentativa) {
+async function downloadRelato(sessaoId, versao, _tentativa) {
+  const v         = versao || 'editado';
   const tentativa  = _tentativa || 1;
   const maxTentativas = 3;
 
-  /* Feedback visual no botão do modal (se estiver aberto) */
-  const btnModal = document.getElementById('btnDownloadModal');
-  if (btnModal && tentativa === 1) {
-    btnModal._textoOriginal = btnModal.innerHTML;
-    btnModal.disabled = true;
-    btnModal.innerHTML = '⏳ Gerando DOCX…';
+  /* Feedback visual nos botões (desabilita todos durante download) */
+  const btns = document.querySelectorAll('#btnDownloadModal, #btnDownloadOriginal');
+  if (tentativa === 1) {
+    btns.forEach(b => { b._html = b.innerHTML; b.disabled = true; });
+    const btnPrincipal = document.getElementById('btnDownloadModal');
+    if (btnPrincipal) btnPrincipal.innerHTML = '⏳ Gerando…';
   }
 
   if (tentativa === 1) mostrarToast('Preparando download…', 'info', '⬇');
 
   try {
-    const res = await fetch(`${API}/artigo/${sessaoId}/resultado`, {
+    const qs  = v === 'original' ? '?versao=original' : '';
+    const res = await fetch(`${API}/artigo/${sessaoId}/resultado${qs}`, {
       headers: authHeaders(),
     });
 
@@ -4175,7 +4175,8 @@ async function downloadRelato(sessaoId, _tentativa) {
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = `relato_${sessaoId}.docx`;
+    a.download = v === 'original' ? `CaseOS_${sessaoId.slice(0,8)}_original.docx`
+                                  : `CaseOS_${sessaoId.slice(0,8)}.docx`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -4190,7 +4191,7 @@ async function downloadRelato(sessaoId, _tentativa) {
       const delay = tentativa * 1500;
       mostrarToast(`Gerando arquivo… (tentativa ${tentativa + 1}/${maxTentativas})`, 'info', '🔄');
       await new Promise(r => setTimeout(r, delay));
-      return downloadRelato(sessaoId, tentativa + 1);
+      return downloadRelato(sessaoId, v, tentativa + 1);
     }
 
     /* Todas as tentativas falharam — mostra detalhe real + botão de retry */
@@ -4202,10 +4203,12 @@ async function downloadRelato(sessaoId, _tentativa) {
       'error', '⚠️', 12000
     );
   } finally {
-    /* Sempre restaura o botão do modal */
-    if (btnModal && tentativa === 1) {
-      btnModal.disabled = false;
-      btnModal.innerHTML = btnModal._textoOriginal || '↓ BAIXAR ARTIGO';
+    /* Restaura todos os botões apenas na chamada raiz (tentativa 1) */
+    if (tentativa === 1) {
+      document.querySelectorAll('#btnDownloadModal, #btnDownloadOriginal').forEach(b => {
+        b.disabled = false;
+        if (b._html) b.innerHTML = b._html;
+      });
     }
   }
 }
@@ -4222,14 +4225,51 @@ async function visualizarRelato(sessaoId) {
   titulo.textContent = 'Relato de Caso';
   modal.classList.add('open');
 
+  // Renderiza botões do footer com estado neutro enquanto carrega
+  _renderBotoesDocx(sessaoId, false, false);
+
   try {
     const res = await fetch(`${API}/artigo/${sessaoId}`, { headers: authHeaders() });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const d = await res.json();
     titulo.textContent = d.titulo || 'Relato de Caso';
     body.innerHTML = _renderModalRelato(d);
+
+    // Atualiza botões de download com informação de versões
+    window.__docxOriginalGerado = !!d.docx_original_gerado;
+    window.__docxTemEditado     = !!d.tem_versao_editada;
+    _renderBotoesDocx(sessaoId, window.__docxOriginalGerado, window.__docxTemEditado);
   } catch (err) {
     body.innerHTML = `<div style="text-align:center;padding:40px;color:var(--red)">❌ Não foi possível carregar o relato.<br><small>${err.message}</small></div>`;
+  }
+}
+
+function _renderBotoesDocx(sessaoId, temOriginal, temEditado) {
+  const wrap = document.getElementById('docxVersionBtns');
+  if (!wrap) return;
+
+  if (temEditado) {
+    /* Duas versões disponíveis */
+    wrap.innerHTML = `
+      <button class="btn btn-sm" id="btnDownloadOriginal"
+        style="background:var(--card-bg);border:1.5px solid var(--card-bdr);color:var(--t2);
+               font-size:11px;font-family:var(--mono);letter-spacing:.05em;padding:6px 14px;
+               border-radius:6px;cursor:pointer;transition:border-color .15s"
+        onmouseover="this.style.borderColor='var(--acid)'" onmouseout="this.style.borderColor='var(--card-bdr)'"
+        onclick="downloadRelato('${sessaoId}','original')" title="Baixar versão original gerada pelo pipeline">
+        📄 Original
+      </button>
+      <button class="btn btn-primary btn-sm" id="btnDownloadModal"
+        onclick="downloadRelato('${sessaoId}','editado')" title="Baixar versão com suas edições">
+        <span class="px-icon px-download" style="margin-right:6px;background:currentColor"></span>Versão Editada
+      </button>`;
+  } else {
+    /* Apenas versão original (ou sessão antiga) */
+    wrap.innerHTML = `
+      <button class="btn btn-primary btn-sm" id="btnDownloadModal"
+        onclick="downloadRelato('${sessaoId}','editado')">
+        <span class="px-icon px-download" style="margin-right:6px;background:currentColor"></span>Baixar DOCX
+      </button>`;
   }
 }
 
@@ -4444,6 +4484,13 @@ async function salvarSecao(chave) {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+
+    // Atualiza botões de versão se o DOCX editado foi gerado
+    if (data.docx_editado_gerado && !window.__docxTemEditado) {
+      window.__docxTemEditado = true;
+      _renderBotoesDocx(sessaoId, window.__docxOriginalGerado, true);
+    }
+
     // Update view
     const view = document.getElementById(`sec-view-${chave}`);
     if (chave === 'referencias') {
