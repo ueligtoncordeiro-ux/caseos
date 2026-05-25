@@ -578,24 +578,25 @@ async def criar_versao(
     if sessao.status != "concluido":
         raise HTTPException(status_code=425, detail="Artigo ainda não concluído.")
 
-    # ── Obtém os bytes do DOCX ────────────────────────────────────────────────
-    # Preferência: docx_editado_bytes — gerado por editar_secao diretamente do
-    # resultado atualizado em memória, garantindo que todas as edições salvas
-    # estejam refletidas. Só regenera do JSON se não houver versão editada.
-    if sessao.docx_editado_bytes:
-        docx_bytes = sessao.docx_editado_bytes
-        fonte = "editado"
-    elif sessao.docx_original_bytes:
-        # Nenhuma edição salva ainda → snapshot do original
-        docx_bytes = sessao.docx_original_bytes
-        fonte = "original"
-    else:
-        # Sessão antiga sem bytes no banco → regenera do JSON
-        try:
-            docx_bytes = await _gerar_bytes_do_resultado(sessao)
-            fonte = "regenerado"
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Erro ao gerar DOCX: {e}")
+    # ── Gera o DOCX sempre do sessao.resultado (fonte de verdade) ───────────────
+    # sessao.resultado é atualizado por TODA edição: seções (editar_secao) E
+    # título (atualizar_sessao). Regenerar garante que a versão reflita EXATAMENTE
+    # o estado atual — sem depender de docx_editado_bytes que pode ser de uma
+    # edição anterior e não incluir o último campo alterado (ex.: título).
+    # Fallback para bytes armazenados apenas em caso de falha na geração.
+    fonte = "regenerado"
+    try:
+        docx_bytes = await _gerar_bytes_do_resultado(sessao)
+    except Exception as gen_err:
+        _log.warning("Falha ao regenerar DOCX para versão (sessao=%s): %s — usando fallback", sessao_id, gen_err)
+        if sessao.docx_editado_bytes:
+            docx_bytes = sessao.docx_editado_bytes
+            fonte = "editado_fallback"
+        elif sessao.docx_original_bytes:
+            docx_bytes = sessao.docx_original_bytes
+            fonte = "original_fallback"
+        else:
+            raise HTTPException(status_code=500, detail=f"Erro ao gerar DOCX: {gen_err}")
 
     _log.info("Versão DOCX fonte=%s sessao=%s bytes=%d", fonte, sessao_id, len(docx_bytes))
 
