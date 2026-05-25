@@ -3473,38 +3473,67 @@ tbody td {
 <!-- Modal de Confirmação de Exclusão -->
 <div class="modal-overlay" id="modalConfirmarExclusao" onclick="if(event.target===this)_cancelarExclusao()">
   <div class="modal" style="max-width:420px;width:95vw;border-radius:16px;overflow:hidden" onclick="event.stopPropagation()">
+
     <!-- Cabeçalho vermelho suave -->
     <div style="background:var(--red-dim);padding:28px 28px 20px;text-align:center">
-      <div style="
-        width:52px;height:52px;border-radius:50%;
-        background:var(--red);
-        display:flex;align-items:center;justify-content:center;
-        margin:0 auto 14px;font-size:22px;line-height:1
-      ">🗑</div>
+      <div style="width:52px;height:52px;border-radius:50%;background:var(--red);
+                  display:flex;align-items:center;justify-content:center;
+                  margin:0 auto 14px;font-size:22px;line-height:1">🗑</div>
       <div style="font-family:var(--head);font-size:17px;font-weight:700;color:var(--t1);margin-bottom:6px">
         Excluir relato?
       </div>
-      <div style="font-size:13px;color:var(--t2);line-height:1.55" id="confirmarExclusaoSubtitulo">
+      <div style="font-size:13px;color:var(--t2);line-height:1.55">
         Esta ação é <strong>irreversível</strong>. O relato e todas as versões serão apagados permanentemente.
       </div>
     </div>
-    <!-- Título do relato em destaque -->
+
+    <!-- Título do relato -->
     <div style="padding:16px 28px;border-bottom:1px solid var(--card-bdr)">
       <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:5px">Relato a excluir</div>
       <div id="confirmarExclusaoTitulo" style="font-size:14px;font-weight:600;color:var(--t1);line-height:1.4"></div>
     </div>
+
+    <!-- CAPTCHA matemático -->
+    <div style="padding:20px 28px;border-bottom:1px solid var(--card-bdr)">
+      <div style="font-size:12px;color:var(--t3);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+        <span style="font-size:14px">🤖</span>
+        Confirme que você é humano resolvendo a operação:
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="
+          background:var(--input-bg);border:1.5px solid var(--card-bdr);
+          border-radius:10px;padding:10px 18px;
+          font-family:var(--mono);font-size:20px;font-weight:700;
+          color:var(--t1);letter-spacing:.08em;white-space:nowrap;flex-shrink:0
+        " id="captchaEnunciado">3 + 4 = ?</div>
+        <span style="color:var(--t3);font-size:18px">=</span>
+        <input id="captchaResposta" type="number" inputmode="numeric"
+          placeholder="?" autocomplete="off"
+          oninput="_validarCaptcha()"
+          onkeydown="if(event.key==='Enter')_confirmarExclusao()"
+          style="
+            width:80px;padding:10px 14px;border-radius:10px;
+            border:1.5px solid var(--card-bdr);background:var(--input-bg);
+            font-size:20px;font-weight:700;font-family:var(--mono);
+            color:var(--t1);text-align:center;outline:none;
+            transition:border-color .15s,box-shadow .15s
+          ">
+      </div>
+      <div id="captchaFeedback" style="font-size:12px;margin-top:8px;height:16px;color:var(--red)"></div>
+    </div>
+
     <!-- Botões -->
-    <div style="padding:20px 28px;display:flex;gap:10px;justify-content:flex-end">
+    <div style="padding:20px 28px;display:flex;gap:10px">
       <button class="btn btn-secondary" onclick="_cancelarExclusao()" style="flex:1">
         Cancelar
       </button>
-      <button id="btnConfirmarExclusao" onclick="_confirmarExclusao()"
+      <button id="btnConfirmarExclusao" onclick="_confirmarExclusao()" disabled
         style="flex:1;background:var(--red);color:#fff;border:none;padding:10px 20px;border-radius:8px;
-               font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s"
-        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+               font-size:14px;font-weight:600;cursor:not-allowed;opacity:.45;transition:opacity .2s">
         Sim, excluir
       </button>
     </div>
+
   </div>
 </div>
 
@@ -4097,32 +4126,96 @@ function _renderPaginacao(paginaAtual, totalPaginas, totalItens) {
 }
 
 /* Table actions */
-/* ── Confirmação de exclusão (modal customizado) ──────────────────────────── */
+/* ── Confirmação de exclusão com CAPTCHA matemático ──────────────────────── */
 let _exclusaoPendenteSessaoId = null;
+let _captchaResposta = null;
+
+function _gerarCaptcha() {
+  // Operações simples: adição ou subtração, resultados sempre positivos, 1–20
+  const ops = ['+', '-', '×'];
+  const op  = ops[Math.floor(Math.random() * ops.length)];
+  let a, b, resultado;
+
+  if (op === '+') {
+    a = Math.floor(Math.random() * 12) + 1;   // 1–12
+    b = Math.floor(Math.random() * 8)  + 1;   // 1–8
+    resultado = a + b;
+  } else if (op === '-') {
+    a = Math.floor(Math.random() * 12) + 5;   // 5–16
+    b = Math.floor(Math.random() * (a - 1)) + 1; // 1..(a-1)
+    resultado = a - b;
+  } else {  // ×
+    a = Math.floor(Math.random() * 6)  + 2;   // 2–7
+    b = Math.floor(Math.random() * 4)  + 2;   // 2–5
+    resultado = a * b;
+  }
+
+  _captchaResposta = resultado;
+  document.getElementById('captchaEnunciado').textContent = `${a} ${op} ${b}`;
+  document.getElementById('captchaResposta').value = '';
+  document.getElementById('captchaFeedback').textContent = '';
+  _atualizarBtnExcluir(false);
+}
+
+function _validarCaptcha() {
+  const input = document.getElementById('captchaResposta');
+  const feedback = document.getElementById('captchaFeedback');
+  const val = parseInt(input.value, 10);
+
+  if (input.value === '') {
+    feedback.textContent = '';
+    input.style.borderColor = 'var(--card-bdr)';
+    _atualizarBtnExcluir(false);
+    return;
+  }
+
+  const correto = val === _captchaResposta;
+  input.style.borderColor = correto ? 'var(--green)' : 'var(--red)';
+  input.style.boxShadow   = correto
+    ? '0 0 0 3px rgba(22,163,74,.15)'
+    : '0 0 0 3px rgba(220,38,38,.12)';
+  feedback.style.color = correto ? 'var(--green)' : 'var(--red)';
+  feedback.textContent  = correto ? '✓ Correto! Você pode confirmar a exclusão.' : '✗ Resposta incorreta. Tente novamente.';
+  _atualizarBtnExcluir(correto);
+}
+
+function _atualizarBtnExcluir(habilitado) {
+  const btn = document.getElementById('btnConfirmarExclusao');
+  if (!btn) return;
+  btn.disabled   = !habilitado;
+  btn.style.opacity = habilitado ? '1'   : '.45';
+  btn.style.cursor  = habilitado ? 'pointer' : 'not-allowed';
+  if (habilitado) {
+    btn.onmouseover = () => btn.style.opacity = '.85';
+    btn.onmouseout  = () => btn.style.opacity = '1';
+  } else {
+    btn.onmouseover = btn.onmouseout = null;
+  }
+}
 
 function deletarRelato(sessaoId) {
   _exclusaoPendenteSessaoId = sessaoId;
 
-  // Preenche o título do relato na modal
-  const row = document.querySelector(`[data-sessao-id="${sessaoId}"]`);
-  let titulo = '';
-  if (row) {
-    // Tenta pegar o título do elemento da linha (coluna Título)
-    const cell = row.closest('tr')?.querySelector('td:first-child');
-    titulo = cell?.textContent?.trim() || '';
-  }
+  // Título do relato — tenta nos dados em memória primeiro, depois no DOM
+  const relato = (todosRelatos || []).find(r => r.sessao_id === sessaoId || r.id === sessaoId);
+  let titulo = relato?.titulo || '';
   if (!titulo) {
-    // Fallback: procura nos dados em memória
-    const relato = (todosRelatos || []).find(r => r.sessao_id === sessaoId || r.id === sessaoId);
-    titulo = relato?.titulo || 'este relato';
+    const row  = document.querySelector(`[data-sessao-id="${sessaoId}"]`);
+    const cell = row?.closest('tr')?.querySelector('td:first-child');
+    titulo = cell?.textContent?.trim() || 'este relato';
   }
   document.getElementById('confirmarExclusaoTitulo').textContent = titulo;
+
+  // Gera novo CAPTCHA toda vez que o modal abre
+  _gerarCaptcha();
+  setTimeout(() => document.getElementById('captchaResposta')?.focus(), 120);
 
   document.getElementById('modalConfirmarExclusao').classList.add('open');
 }
 
 function _cancelarExclusao() {
   _exclusaoPendenteSessaoId = null;
+  _captchaResposta = null;
   document.getElementById('modalConfirmarExclusao').classList.remove('open');
 }
 
@@ -4130,8 +4223,17 @@ async function _confirmarExclusao() {
   const sessaoId = _exclusaoPendenteSessaoId;
   if (!sessaoId) return;
 
+  // Valida CAPTCHA uma última vez (garante mesmo se botão for habilitado via devtools)
+  const val = parseInt(document.getElementById('captchaResposta').value, 10);
+  if (val !== _captchaResposta) {
+    document.getElementById('captchaFeedback').textContent = '✗ Resolva o desafio corretamente antes de excluir.';
+    document.getElementById('captchaResposta').focus();
+    return;
+  }
+
   const btn = document.getElementById('btnConfirmarExclusao');
   btn.disabled = true;
+  btn.style.opacity = '.7';
   btn.textContent = 'Excluindo…';
 
   try {
@@ -4147,9 +4249,8 @@ async function _confirmarExclusao() {
   } catch (err) {
     console.error('[CaseOS] Erro ao deletar:', err);
     mostrarToast('Erro ao excluir o relato.', 'error', '⚠️');
-  } finally {
-    btn.disabled = false;
     btn.textContent = 'Sim, excluir';
+    _atualizarBtnExcluir(true);
   }
 }
 
