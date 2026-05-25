@@ -85,17 +85,29 @@ def _normalizar_resultado(raw: dict, sessao_id: str) -> dict:
     refs_norm = []
     for i, ref in enumerate(refs_raw, start=1):
         if isinstance(ref, str):
-            refs_norm.append({"numero": i, "autores": "", "titulo": ref,
-                              "periodico": "", "ano": "", "formatada": ref})
+            # Referência salva como string pura
+            refs_norm.append({
+                "numero": i, "autores": "", "titulo": ref,
+                "periodico": "", "ano": "", "formatada": ref,
+            })
         elif isinstance(ref, dict):
-            if not ref.get("formatada"):
-                ref["formatada"] = ref.get("titulo", "")
-            ref.setdefault("numero", i)
-            ref.setdefault("autores", "")
-            ref.setdefault("titulo", _to_str(ref.get("formatada")))
-            ref.setdefault("periodico", "")
-            ref.setdefault("ano", "")
-            refs_norm.append(ref)
+            # ⚠️ Construção explícita — não usar setdefault, pois versões antigas
+            # do servidor podem não ter commitado as normalizações anteriores.
+            formatada = _to_str(ref.get("formatada") or ref.get("titulo", ""))
+            refs_norm.append({
+                "numero":   ref.get("numero") or i,
+                "autores":  _to_str(ref.get("autores")),
+                "titulo":   _to_str(ref.get("titulo") or formatada),
+                "periodico":_to_str(ref.get("periodico")),
+                "ano":      _to_str(ref.get("ano")),
+                "formatada":formatada,
+                # campos opcionais — preservar se existirem
+                **({"volume":       ref["volume"]}       if "volume"       in ref else {}),
+                **({"numero_edicao":ref["numero_edicao"]} if "numero_edicao" in ref else {}),
+                **({"paginas":      ref["paginas"]}      if "paginas"      in ref else {}),
+                **({"doi":          ref["doi"]}          if "doi"          in ref else {}),
+                **({"pmid":         ref["pmid"]}         if "pmid"         in ref else {}),
+            })
     res["referencias"] = refs_norm
     return res
 

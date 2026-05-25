@@ -131,7 +131,10 @@ class Referencia(BaseModel):
     """
     Todos os campos têm default para tolerar referências salvas em formatos parciais
     (ex: {numero, formatada} editadas pela UI) sem causar ValidationError no download.
+    extra="ignore" descarta quaisquer chaves extras sem crash.
     """
+    model_config = ConfigDict(extra="ignore")
+
     numero: int = 0
     autores: str = ""
     titulo: str = ""
