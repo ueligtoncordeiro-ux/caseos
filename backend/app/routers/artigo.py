@@ -349,7 +349,23 @@ async def atualizar_sessao(
         raise HTTPException(status_code=403, detail="Acesso negado.")
 
     if "titulo" in body:
-        sessao.titulo = str(body["titulo"])[:120]
+        novo_titulo = str(body["titulo"])[:120]
+        sessao.titulo = novo_titulo
+
+        # Sincroniza resultado["titulo"] para que o DOCX reflita a alteração
+        if sessao.resultado:
+            from sqlalchemy.orm.attributes import flag_modified
+            resultado = dict(sessao.resultado)
+            resultado["titulo"] = novo_titulo
+            sessao.resultado = resultado
+            flag_modified(sessao, "resultado")
+
+            # Regenera docx_editado_bytes para que "+ Nova Versão" pegue o título novo
+            try:
+                sessao.docx_editado_bytes = await _gerar_bytes_do_resultado(sessao)
+            except Exception as e:
+                _log.warning("Falha ao regenerar DOCX após edição de título: %s", e)
+
     await db.commit()
     return {"sessao_id": sessao_id, "titulo": sessao.titulo}
 
