@@ -50,6 +50,11 @@ def _normalizar_resultado(raw: dict, sessao_id: str) -> dict:
     """
     res = copy.deepcopy(raw)
 
+    # ── Renomear campos legados ANTES de qualquer remoção de chaves ──────────
+    # O pipeline antigo usava "relato_caso"; o schema atual usa "caso_clinico"
+    if "caso_clinico" not in res and "relato_caso" in res:
+        res["caso_clinico"] = res.pop("relato_caso")
+
     SCHEMA_KEYS = {"titulo","palavras_chave","resumo","introducao",
                    "caso_clinico","discussao","conclusao","referencias"}
     for k in list(res.keys()):
@@ -63,9 +68,6 @@ def _normalizar_resultado(raw: dict, sessao_id: str) -> dict:
         res["palavras_chave"] = [p.strip() for p in pck.replace(";",",").split(",") if p.strip()]
     else:
         res["palavras_chave"] = [_to_str(p) for p in (pck or []) if p]
-
-    if "caso_clinico" not in res and "relato_caso" in res:
-        res["caso_clinico"] = res.pop("relato_caso")
 
     for campo in ("introducao", "caso_clinico", "discussao", "conclusao"):
         res[campo] = _to_str_list(res.get(campo))
