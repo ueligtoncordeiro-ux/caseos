@@ -169,6 +169,10 @@ button,input,textarea,select{font:inherit}
 .review-badge.approved{background:rgba(22,163,74,.10);border-color:rgba(22,163,74,.25);color:var(--green)}
 .review-badge.muted{background:#F5F5F5;color:var(--t3)}
 .review-answer{min-height:140px;max-height:420px;overflow:auto;border:1px solid var(--border);border-radius:8px;background:#fff;padding:14px;font-size:13.5px;line-height:1.6;color:var(--t1);white-space:pre-wrap}
+.review-corpus-preview{display:grid;gap:8px;max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:8px;background:#fff;padding:10px}
+.review-chunk{border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--muted)}
+.review-chunk-title{font-size:12px;font-weight:800;color:var(--t1);margin-bottom:5px}
+.review-chunk-text{font-size:12.5px;color:var(--t2);line-height:1.5}
 .review-small-note{font-size:11.5px;color:var(--t3);line-height:1.45}
 .toast-container{position:fixed;right:18px;bottom:18px;z-index:800;display:grid;gap:8px}
 .toast{background:#fff;border:1px solid var(--border);border-left:4px solid var(--acid);border-radius:8px;box-shadow:0 10px 28px rgba(0,0,0,.14);padding:12px 14px;display:flex;gap:8px;align-items:center;font-size:13px;min-width:250px;max-width:360px}
@@ -349,11 +353,18 @@ button,input,textarea,select{font:inherit}
         <div class="review-toolbar">
           <button class="btn btn-primary" onclick="buscarFontesReview()" id="reviewSearchBtn">Buscar e importar</button>
           <button class="btn btn-secondary" onclick="uploadFonteReview()" id="reviewUploadBtn">Enviar fonte</button>
+          <button class="btn btn-ghost" onclick="carregarPreviewCorpusReview()" id="reviewCorpusPreviewBtn">Ver corpus</button>
         </div>
         <div style="margin-top:14px">
           <div class="review-card-title" style="font-size:14px">Fontes da revisão</div>
           <div id="reviewSourcesList" class="review-source-list">
             <div class="review-small-note">Selecione uma revisão para ver as fontes.</div>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <div class="review-card-title" style="font-size:14px">Trechos indexados</div>
+          <div id="reviewCorpusPreview" class="review-corpus-preview">
+            <div class="review-small-note">Reconstrua e visualize o corpus fechado antes de usar a IA.</div>
           </div>
         </div>
       </div>
@@ -457,6 +468,7 @@ function _formatReviewText(text){return _esc(text).replace(/\n/g,'<br>')}
 
 let reviewAtivaId=null;
 let reviewCache=[];
+let reviewCorpusStats={fontes_total:0,fontes_aprovadas:0,chunks_total:0,caracteres_indexados:0};
 
 function novaRevisaoForm(){
   reviewAtivaId=null;
@@ -532,8 +544,10 @@ async function salvarRevisaoAtual(){
 
 async function _garantirRevisaoAtiva(){return reviewAtivaId||await salvarRevisaoAtual()}
 function _resetReviewCorpusUI(){
+  reviewCorpusStats={fontes_total:0,fontes_aprovadas:0,chunks_total:0,caracteres_indexados:0};
   ['reviewFontesTotal','reviewFontesAprovadas','reviewChunksTotal','reviewCharsTotal'].forEach(id=>_setText(id,'—'));
   const lista=document.getElementById('reviewSourcesList');if(lista)lista.innerHTML='<div class="review-small-note">Selecione ou salve uma revisão para ver as fontes.</div>';
+  const preview=document.getElementById('reviewCorpusPreview');if(preview)preview.innerHTML='<div class="review-small-note">Reconstrua e visualize o corpus fechado antes de usar a IA.</div>';
   _setText('reviewAnswer','Aguardando pergunta.');_setText('reviewDraft','Aguardando geração.');
 }
 async function carregarResumoCorpusReview(){
@@ -541,10 +555,46 @@ async function carregarResumoCorpusReview(){
   const res=await fetch(`${API}/revisoes/${reviewAtivaId}/corpus/resumo`,{headers:authHeaders()});
   if(!res.ok)throw new Error(`HTTP ${res.status}`);
   const stats=await res.json();
+  reviewCorpusStats=stats||reviewCorpusStats;
   _setText('reviewFontesTotal',stats.fontes_total??0);
   _setText('reviewFontesAprovadas',stats.fontes_aprovadas??0);
   _setText('reviewChunksTotal',stats.chunks_total??0);
   _setText('reviewCharsTotal',_fmtTok(stats.caracteres_indexados??0));
+}
+async function _safeJson(res){
+  try{return await res.json()}catch{return null}
+}
+function _erroApi(data,fallback){
+  if(!data)return fallback;
+  const detail=data.detail||data.erro||data.message;
+  if(Array.isArray(detail))return detail.map(item=>item.msg||item.message||String(item)).join(' ');
+  if(typeof detail==='object')return detail.message||JSON.stringify(detail);
+  return detail||fallback;
+}
+async function _exigirCorpusFechado(){
+  try{
+    await carregarResumoCorpusReview();
+    const aprovadas=Number(reviewCorpusStats.fontes_aprovadas||0);
+    let chunks=Number(reviewCorpusStats.chunks_total||0);
+    if(!aprovadas){
+      mostrarToast('Aprove pelo menos uma fonte antes de usar a IA.','info','📚');
+      return false;
+    }
+    if(!chunks){
+      await reconstruirCorpusReview({silent:true});
+      await carregarResumoCorpusReview();
+      chunks=Number(reviewCorpusStats.chunks_total||0);
+    }
+    if(!chunks){
+      mostrarToast('O corpus fechado ainda está vazio. Envie fontes com texto ou aprove artigos com resumo.','error','⚠️');
+      return false;
+    }
+    return true;
+  }catch(err){
+    console.error('[CaseOS] Erro ao validar corpus fechado:',err);
+    mostrarToast('Não foi possível validar o corpus fechado agora.','error','⚠️');
+    return false;
+  }
 }
 async function buscarFontesReview(){
   const id=await _garantirRevisaoAtiva();if(!id)return;
@@ -602,19 +652,40 @@ async function reconstruirCorpusReview(opts={}){
   if(!reviewAtivaId){if(!opts.silent)mostrarToast('Selecione uma revisão primeiro.','info','📚');return}
   try{
     const res=await fetch(`${API}/revisoes/${reviewAtivaId}/corpus/reconstruir`,{method:'POST',headers:authHeaders(),body:JSON.stringify({somente_aprovadas:true})});
-    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const data=await _safeJson(res);
+    if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
     await carregarResumoCorpusReview();if(!opts.silent)mostrarToast('Corpus reconstruído com fontes aprovadas.','success','✓');
-  }catch(err){console.error('[CaseOS] Erro ao reconstruir corpus:',err);if(!opts.silent)mostrarToast('Não foi possível reconstruir o corpus.','error','⚠️')}
+  }catch(err){console.error('[CaseOS] Erro ao reconstruir corpus:',err);if(!opts.silent)mostrarToast(err.message||'Não foi possível reconstruir o corpus.','error','⚠️')}
+}
+async function carregarPreviewCorpusReview(){
+  if(!reviewAtivaId){mostrarToast('Selecione uma revisão primeiro.','info','📚');return}
+  const out=document.getElementById('reviewCorpusPreview');const btn=document.getElementById('reviewCorpusPreviewBtn');
+  if(out)out.innerHTML='<div class="review-small-note">Carregando trechos aprovados...</div>';_setReviewBusy(btn,true,'Carregando...');
+  try{
+    const ok=await _exigirCorpusFechado();if(!ok){if(out)out.innerHTML='<div class="review-small-note">Corpus fechado vazio.</div>';return}
+    const res=await fetch(`${API}/revisoes/${reviewAtivaId}/corpus?por_pagina=20`,{headers:authHeaders()});
+    const data=await _safeJson(res);
+    if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
+    const chunks=data.items||data.itens||[];
+    if(!chunks.length){if(out)out.innerHTML='<div class="review-small-note">Nenhum trecho indexado encontrado.</div>';return}
+    if(out)out.innerHTML=chunks.map((chunk,idx)=>`<article class="review-chunk"><div class="review-chunk-title">Trecho ${idx+1} · ${_esc(chunk.secao||'fonte aprovada')}</div><div class="review-chunk-text">${_esc(String(chunk.texto||'').slice(0,520))}${String(chunk.texto||'').length>520?'...':''}</div></article>`).join('');
+  }catch(err){
+    console.error('[CaseOS] Erro ao carregar prévia do corpus:',err);
+    if(out)out.innerHTML=`<div class="review-small-note">${_esc(err.message||'Não foi possível carregar o corpus.')}</div>`;
+    mostrarToast('Erro ao carregar prévia do corpus.','error','⚠️');
+  }finally{_setReviewBusy(btn,false)}
 }
 async function perguntarCorpusReview(){
   if(!reviewAtivaId){mostrarToast('Selecione uma revisão primeiro.','info','📚');return}
   const pergunta=document.getElementById('reviewQuestion')?.value?.trim();if(!pergunta){mostrarToast('Digite uma pergunta para o corpus.','info','💬');return}
+  if(!await _exigirCorpusFechado())return;
   const out=document.getElementById('reviewAnswer');const btn=document.getElementById('reviewAskBtn');if(out)out.textContent='Consultando somente as fontes aprovadas...';_setReviewBusy(btn,true,'Perguntando...');
   try{
     const res=await fetch(`${API}/revisoes/${reviewAtivaId}/corpus/perguntar`,{method:'POST',headers:authHeaders(),body:JSON.stringify({pergunta,max_chunks:10})});
-    if(!res.ok)throw new Error(`HTTP ${res.status}`);
-    const data=await res.json();if(out)out.innerHTML=`${_formatReviewText(data.resposta||'Sem resposta.')} ${_renderReviewRefs(data.fontes||data.fontes_usadas||[])}`;
-  }catch(err){console.error('[CaseOS] Erro ao perguntar ao corpus:',err);if(out)out.textContent='Não foi possível responder com o corpus atual.';mostrarToast('Erro ao consultar o corpus.','error','⚠️')}
+    const data=await _safeJson(res);
+    if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
+    if(out)out.innerHTML=`${_formatReviewText(data.resposta||'Sem resposta.')} ${_renderReviewRefs(data.fontes||data.fontes_usadas||[])}`;
+  }catch(err){console.error('[CaseOS] Erro ao perguntar ao corpus:',err);if(out)out.textContent=err.message||'Não foi possível responder com o corpus atual.';mostrarToast('Erro ao consultar o corpus.','error','⚠️')}
   finally{_setReviewBusy(btn,false)}
 }
 async function gerarRascunhoReview(){
@@ -622,12 +693,14 @@ async function gerarRascunhoReview(){
   const secao=document.getElementById('reviewDraftSection')?.value||'introducao';
   const maxChunks=Number(document.getElementById('reviewDraftChunks')?.value||12);
   const instrucao=document.getElementById('reviewDraftInstruction')?.value?.trim()||'';
+  if(!await _exigirCorpusFechado())return;
   const out=document.getElementById('reviewDraft');const btn=document.getElementById('reviewDraftBtn');if(out)out.textContent='Gerando rascunho apenas com as fontes aprovadas...';_setReviewBusy(btn,true,'Gerando...');
   try{
     const res=await fetch(`${API}/revisoes/${reviewAtivaId}/rascunho`,{method:'POST',headers:authHeaders(),body:JSON.stringify({secao,instrucao,max_chunks:maxChunks})});
-    if(!res.ok)throw new Error(`HTTP ${res.status}`);
-    const data=await res.json();if(out)out.innerHTML=`${_formatReviewText(data.rascunho||data.resposta||'Sem rascunho.')} ${_renderReviewRefs(data.fontes_usadas||data.fontes||[])}`;
-  }catch(err){console.error('[CaseOS] Erro ao gerar rascunho:',err);if(out)out.textContent='Não foi possível gerar o rascunho com o corpus atual.';mostrarToast('Erro ao gerar rascunho.','error','⚠️')}
+    const data=await _safeJson(res);
+    if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
+    if(out)out.innerHTML=`${_formatReviewText(data.rascunho||data.resposta||'Sem rascunho.')} ${_renderReviewRefs(data.fontes_usadas||data.fontes||[])}`;
+  }catch(err){console.error('[CaseOS] Erro ao gerar rascunho:',err);if(out)out.textContent=err.message||'Não foi possível gerar o rascunho com o corpus atual.';mostrarToast('Erro ao gerar rascunho.','error','⚠️')}
   finally{_setReviewBusy(btn,false)}
 }
 function _renderReviewRefs(fontes){
