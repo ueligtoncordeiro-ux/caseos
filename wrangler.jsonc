@@ -10,7 +10,18 @@
     "directory": ".",
     "binding": "ASSETS",
     "html_handling": "none",
-    "run_worker_first": ["/", "/landing", "/review-studio", "/review-studio/"]
+    "run_worker_first": [
+      "/",
+      "/landing",
+      "/dashboard",
+      "/novo-relato",
+      "/login",
+      "/admin",
+      "/termos",
+      "/privacidade",
+      "/review-studio",
+      "/review-studio/"
+    ]
   },
   "compatibility_flags": [
     "nodejs_compat"

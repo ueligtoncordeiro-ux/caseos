@@ -19,6 +19,14 @@ const BACKEND_ORIGIN = 'https://caseos-api-bhdx.onrender.com';
 const ASSETS_ORIGIN  = 'https://caseos.voandonaia.com';
 const REVIEW_ORIGIN  = 'https://reviewstudio.voandonaia.com';
 const REVIEW_PAGE_PATH = '/review-studio/index.html';
+const CLEAN_HTML_ROUTES = {
+  '/dashboard': '/dashboard.html',
+  '/novo-relato': '/novo-relato.html',
+  '/login': '/login.html',
+  '/admin': '/admin.html',
+  '/termos': '/termos.html',
+  '/privacidade': '/privacidade.html',
+};
 
 /**
  * Content-Security-Policy cuidadosamente construída para o CaseOS:
@@ -90,6 +98,12 @@ export default {
 
     if (url.pathname === '/review-studio' || url.pathname === '/review-studio/') {
       url.pathname = REVIEW_PAGE_PATH;
+      const response = await env.ASSETS.fetch(new Request(url.toString(), request));
+      return _addSecurityHeaders(response);
+    }
+
+    if (CLEAN_HTML_ROUTES[url.pathname]) {
+      url.pathname = CLEAN_HTML_ROUTES[url.pathname];
       const response = await env.ASSETS.fetch(new Request(url.toString(), request));
       return _addSecurityHeaders(response);
     }
