@@ -10,9 +10,10 @@ import time
 from collections import defaultdict
 from datetime import datetime
 from typing import Optional
+from urllib.parse import urlparse
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Response, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, Request, status
 from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -91,6 +92,32 @@ class TrocarSenhaRequest(BaseModel):
 _GOOGLE_AUTH_URL   = "https://accounts.google.com/o/oauth2/v2/auth"
 _GOOGLE_TOKEN_URL  = "https://oauth2.googleapis.com/token"
 _GOOGLE_USERINFO   = "https://www.googleapis.com/oauth2/v3/userinfo"
+_ALLOWED_OAUTH_RETURN_HOSTS = {
+    "caseos.voandonaia.com",
+    "reviewstudio.voandonaia.com",
+    "localhost",
+    "127.0.0.1",
+}
+
+
+def _safe_oauth_return_to(return_to: Optional[str]) -> str:
+    fallback = f"{settings.frontend_url}/login.html"
+    if not return_to:
+        return fallback
+
+    parsed = urlparse(return_to)
+    if parsed.scheme not in {"https", "http"}:
+        return fallback
+    if parsed.scheme != "https" and parsed.hostname not in {"localhost", "127.0.0.1"}:
+        return fallback
+    if parsed.hostname not in _ALLOWED_OAUTH_RETURN_HOSTS:
+        return fallback
+    if parsed.path not in {"", "/", "/login.html", "/login"}:
+        return fallback
+
+    path = "/login.html"
+    port = f":{parsed.port}" if parsed.port else ""
+    return f"{parsed.scheme}://{parsed.hostname}{port}{path}"
 
 _REFRESH_COOKIE    = "rccs_refresh"
 
@@ -353,11 +380,15 @@ async def trocar_senha(
 # ── Google OAuth ──────────────────────────────────────────────────────────────
 
 @router.get("/google")
-async def google_login(response: Response):
+async def google_login(
+    response: Response,
+    return_to: Optional[str] = Query(default=None, max_length=500),
+):
     if not settings.google_client_id:
         raise HTTPException(status_code=501, detail="Google OAuth não configurado.")
 
     state = secrets.token_urlsafe(32)
+    safe_return_to = _safe_oauth_return_to(return_to)
     # Guarda state em cookie httpOnly para validação no callback (CSRF)
     response = RedirectResponse(
         url=(
@@ -375,6 +406,13 @@ async def google_login(response: Response):
     is_https = settings.environment == "production"
     response.set_cookie(
         "oauth_state", state,
+        httponly=True,
+        max_age=300,
+        secure=is_https,
+        samesite="none" if is_https else "lax",
+    )
+    response.set_cookie(
+        "oauth_return_to", safe_return_to,
         httponly=True,
         max_age=300,
         secure=is_https,
@@ -455,11 +493,11 @@ async def google_callback(
     access  = create_access_token(user.id, user.email, user.plano)
     refresh = create_refresh_token(user.id)
 
-    redirect = RedirectResponse(
-        f"{settings.frontend_url}/login.html?token={access}"
-    )
+    return_to = _safe_oauth_return_to(request.cookies.get("oauth_return_to"))
+    redirect = RedirectResponse(f"{return_to}?token={access}")
     _set_refresh_cookie(redirect, refresh)
     redirect.delete_cookie("oauth_state")
+    redirect.delete_cookie("oauth_return_to")
     return redirect
 
 

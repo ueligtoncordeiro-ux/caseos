@@ -621,7 +621,18 @@ const API = window.location.hostname === 'localhost'
   : 'https://caseos-api-bhdx.onrender.com';
 
 // ── Google OAuth com wake-up do Render ───────────────────────────────────
-const GOOGLE_URL = API + '/auth/google';
+function getPostLoginUrl() {
+  const p = new URLSearchParams(location.search);
+  const next = p.get('next');
+  if (next && next.startsWith('/') && !next.startsWith('//')) return next;
+  if (location.hostname === 'reviewstudio.voandonaia.com') return '/';
+  return 'dashboard.html';
+}
+
+function getGoogleUrl() {
+  const returnTo = `${location.origin}${location.pathname}`;
+  return `${API}/auth/google?return_to=${encodeURIComponent(returnTo)}`;
+}
 
 async function handleGoogleLogin(e) {
   e.preventDefault();
@@ -644,7 +655,7 @@ async function handleGoogleLogin(e) {
 
   if (apiOk) {
     // API já acordada — vai direto, sem overlay
-    window.location.href = GOOGLE_URL;
+    window.location.href = getGoogleUrl();
     return;
   }
 
@@ -658,7 +669,7 @@ async function handleGoogleLogin(e) {
 
   // Fecha overlay e redireciona
   overlay.classList.remove('show');
-  window.location.href = GOOGLE_URL;
+  window.location.href = getGoogleUrl();
 }
 
 function showView(id) {
@@ -713,7 +724,7 @@ function avaliarSenha(val) {
   if (p.get('token')) {
     sessionStorage.setItem('rccs_token', p.get('token'));
     history.replaceState({}, '', location.pathname);
-    location.href = 'dashboard.html';
+    location.href = getPostLoginUrl();
     return;
   }
 
@@ -737,7 +748,7 @@ function avaliarSenha(val) {
 })();
 
 if (sessionStorage.getItem('rccs_token')) {
-  location.href = 'dashboard.html';
+  location.href = getPostLoginUrl();
 }
 
 async function submitLogin(e) {
@@ -757,7 +768,7 @@ async function submitLogin(e) {
     if (!res.ok) { showAlert(data.detail || 'Erro ao entrar. Tente novamente.'); return; }
     sessionStorage.setItem('rccs_token', data.access_token);
     sessionStorage.setItem('rccs_user',  JSON.stringify(data.usuario));
-    location.href = 'dashboard.html';
+    location.href = getPostLoginUrl();
   } catch (_) {
     showAlert('Sem conexão com o servidor. Verifique se o backend está rodando.');
   } finally {

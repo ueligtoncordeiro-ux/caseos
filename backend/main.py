@@ -75,6 +75,7 @@ app = FastAPI(
 # ── CORS ──────────────────────────────────────────────────────────────────────
 _ALLOWED_ORIGINS = [
     settings.frontend_url,
+    "https://reviewstudio.voandonaia.com",
     "http://localhost:5500",
     "http://127.0.0.1:5500",
     # "null" REMOVIDO — abria vetor CSRF via iframes e file://
