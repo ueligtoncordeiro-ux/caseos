@@ -97,6 +97,7 @@ class AssistTextoRequest(BaseModel):
     texto: str
     acao: str  # "melhorar" | "corrigir" | "encurtar" | "expandir" | "formalizar"
     contexto_campo: Optional[str] = None  # ex: "história da doença atual"
+    instrucao: Optional[str] = None  # instrução personalizada do usuário
 
 
 @router.post("/assist-texto", response_model=ChatResponse)
@@ -113,7 +114,15 @@ async def assist_texto(
         "formalizar": "Reescreva o texto abaixo em linguagem científica formal adequada para publicação em periódico médico.",
     }
 
-    instrucao = acoes.get(req.acao, acoes["melhorar"])
+    instrucao_usuario = (req.instrucao or "").strip()
+    if instrucao_usuario:
+        instrucao = (
+            "Ajuste o texto abaixo seguindo exatamente esta instrução do usuário: "
+            f"{instrucao_usuario}. Preserve precisão científica, sentido original e informações factuais, "
+            "a menos que a instrução peça resumir, limitar palavras ou reorganizar."
+        )
+    else:
+        instrucao = acoes.get(req.acao, acoes["melhorar"])
     campo_info = f" O campo é: {req.contexto_campo}." if req.contexto_campo else ""
 
     prompt = f"""{instrucao}{campo_info}
