@@ -19,7 +19,7 @@ from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import (
-    get_db, Usuario, Sessao,
+    get_db, AuditLog, Usuario, Sessao,
     QUOTA_MENSAL, TOKENS_LIMITE,
     PLANO_FREE, PLANO_STARTER, PLANO_PRO, PLANO_INSTITUCIONAL,
 )
@@ -335,6 +335,39 @@ async def deletar_sessao(
     await db.commit()
     logger.warning("ADMIN DELETE session=%s by admin=%s", sessao_id, admin.id)
     return {"ok": True, "excluido": sessao_id}
+
+
+@router.get("/audit-logs")
+async def listar_audit_logs(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    user_id: Optional[str] = Query(None),
+    acao: Optional[str] = Query(None),
+    admin: Usuario = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Lista registros administrativos sensíveis, sem restaurar dados excluídos."""
+    stmt = select(AuditLog).order_by(AuditLog.created_at.desc())
+    if user_id:
+        stmt = stmt.where(AuditLog.user_id == user_id)
+    if acao:
+        stmt = stmt.where(AuditLog.acao == acao)
+    stmt = stmt.offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    logs = result.scalars().all()
+    return [
+        {
+            "id": log.id,
+            "user_id": log.user_id,
+            "actor_id": log.actor_id,
+            "acao": log.acao,
+            "entidade_tipo": log.entidade_tipo,
+            "entidade_id": log.entidade_id,
+            "metadados": log.metadados,
+            "created_at": log.created_at,
+        }
+        for log in logs
+    ]
 
 
 # ── Stripe ────────────────────────────────────────────────────────────────────

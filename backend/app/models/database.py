@@ -141,6 +141,7 @@ class Sessao(Base):
     versoes_docx: Mapped[List["VersaoDocx"]] = relationship(
         "VersaoDocx", back_populates="sessao", lazy="noload",
         order_by="VersaoDocx.numero",
+        cascade="all, delete-orphan",
     )
 
 
@@ -158,6 +159,20 @@ class VersaoDocx(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     sessao: Mapped["Sessao"] = relationship("Sessao", back_populates="versoes_docx")
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True,
+                                    default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    actor_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    acao: Mapped[str] = mapped_column(String, index=True)
+    entidade_tipo: Mapped[str] = mapped_column(String, index=True)
+    entidade_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    metadados: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class PesquisaSalva(Base):

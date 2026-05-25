@@ -1,9 +1,9 @@
-import os
 import asyncio
 import copy
 import io
 import logging
 import re
+import shutil
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -12,10 +12,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc
+from sqlalchemy import delete, select, func, desc
 
 from app.models.schemas import CKO, IniciarResponse, StatusResponse
-from app.models.database import PesquisaSalva, Sessao, VersaoDocx, get_db, Usuario
+from app.models.database import AuditLog, PesquisaSalva, Sessao, VersaoDocx, get_db, Usuario
 from app.agents.orchestrator import executar_pipeline, executar_pipeline_demo
 from app.services.auth import get_verified_user, check_quota
 from app.services.scientific_search import buscar_literatura
@@ -377,7 +377,7 @@ async def deletar_sessao(
     db: AsyncSession = Depends(get_db),
     user: Usuario = Depends(get_verified_user),
 ):
-    """Remove um relato do histórico (e arquivo DOCX se existir)."""
+    """Remove um relato do usuário e mantém apenas rastro administrativo."""
     result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
     sessao = result.scalar_one_or_none()
     if not sessao:
@@ -385,16 +385,61 @@ async def deletar_sessao(
     if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
 
-    # Remove arquivo DOCX se existir
+    arquivos_removidos: list[str] = []
+    erros_limpeza: list[str] = []
+
     if sessao.docx_path and Path(sessao.docx_path).exists():
         try:
-            os.remove(sessao.docx_path)
-        except OSError:
-            pass
+            Path(sessao.docx_path).unlink()
+            arquivos_removidos.append("docx_path")
+        except OSError as exc:
+            erros_limpeza.append(f"docx_path: {exc}")
+
+    imagens_dir = Path("images_output") / sessao.external_id
+    if imagens_dir.exists():
+        try:
+            shutil.rmtree(imagens_dir)
+            arquivos_removidos.append("images_output")
+        except OSError as exc:
+            erros_limpeza.append(f"images_output: {exc}")
+
+    versoes_count_result = await db.execute(
+        select(func.count()).select_from(VersaoDocx).where(
+            VersaoDocx.sessao_external_id == sessao.external_id
+        )
+    )
+    versoes_count = versoes_count_result.scalar() or 0
+
+    db.add(AuditLog(
+        user_id=user.id,
+        actor_id=user.id,
+        acao="relato_excluido_usuario",
+        entidade_tipo="sessao",
+        entidade_id=sessao.external_id,
+        metadados={
+            "sessao_pk": sessao.id,
+            "titulo": sessao.titulo,
+            "status": sessao.status,
+            "care_score": sessao.care_score,
+            "tokens_usados": sessao.tokens_usados,
+            "created_at": sessao.created_at.isoformat() if sessao.created_at else None,
+            "versoes_docx_removidas": versoes_count,
+            "arquivos_removidos": arquivos_removidos,
+            "erros_limpeza": erros_limpeza,
+        },
+    ))
+
+    await db.execute(
+        delete(VersaoDocx).where(VersaoDocx.sessao_external_id == sessao.external_id)
+    )
 
     await db.delete(sessao)
     await db.commit()
-    return {"deletado": True, "sessao_id": sessao_id}
+    return {
+        "deletado": True,
+        "sessao_id": sessao_id,
+        "arquivos_removidos": arquivos_removidos,
+    }
 
 
 @router.get("/{sessao_id}/status", response_model=StatusResponse)

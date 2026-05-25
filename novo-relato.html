@@ -2391,7 +2391,6 @@ buildSidebar();
 restoreCaseSidebar();
 updateNavUI();
 updateProgress();
-renderAutoresList();
 
 /* ══ TIMELINE ══ */
 let timeline = [];
@@ -2572,6 +2571,8 @@ function renderAutoresList() {
 function _esc(str) {
   return (str || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
+
+renderAutoresList();
 
 /* ══ IMAGE UPLOAD ══ */
 const uploadedImages = [];
