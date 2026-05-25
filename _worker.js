@@ -79,6 +79,12 @@ export default {
       return Response.redirect(url.toString(), 302);
     }
 
+    if (url.pathname === '/review-studio') {
+      url.pathname = '/review-studio.html';
+      const response = await env.ASSETS.fetch(new Request(url.toString(), request));
+      return _addSecurityHeaders(response);
+    }
+
     const response = await env.ASSETS.fetch(request);
     return _addSecurityHeaders(response);
   },
