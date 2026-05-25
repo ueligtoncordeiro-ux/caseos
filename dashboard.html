@@ -3470,6 +3470,44 @@ tbody td {
   </div>
 </div>
 
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal-overlay" id="modalConfirmarExclusao" onclick="if(event.target===this)_cancelarExclusao()">
+  <div class="modal" style="max-width:420px;width:95vw;border-radius:16px;overflow:hidden" onclick="event.stopPropagation()">
+    <!-- Cabeçalho vermelho suave -->
+    <div style="background:var(--red-dim);padding:28px 28px 20px;text-align:center">
+      <div style="
+        width:52px;height:52px;border-radius:50%;
+        background:var(--red);
+        display:flex;align-items:center;justify-content:center;
+        margin:0 auto 14px;font-size:22px;line-height:1
+      ">🗑</div>
+      <div style="font-family:var(--head);font-size:17px;font-weight:700;color:var(--t1);margin-bottom:6px">
+        Excluir relato?
+      </div>
+      <div style="font-size:13px;color:var(--t2);line-height:1.55" id="confirmarExclusaoSubtitulo">
+        Esta ação é <strong>irreversível</strong>. O relato e todas as versões serão apagados permanentemente.
+      </div>
+    </div>
+    <!-- Título do relato em destaque -->
+    <div style="padding:16px 28px;border-bottom:1px solid var(--card-bdr)">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:5px">Relato a excluir</div>
+      <div id="confirmarExclusaoTitulo" style="font-size:14px;font-weight:600;color:var(--t1);line-height:1.4"></div>
+    </div>
+    <!-- Botões -->
+    <div style="padding:20px 28px;display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="_cancelarExclusao()" style="flex:1">
+        Cancelar
+      </button>
+      <button id="btnConfirmarExclusao" onclick="_confirmarExclusao()"
+        style="flex:1;background:var(--red);color:#fff;border:none;padding:10px 20px;border-radius:8px;
+               font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s"
+        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        Sim, excluir
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal de Detalhe do Relato -->
 <div class="modal-overlay" id="modalRelato" onclick="fecharModalRelato(event)">
   <div class="modal modal-relato" onclick="event.stopPropagation()">
@@ -4023,7 +4061,7 @@ function _renderTabela(itens) {
           <div class="actions" onclick="event.stopPropagation()">
             <button class="action-btn" onclick="visualizarRelato('${id}')" title="Visualizar artigo"><span class="px-icon px-eye"></span></button>
             <button class="action-btn" onclick="downloadRelato('${id}')" title="Baixar DOCX"><span class="px-icon px-download"></span></button>
-            <button class="action-btn danger" onclick="deletarRelato('${id}')" title="Excluir"><span class="px-icon px-trash"></span></button>
+            <button class="action-btn danger" data-sessao-id="${id}" onclick="deletarRelato('${id}')" title="Excluir"><span class="px-icon px-trash"></span></button>
           </div>
         </td>
       </tr>`;
@@ -4059,23 +4097,59 @@ function _renderPaginacao(paginaAtual, totalPaginas, totalItens) {
 }
 
 /* Table actions */
-async function deletarRelato(sessaoId) {
-  const ok = confirm('Tem certeza que deseja excluir este relato? Esta ação é irreversível.');
-  if (!ok) return;
+/* ── Confirmação de exclusão (modal customizado) ──────────────────────────── */
+let _exclusaoPendenteSessaoId = null;
+
+function deletarRelato(sessaoId) {
+  _exclusaoPendenteSessaoId = sessaoId;
+
+  // Preenche o título do relato na modal
+  const row = document.querySelector(`[data-sessao-id="${sessaoId}"]`);
+  let titulo = '';
+  if (row) {
+    // Tenta pegar o título do elemento da linha (coluna Título)
+    const cell = row.closest('tr')?.querySelector('td:first-child');
+    titulo = cell?.textContent?.trim() || '';
+  }
+  if (!titulo) {
+    // Fallback: procura nos dados em memória
+    const relato = (todosRelatos || []).find(r => r.sessao_id === sessaoId || r.id === sessaoId);
+    titulo = relato?.titulo || 'este relato';
+  }
+  document.getElementById('confirmarExclusaoTitulo').textContent = titulo;
+
+  document.getElementById('modalConfirmarExclusao').classList.add('open');
+}
+
+function _cancelarExclusao() {
+  _exclusaoPendenteSessaoId = null;
+  document.getElementById('modalConfirmarExclusao').classList.remove('open');
+}
+
+async function _confirmarExclusao() {
+  const sessaoId = _exclusaoPendenteSessaoId;
+  if (!sessaoId) return;
+
+  const btn = document.getElementById('btnConfirmarExclusao');
+  btn.disabled = true;
+  btn.textContent = 'Excluindo…';
 
   try {
     const res = await fetch(`${API}/artigo/${sessaoId}`, {
       method: 'DELETE',
       headers: authHeaders(),
     });
-
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    _cancelarExclusao();
     mostrarToast('Relato excluído com sucesso.', 'success', '🗑');
     await carregarHistorico(paginaAtual);
     await carregarStats();
   } catch (err) {
     console.error('[CaseOS] Erro ao deletar:', err);
     mostrarToast('Erro ao excluir o relato.', 'error', '⚠️');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sim, excluir';
   }
 }
 
