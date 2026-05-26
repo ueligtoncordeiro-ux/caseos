@@ -137,7 +137,7 @@ body.sidebar-open .main{margin-left:320px}
   min-height:calc(100vh - 120px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px 0 38px;
   transition:min-height .22s ease,justify-content .22s ease,padding .22s ease;
 }
-.review-hero.conversation{min-height:560px;justify-content:flex-start;padding-top:72px}
+.review-hero.conversation{min-height:calc(100vh - 16px);justify-content:flex-start;padding-top:72px;padding-bottom:142px}
 .review-title{font-family:var(--head);font-size:42px;font-weight:600;letter-spacing:0;color:#1B1B1E;margin-bottom:34px}
 .review-hero.conversation .review-title{font-size:34px;margin-bottom:22px}
 .command-card{
@@ -153,7 +153,7 @@ body.sidebar-open .main{margin-left:320px}
 .command-card.compact .chat-send{border-radius:999px}
 .prompt-intro{padding:18px 22px 0;color:var(--t2);font-size:14px;line-height:1.45}
 .prompt-intro strong{color:var(--t1)}
-.chat-thread{min-height:300px;max-height:calc(100vh - 285px);overflow:auto;padding:10px 4px 24px;display:grid;align-content:start;gap:18px}
+.chat-thread{min-height:300px;overflow:visible;padding:10px 4px 130px;display:grid;align-content:start;gap:18px}
 .chat-message{display:flex;gap:10px;align-items:flex-start;max-width:86%}
 .chat-message.user{margin-left:auto;flex-direction:row-reverse}
 .chat-avatar{width:28px;height:28px;border-radius:999px;background:var(--acid);display:grid;place-items:center;flex:0 0 28px;overflow:hidden;font-size:11px;font-weight:800}
@@ -163,6 +163,18 @@ body.sidebar-open .main{margin-left:320px}
 .chat-message.user .chat-bubble{background:#080808;color:#fff;border-color:#080808}
 .chat-message.user .chat-bubble{border-radius:18px;padding:12px 15px}
 .chat-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.message-tools{display:flex;gap:8px;align-items:center;margin-top:8px}
+.message-tool{
+  border:0;background:transparent;color:var(--t2);font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:5px;
+  padding:6px 7px;border-radius:8px;cursor:pointer;
+}
+.message-tool:hover{background:rgba(0,0,0,.05);color:var(--t1)}
+.message-tool svg{width:14px;height:14px}
+.typing-dots{display:inline-flex;align-items:center;gap:5px;padding:10px 2px}
+.typing-dots span{width:7px;height:7px;border-radius:999px;background:var(--acid);animation:reviewDot 1s infinite ease-in-out}
+.typing-dots span:nth-child(2){animation-delay:.14s}
+.typing-dots span:nth-child(3){animation-delay:.28s}
+@keyframes reviewDot{0%,80%,100%{transform:scale(.6);opacity:.45}40%{transform:scale(1);opacity:1}}
 .choice-chip{
   border:1px solid var(--border);background:#fff;border-radius:999px;padding:9px 13px;font-size:13px;font-weight:800;cursor:pointer;color:var(--t1);
   transition:background .16s ease,border-color .16s ease,transform .16s ease;
@@ -173,6 +185,17 @@ body.sidebar-open .main{margin-left:320px}
 .inline-card textarea{min-height:84px}
 .chat-refs{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
 .chat-input-wrap{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:12px 16px;background:#fff;box-shadow:var(--shadow-lg)}
+.command-card.active .chat-input-wrap{
+  position:fixed;left:50%;bottom:22px;transform:translateX(-50%);width:min(920px,calc(100vw - 156px));z-index:290;
+}
+.chat-local-notice{
+  display:none;position:fixed;left:50%;bottom:102px;transform:translateX(-50%);width:min(760px,calc(100vw - 180px));z-index:291;
+  border:1px solid var(--border);background:rgba(255,255,255,.94);box-shadow:var(--shadow-sm);border-radius:999px;padding:9px 14px;
+  color:var(--t2);font-size:12.5px;font-weight:700;text-align:center;
+}
+.chat-local-notice.show{display:block}
+.chat-local-notice.warn{border-color:#f0d26a;background:#fff9de;color:#6b5700}
+.chat-local-notice.error{border-color:#f3a8a8;background:#fff1f1;color:#8c1d1d}
 .chat-plus{width:38px;height:38px;border:0;border-radius:999px;background:var(--muted);font-size:26px;line-height:1;cursor:pointer;color:#111}
 .chat-input{min-height:42px;max-height:130px;resize:none;border:0;background:transparent;outline:none;font-size:15px;line-height:1.45;padding:8px 0}
 .chat-send{width:42px;height:42px;border-radius:999px;border:0;background:#080808;color:#fff;font-weight:900;cursor:pointer}
@@ -279,6 +302,8 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
   .review-hero.conversation .review-title{font-size:26px}
   .command-card{border-radius:20px}
   .command-card.compact{border-radius:999px}
+  .command-card.active .chat-input-wrap{left:56px;right:10px;bottom:12px;transform:none;width:auto}
+  .chat-local-notice{left:56px;right:10px;bottom:92px;transform:none;width:auto;border-radius:14px}
   .chat-message{max-width:96%}
   .sidebar-drawer{width:calc(100vw - 56px)}
   body.sidebar-open .main{margin-left:56px}
@@ -289,10 +314,6 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
 </head>
 <body>
 <div class="app-actions">
-  <button class="notif-btn" aria-label="Notificações" title="Notificações">
-    <svg style="width:16px;height:16px"><use href="assets/pixel-icons.svg#px-bell"/></svg>
-    <span class="notif-badge">2</span>
-  </button>
   <div class="user-avatar" id="userAvatar" onclick="toggleUserDropdown()">?</div>
   <div class="user-dropdown" id="userDropdown">
     <div class="user-dropdown-header">
@@ -373,6 +394,7 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
           <strong>Organize fontes e gere sua revisão com base nos artigos selecionados.</strong> Comece por aqui.
         </div>
         <div id="reviewChatThread" class="chat-thread"></div>
+        <div class="chat-local-notice" id="chatLocalNotice"></div>
         <div class="chat-input-wrap">
           <button class="chat-plus" onclick="mostrarPaineis('fontes')" title="Adicionar fontes">+</button>
           <textarea id="reviewChatInput" class="chat-input" placeholder="Organize fontes e gere sua revisão com base nos artigos selecionados. Comece por aqui." onfocus="startReviewConversation()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMensagemReviewChat()}"></textarea>
@@ -531,7 +553,16 @@ async function logout(){try{await fetch(`${API}/auth/logout`,{method:'POST',cred
 function mostrarToast(mensagem,tipo='info',icone='ℹ️',duracao=4000){
   const container=document.getElementById('toastContainer');if(!container)return;
   const toast=document.createElement('div');toast.className=`toast ${tipo}`;toast.innerHTML=`<span>${icone}</span><span>${_esc(mensagem)}</span>`;container.appendChild(toast);
+  if(/cr[eé]dito|token|plano|limite/i.test(String(mensagem||'')))mostrarAvisoChatLocal(mensagem,tipo,duracao);
   setTimeout(()=>{toast.style.opacity='0';toast.style.transform='translateX(20px)';toast.style.transition='all .3s ease';setTimeout(()=>toast.remove(),300)},duracao);
+}
+let chatNoticeTimer=null;
+function mostrarAvisoChatLocal(mensagem,tipo='info',duracao=4200){
+  const el=document.getElementById('chatLocalNotice');if(!el)return;
+  el.textContent=mensagem;
+  el.className=`chat-local-notice show ${tipo==='error'?'error':tipo==='warning'||tipo==='warn'?'warn':''}`;
+  clearTimeout(chatNoticeTimer);
+  chatNoticeTimer=setTimeout(()=>{el.classList.remove('show')},duracao);
 }
 function _setReviewBusy(btn,busy,label){
   if(!btn)return;
@@ -540,6 +571,10 @@ function _setReviewBusy(btn,busy,label){
   btn.textContent=busy?label:btn.dataset.originalLabel;
 }
 function _formatReviewText(text){return _esc(text).replace(/\n/g,'<br>')}
+function _setReviewInputPlaceholder(started){
+  const input=document.getElementById('reviewChatInput');if(!input)return;
+  input.placeholder=started?'Peça ao Review...':'Organize fontes e gere sua revisão com base nos artigos selecionados. Comece por aqui.';
+}
 
 let reviewAtivaId=null;
 let reviewCache=[];
@@ -618,16 +653,20 @@ function renderReviewSections(){
 }
 function appendReviewChat(role,text,fontes=[],actions=[]){
   const thread=document.getElementById('reviewChatThread');if(!thread)return;
+  if(role==='assistant')hideReviewTyping();
   const idx=reviewChatHistory.push({role,text,fontes,actions})-1;
   const avatar=role==='user'?_getInitials(getUser()?.nome||'Usuário'):'RS';
   const refs=_renderReviewRefs(fontes);
   const buttons=Array.isArray(actions)&&actions.length?`<div class="chat-actions">${actions.map(a=>`<button class="choice-chip" onclick="${_esc(a.onclick)}">${_esc(a.label)}</button>`).join('')}</div>`:'';
-  const save=role==='assistant'&&text?`<div class="review-toolbar" style="margin-top:8px"><button class="btn btn-ghost" onclick="salvarChatComoRascunho(${idx})">Salvar rascunho</button></div>`:'';
+  const tools=role==='assistant'&&text?`<div class="message-tools">
+    <button class="message-tool" onclick="copiarChatMensagem(${idx})" title="Copiar resposta" aria-label="Copiar resposta"><svg><use href="assets/pixel-icons.svg#px-docstar"/></svg><span>Copiar</span></button>
+    <button class="message-tool" onclick="salvarChatComoRascunho(${idx})">Salvar rascunho</button>
+  </div>`:'';
   const item=document.createElement('div');
   item.className=`chat-message ${role==='user'?'user':'assistant'}`;
-  item.innerHTML=`<div class="chat-avatar">${avatar}</div><div><div class="chat-bubble">${_formatReviewText(text)}</div>${refs}${buttons}${save}</div>`;
+  item.innerHTML=`<div class="chat-avatar">${avatar}</div><div><div class="chat-bubble">${_formatReviewText(text)}</div>${refs}${buttons}${tools}</div>`;
   thread.appendChild(item);
-  thread.scrollTop=thread.scrollHeight;
+  item.scrollIntoView({block:'end',behavior:'smooth'});
   _saveReviewWorkspace();
 }
 function renderChatHistory(){
@@ -636,15 +675,16 @@ function renderChatHistory(){
   thread.innerHTML='';reviewChatHistory=[];
   saved.forEach(m=>appendReviewChat(m.role,m.text,m.fontes||[],m.actions||[]));
 }
-function startReviewConversation(){
+function startReviewConversation(seedInitial=true){
   const card=document.getElementById('reviewCommandCard');
   const hero=document.getElementById('reviewHero');
   card?.classList.remove('compact');
   card?.classList.add('active');
   hero?.classList.add('conversation');
+  _setReviewInputPlaceholder(true);
   if(!reviewConversationStarted){
     reviewConversationStarted=true;
-    if(!reviewChatHistory.length)renderInitialChat();
+    if(seedInitial&&!reviewChatHistory.length)renderInitialChat();
   }
 }
 function resetReviewConversationView(){
@@ -654,6 +694,7 @@ function resetReviewConversationView(){
   card?.classList.add('compact');
   card?.classList.remove('active');
   hero?.classList.remove('conversation');
+  _setReviewInputPlaceholder(false);
 }
 function renderInitialChat(){
   const thread=document.getElementById('reviewChatThread');if(!thread)return;
@@ -768,6 +809,7 @@ async function carregarRevisoes(){
 }
 
 function selecionarRevisaoAtiva(id,opts={}){
+  const manterConversaAberta=reviewConversationStarted||document.getElementById('reviewCommandCard')?.classList.contains('active');
   reviewAtivaId=id||null;
   const select=document.getElementById('reviewSelect');if(select)select.value=reviewAtivaId||'';
   const review=reviewCache.find(r=>String(r.id)===String(reviewAtivaId));
@@ -776,7 +818,8 @@ function selecionarRevisaoAtiva(id,opts={}){
   carregarReviewSources().catch(console.error);
   carregarResumoCorpusReview().catch(console.error);
   _loadReviewWorkspace();
-  if(reviewChatHistory.length&&!opts.silent)startReviewConversation();else resetReviewConversationView();
+  if(reviewChatHistory.length&&(manterConversaAberta||!opts.silent))startReviewConversation(false);
+  else if(!manterConversaAberta)resetReviewConversationView();
   renderConversationList();
   if(!opts.silent)mostrarToast('Revisão ativa selecionada.','success','✓');
 }
@@ -993,11 +1036,30 @@ function _renderReviewRefs(fontes){
   const items=fontes.map((f,idx)=>`<span class="review-badge">[${_esc(f.ref||`F${idx+1}`)}] ${_esc(f.titulo||f.title||f.fonte_titulo||'Fonte usada')}</span>`).join('');
   return `<div class="chat-refs">${items}</div>`;
 }
+function showReviewTyping(){
+  const thread=document.getElementById('reviewChatThread');if(!thread||document.getElementById('reviewTypingIndicator'))return;
+  const item=document.createElement('div');
+  item.id='reviewTypingIndicator';
+  item.className='chat-message assistant typing';
+  item.innerHTML='<div class="chat-avatar">RS</div><div class="typing-dots" aria-label="Review pensando"><span></span><span></span><span></span></div>';
+  thread.appendChild(item);
+  item.scrollIntoView({block:'end',behavior:'smooth'});
+}
+function hideReviewTyping(){document.getElementById('reviewTypingIndicator')?.remove()}
+function copiarChatMensagem(index){
+  const msg=reviewChatHistory[index];if(!msg?.text)return;
+  const texto=msg.text;
+  const fallback=()=>{const area=document.createElement('textarea');area.value=texto;document.body.appendChild(area);area.select();document.execCommand('copy');area.remove()};
+  Promise.resolve(navigator.clipboard?.writeText?navigator.clipboard.writeText(texto):fallback())
+    .then(()=>mostrarAvisoChatLocal('Resposta copiada.','info',2200))
+    .catch(()=>{fallback();mostrarAvisoChatLocal('Resposta copiada.','info',2200)});
+}
 async function enviarMensagemReviewChat(){
   const input=document.getElementById('reviewChatInput');const btn=document.getElementById('reviewChatSendBtn');
   const pergunta=input?.value?.trim();if(!pergunta)return;
   startReviewConversation();
   appendReviewChat('user',pergunta);input.value='';
+  showReviewTyping();
   const id=await _garantirRevisaoAtiva();if(!id){appendReviewChat('assistant','Salve a revisão para começar.');return}
   if(reviewFlowStage==='tema'){
     const tema=document.getElementById('reviewTema');if(tema)tema.value=pergunta;
@@ -1030,7 +1092,7 @@ async function enviarMensagemReviewChat(){
   _setReviewBusy(btn,true,'...');
   try{
     if(Number(reviewCorpusStats.fontes_aprovadas||0)>0){
-      const ok=await _exigirCorpusFechado();if(!ok)return;
+      const ok=await _exigirCorpusFechado();if(!ok){hideReviewTyping();return}
       const res=await fetch(`${API}/revisoes/${reviewAtivaId}/corpus/perguntar`,{method:'POST',headers:authHeaders(),body:JSON.stringify({pergunta,max_chunks:10})});
       const data=await _safeJson(res);
       if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
@@ -1039,7 +1101,7 @@ async function enviarMensagemReviewChat(){
       appendReviewChat('assistant','Posso ajudar a estruturar título, pergunta e objetivo. Para responder sobre evidências, aprove fontes na Base da revisão.');
     }
   }catch(err){console.error('[CaseOS] Erro no chat da revisão:',err);appendReviewChat('assistant',err.message||'Não consegui processar agora.');mostrarToast('Erro no chat da revisão.','error','⚠️')}
-  finally{_setReviewBusy(btn,false)}
+  finally{hideReviewTyping();_setReviewBusy(btn,false)}
 }
 async function ajustarCampoReviewIA(fieldId,label){
   const field=document.getElementById(fieldId);if(!field)return;
