@@ -2673,6 +2673,131 @@ tbody td {
 .stat-icon.blue { background: var(--blue-dim); border-color: rgba(37,99,235,0.15); }
 .stat-icon.blue svg { color: var(--blue); }
 
+/* ═══════════════════════════════════════════════════════════════
+   ONBOARDING TOUR
+═══════════════════════════════════════════════════════════════ */
+#tourOverlay {
+  position: fixed; inset: 0; z-index: 9000;
+  pointer-events: none;
+}
+#tourOverlay.active { pointer-events: all; }
+
+/* Escuridão ao redor do spotlight */
+.tour-mask {
+  position: fixed; inset: 0; z-index: 9001;
+  background: rgba(10,10,11,0.72);
+  transition: opacity .3s;
+}
+/* Recorte luminoso */
+#tourSpotlight {
+  position: fixed; z-index: 9002;
+  border-radius: 10px;
+  box-shadow: 0 0 0 9999px rgba(10,10,11,0.72),
+              0 0 0 2px var(--acid);
+  transition: all .35s cubic-bezier(.4,0,.2,1);
+  pointer-events: none;
+}
+
+/* Tooltip do tour */
+#tourTooltip {
+  position: fixed; z-index: 9003;
+  width: 320px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.07);
+  padding: 22px 22px 18px;
+  transition: all .35s cubic-bezier(.4,0,.2,1);
+}
+.tour-step-badge {
+  display: inline-block;
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #5A6600; background: rgba(200,255,0,0.25);
+  border-radius: 20px; padding: 3px 10px;
+  margin-bottom: 10px;
+}
+#tourTooltip h3 {
+  font-size: 15px; font-weight: 700; color: #0A0A0B;
+  margin: 0 0 7px; line-height: 1.3;
+}
+#tourTooltip p {
+  font-size: 13px; color: #4B4B4F; margin: 0 0 16px;
+  line-height: 1.6;
+}
+.tour-progress {
+  display: flex; gap: 5px; margin-bottom: 14px;
+}
+.tour-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #E9E9E7; transition: background .2s;
+}
+.tour-dot.active { background: var(--acid); width: 18px; border-radius: 3px; }
+.tour-dot.done   { background: #C8FF00; }
+
+.tour-actions {
+  display: flex; align-items: center; gap: 8px;
+}
+.tour-btn-skip {
+  margin-right: auto;
+  font-size: 12px; color: #9A9A9E;
+  background: none; border: none; cursor: pointer;
+  padding: 4px 0;
+}
+.tour-btn-skip:hover { color: #4B4B4F; }
+.tour-btn-prev {
+  font-size: 12.5px; font-weight: 500; color: #4B4B4F;
+  background: #F7F7F5; border: 1px solid #E9E9E7;
+  border-radius: 7px; padding: 7px 14px; cursor: pointer;
+}
+.tour-btn-prev:hover { background: #EFEFED; }
+.tour-btn-next {
+  font-size: 13px; font-weight: 600; color: #0A0A0B;
+  background: var(--acid); border: none;
+  border-radius: 7px; padding: 8px 18px; cursor: pointer;
+}
+.tour-btn-next:hover { filter: brightness(1.08); }
+
+/* Modal de boas-vindas (step 0) */
+#tourWelcomeModal {
+  position: fixed; inset: 0; z-index: 9010;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(10,10,11,0.72);
+  opacity: 0; transition: opacity .3s;
+  pointer-events: none;
+}
+#tourWelcomeModal.active {
+  opacity: 1; pointer-events: all;
+}
+.tour-welcome-card {
+  background: #fff; border-radius: 18px;
+  padding: 40px 40px 32px;
+  max-width: 460px; width: 90%;
+  box-shadow: 0 20px 80px rgba(0,0,0,0.2);
+  text-align: center;
+  transform: translateY(16px); transition: transform .3s;
+}
+#tourWelcomeModal.active .tour-welcome-card { transform: translateY(0); }
+.tour-welcome-emoji { font-size: 48px; margin-bottom: 16px; }
+.tour-welcome-card h2 {
+  font-size: 22px; font-weight: 700; color: #0A0A0B; margin: 0 0 10px;
+}
+.tour-welcome-card p {
+  font-size: 14px; color: #4B4B4F; line-height: 1.7; margin: 0 0 28px;
+}
+.tour-welcome-actions { display: flex; gap: 10px; justify-content: center; }
+.tour-welcome-btn-skip {
+  font-size: 13px; color: #9A9A9E; background: none;
+  border: 1px solid #E9E9E7; border-radius: 8px;
+  padding: 10px 20px; cursor: pointer;
+}
+.tour-welcome-btn-skip:hover { background: #F7F7F5; }
+.tour-welcome-btn-start {
+  font-size: 13px; font-weight: 600; color: #0A0A0B;
+  background: var(--acid); border: none;
+  border-radius: 8px; padding: 10px 24px; cursor: pointer;
+}
+.tour-welcome-btn-start:hover { filter: brightness(1.08); }
+
 </style>
 </head>
 <body>
@@ -3716,6 +3841,9 @@ function _renderUser(user) {
 
   // Quota banner (artigos, não tokens)
   _checkQuotaBanner(user);
+
+  // Onboarding tour — dispara só uma vez
+  _checkOnboarding(user);
 }
 
 /* ── Quota Banner ──────────────────────────────────────────────────────────── */
@@ -5704,6 +5832,236 @@ window.addEventListener('DOMContentLoaded', async () => {
     carregarHistorico(1),
   ]);
 });
+
+// ══════════════════════════════════════════════════════════════
+// ONBOARDING TOUR
+// ══════════════════════════════════════════════════════════════
+const TOUR_KEY = 'caseos_onboarding_v2';
+
+const TOUR_STEPS = [
+  {
+    targetId: null,  // step welcome — sem spotlight
+    title: null,
+  },
+  {
+    targetId: 'greetingTitle',
+    selectorFallback: '.greeting',
+    title: '✍️ Crie seu primeiro relato',
+    desc:  'Clique em <strong>Novo Relato</strong> para iniciar o assistente de caso clínico. Em minutos você terá um artigo completo, com referências e DOCX pronto para envio.',
+  },
+  {
+    targetId: 'statTotal',
+    selectorFallback: '.bento-grid',
+    title: '📊 Acompanhe sua produção',
+    desc:  'Os cards mostram quantos relatos você gerou, a média de aderência CARE e informações do seu plano.',
+  },
+  {
+    targetId: 'relatosTable',
+    selectorFallback: '#relatosBody',
+    title: '📁 Histórico de relatos',
+    desc:  'Aqui ficam todos os relatos gerados. Você pode editar, baixar o DOCX, salvar versões e excluir a qualquer momento.',
+  },
+  {
+    targetId: 'sidebarUsageWrap',
+    selectorFallback: '#sidebarUsageWrap',
+    title: '⚡ Consumo do plano',
+    desc:  'Esta barra mostra os tokens LLM utilizados no mês. Cada artigo completo usa ~25 000 tokens.',
+  },
+  {
+    targetId: null,
+    selectorFallback: 'a[href*="reviewstudio"]',
+    title: '🔬 Review Studio',
+    desc:  'Acesse pela barra lateral para realizar revisões bibliográficas estruturadas com IA — corpus fechado, perguntas livres e rascunhos automáticos.',
+    isLast: true,
+  },
+];
+
+let _tourStep = 0;
+
+function _tourEl(id) {
+  return document.getElementById(id);
+}
+
+function _tourGetRect(step) {
+  let el = step.targetId ? _tourEl(step.targetId) : null;
+  if (!el && step.selectorFallback) el = document.querySelector(step.selectorFallback);
+  if (!el) return null;
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  return el.getBoundingClientRect();
+}
+
+function _tourPositionTooltip(rect) {
+  const tt = _tourEl('tourTooltip');
+  if (!tt) return;
+  const W = window.innerWidth, H = window.innerHeight;
+  const TW = 320, TH = tt.offsetHeight || 180;
+  const PAD = 16;
+
+  let top, left;
+
+  if (!rect) {
+    // Centralizado
+    top  = (H - TH) / 2 + 80;
+    left = (W - TW) / 2;
+  } else {
+    // Tenta posicionar abaixo; se não couber, acima; se não, à direita
+    if (rect.bottom + TH + PAD < H) {
+      top  = rect.bottom + PAD;
+      left = Math.min(rect.left, W - TW - PAD);
+    } else if (rect.top - TH - PAD > 0) {
+      top  = rect.top - TH - PAD;
+      left = Math.min(rect.left, W - TW - PAD);
+    } else {
+      top  = Math.max(PAD, (H - TH) / 2);
+      left = rect.right + PAD < W - TW ? rect.right + PAD : PAD;
+    }
+    left = Math.max(PAD, left);
+    top  = Math.max(PAD, top);
+  }
+
+  tt.style.top  = top  + 'px';
+  tt.style.left = left + 'px';
+}
+
+function _tourUpdateSpotlight(rect) {
+  const sp = _tourEl('tourSpotlight');
+  if (!sp) return;
+  if (!rect) {
+    sp.style.display = 'none';
+    return;
+  }
+  const PAD = 8;
+  sp.style.display = 'block';
+  sp.style.top    = (rect.top    - PAD) + 'px';
+  sp.style.left   = (rect.left   - PAD) + 'px';
+  sp.style.width  = (rect.width  + PAD * 2) + 'px';
+  sp.style.height = (rect.height + PAD * 2) + 'px';
+}
+
+function _tourRenderStep(idx) {
+  const step = TOUR_STEPS[idx];
+  const tt   = _tourEl('tourTooltip');
+  const ov   = _tourEl('tourOverlay');
+  if (!tt || !ov) return;
+
+  // Dots
+  const dots = tt.querySelectorAll('.tour-dot');
+  dots.forEach((d, i) => {
+    d.classList.toggle('active', i === idx - 1);
+    d.classList.toggle('done',   i < idx - 1);
+  });
+
+  // Content
+  tt.querySelector('.tour-step-badge').textContent = `Passo ${idx} de ${TOUR_STEPS.length - 1}`;
+  tt.querySelector('h3').textContent = step.title;
+  tt.querySelector('p').innerHTML    = step.desc;
+
+  const prevBtn = tt.querySelector('.tour-btn-prev');
+  const nextBtn = tt.querySelector('.tour-btn-next');
+  prevBtn.style.display = idx > 1 ? '' : 'none';
+  nextBtn.textContent   = step.isLast ? 'Concluir 🎉' : 'Próximo →';
+
+  ov.classList.add('active');
+  tt.style.display = 'block';
+
+  const rect = _tourGetRect(step);
+  _tourUpdateSpotlight(rect);
+
+  // Delay to let scroll happen
+  setTimeout(() => {
+    const r2 = _tourGetRect(step);
+    _tourUpdateSpotlight(r2);
+    _tourPositionTooltip(r2);
+  }, 320);
+}
+
+function tourNext() {
+  _tourStep++;
+  if (_tourStep >= TOUR_STEPS.length) {
+    tourFinish();
+  } else {
+    _tourRenderStep(_tourStep);
+  }
+}
+
+function tourPrev() {
+  if (_tourStep > 1) {
+    _tourStep--;
+    _tourRenderStep(_tourStep);
+  }
+}
+
+function tourFinish() {
+  try { localStorage.setItem(TOUR_KEY, '1'); } catch {}
+  const ov = _tourEl('tourOverlay');
+  const tt = _tourEl('tourTooltip');
+  const sp = _tourEl('tourSpotlight');
+  if (ov) { ov.classList.remove('active'); ov.style.pointerEvents = 'none'; }
+  if (tt) tt.style.display = 'none';
+  if (sp) sp.style.display = 'none';
+}
+
+function tourStart() {
+  // Esconde modal de boas-vindas
+  const wm = _tourEl('tourWelcomeModal');
+  if (wm) { wm.classList.remove('active'); setTimeout(() => wm.remove(), 300); }
+
+  _tourStep = 1;
+  _tourRenderStep(_tourStep);
+}
+
+function _checkOnboarding(user) {
+  try {
+    if (localStorage.getItem(TOUR_KEY)) return;  // já fez o tour
+  } catch {}
+
+  // Só dispara para usuários que ainda não geraram nenhum relato
+  // (artigos_mes == 0) — ou sempre para quem nunca viu o tour
+  const wm = _tourEl('tourWelcomeModal');
+  if (!wm) return;
+  // Pequeno delay para o dashboard terminar de renderizar
+  setTimeout(() => {
+    wm.classList.add('active');
+  }, 800);
+}
+
 </script>
+
+<!-- ══ ONBOARDING TOUR HTML ══ -->
+<div id="tourWelcomeModal">
+  <div class="tour-welcome-card">
+    <div class="tour-welcome-emoji">👋</div>
+    <h2>Bem-vindo ao CaseOS!</h2>
+    <p>O seu assistente de IA para transformar casos clínicos em artigos científicos publicáveis.<br>Quer um tour rápido pelo painel?</p>
+    <div class="tour-welcome-actions">
+      <button class="tour-welcome-btn-skip" onclick="tourFinish();this.closest('#tourWelcomeModal').classList.remove('active')">Pular</button>
+      <button class="tour-welcome-btn-start" onclick="tourStart()">Fazer o tour →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay + Spotlight + Tooltip -->
+<div id="tourOverlay">
+  <div class="tour-mask"></div>
+  <div id="tourSpotlight" style="display:none"></div>
+</div>
+<div id="tourTooltip" style="display:none">
+  <div class="tour-step-badge">Passo 1 de 5</div>
+  <h3></h3>
+  <p></p>
+  <div class="tour-progress">
+    <div class="tour-dot active"></div>
+    <div class="tour-dot"></div>
+    <div class="tour-dot"></div>
+    <div class="tour-dot"></div>
+    <div class="tour-dot"></div>
+  </div>
+  <div class="tour-actions">
+    <button class="tour-btn-skip" onclick="tourFinish()">Pular tour</button>
+    <button class="tour-btn-prev" onclick="tourPrev()">← Anterior</button>
+    <button class="tour-btn-next" onclick="tourNext()">Próximo →</button>
+  </div>
+</div>
+
 </body>
 </html>
