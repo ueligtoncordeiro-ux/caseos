@@ -5243,46 +5243,89 @@ async function excluirConta() {
    NOTIFICATIONS
 ═══════════════════════════════════════════════ */
 // Notificações estáticas — lidas persistidas em localStorage
-const _NOTIF_LS_KEY = 'caseos_notif_lidas_v1';
+/* ═══════════════════════════════════════════════
+   NOTIFICAÇÕES IN-APP — API-backed
+═══════════════════════════════════════════════ */
+let _notifCache = [];         // cache local dos itens
+let _notifPollingTimer = null;
 
-const notificacoes = [
-  { id: 1, texto: 'Seu relato está sendo preparado no CaseOS.', tempo: 'agora' },
-  { id: 2, texto: 'Lembre-se de não inserir dados identificáveis do paciente.', tempo: '5 min atrás' },
-];
-
-function _notifLidasIds() {
-  try { return new Set(JSON.parse(localStorage.getItem(_NOTIF_LS_KEY) || '[]')); }
-  catch { return new Set(); }
+function _tempoRelativo(iso) {
+  if (!iso) return '';
+  const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (diff < 60)   return 'agora';
+  if (diff < 3600) return `${Math.floor(diff/60)} min atrás`;
+  if (diff < 86400)return `${Math.floor(diff/3600)}h atrás`;
+  return `${Math.floor(diff/86400)}d atrás`;
 }
 
-function _salvarLidas(ids) {
-  try { localStorage.setItem(_NOTIF_LS_KEY, JSON.stringify([...ids])); } catch {}
-}
-
-function renderNotificacoes() {
+function renderNotificacoes(data) {
   const list  = document.getElementById('notifList');
   const badge = document.getElementById('notifBadge');
-  const lidas = _notifLidasIds();
+  if (!list || !badge) return;
 
-  const naoLidas = notificacoes.filter(n => !lidas.has(n.id)).length;
-  badge.textContent = naoLidas;
+  const itens    = (data && data.itens) || _notifCache;
+  const naoLidas = (data && data.nao_lidas != null) ? data.nao_lidas
+                   : itens.filter(n => !n.lida).length;
+
+  // Atualiza badge
+  badge.textContent = naoLidas > 9 ? '9+' : String(naoLidas);
   badge.style.display = naoLidas > 0 ? 'flex' : 'none';
 
-  list.innerHTML = notificacoes.map(n => `
-    <div class="notif-item ${lidas.has(n.id) ? '' : 'unread'}">
+  if (!itens.length) {
+    list.innerHTML = '<div style="padding:20px 16px;font-size:12px;color:var(--t3);text-align:center">Nenhuma notificação</div>';
+    return;
+  }
+
+  list.innerHTML = itens.map(n => `
+    <div class="notif-item ${n.lida ? '' : 'unread'}" style="cursor:${n.link ? 'pointer' : 'default'}"
+         onclick="${n.link ? `location.href='${n.link}'` : ''}">
       <span class="notif-dot"></span>
-      <div>
-        <div class="notif-text">${n.texto}</div>
-        <div class="notif-time">${n.tempo}</div>
+      <div style="flex:1;min-width:0">
+        <div class="notif-text">
+          <span style="margin-right:4px">${n.emoji || '🔔'}</span>
+          <strong>${_escHtml(n.titulo)}</strong>
+        </div>
+        <div class="notif-text" style="font-weight:400;margin-top:2px">${_escHtml(n.texto)}</div>
+        <div class="notif-time">${_tempoRelativo(n.created_at)}</div>
       </div>
     </div>
-  `).join('') || '<div style="padding:16px;font-size:12px;color:var(--t3);text-align:center">Nenhuma notificação</div>';
+  `).join('');
 }
 
-function marcarTodasLidas() {
-  const ids = new Set(notificacoes.map(n => n.id));
-  _salvarLidas(ids);
-  renderNotificacoes();
+function _escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function _fetchNotificacoes() {
+  const token = getToken();
+  if (!token) return;
+  try {
+    const res = await fetch(`${API}/notificacoes`, { headers: authHeaders() });
+    if (!res.ok) return;
+    const data = await res.json();
+    _notifCache = data.itens || [];
+    renderNotificacoes(data);
+  } catch {}
+}
+
+async function marcarTodasLidas() {
+  const token = getToken();
+  if (!token) return;
+  try {
+    await fetch(`${API}/notificacoes/marcar-todas-lidas`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    _notifCache = _notifCache.map(n => ({ ...n, lida: true }));
+    renderNotificacoes({ itens: _notifCache, nao_lidas: 0 });
+  } catch {}
+}
+
+function _iniciarPollingNotificacoes() {
+  if (_notifPollingTimer) return;
+  _fetchNotificacoes();
+  // Polling leve a cada 60s — suficiente para feedback pós-geração
+  _notifPollingTimer = setInterval(_fetchNotificacoes, 60_000);
 }
 
 /* ═══════════════════════════════════════════════
@@ -5294,8 +5337,8 @@ function toggleNotifDropdown() {
   fecharDropdowns();
   if (!wasOpen) {
     dd.classList.add('open');
-    // Auto-mark all as read when the bell is opened
-    marcarTodasLidas();
+    // Busca dados frescos ao abrir e marca todas como lidas
+    _fetchNotificacoes().then(() => marcarTodasLidas());
   }
 }
 
@@ -5892,7 +5935,7 @@ function _iniciarDigitacaoBalao() {
 
 window.addEventListener('DOMContentLoaded', async () => {
   renderizarData();
-  renderNotificacoes();  // inicializa badge a partir do localStorage (sem esperar auth)
+  renderNotificacoes(null);  // inicializa dropdown vazio até auth completar
 
   // Auth guard — redirect to login if not authenticated
   const autenticado = await initAuth();
@@ -5903,6 +5946,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     carregarStats(),
     carregarHistorico(1),
   ]);
+
+  // Inicia polling de notificações (após auth garantida)
+  _iniciarPollingNotificacoes();
 });
 
 // ══════════════════════════════════════════════════════════════

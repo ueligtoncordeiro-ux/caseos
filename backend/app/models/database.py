@@ -389,6 +389,33 @@ class RevisaoDocumento(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+# ── Notificações in-app ───────────────────────────────────────────────────────
+
+NOTIF_TIPOS = {
+    "artigo_concluido": "✅",
+    "erro_pipeline":    "⚠️",
+    "plano_atualizado": "🎉",
+    "cota_esgotada":    "🔴",
+    "bem_vindo":        "👋",
+    "dica":             "💡",
+}
+
+
+class Notificacao(Base):
+    __tablename__ = "notificacoes"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True,
+                                    default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("usuarios.id"),
+                                         nullable=False, index=True)
+    tipo: Mapped[str] = mapped_column(String, default="dica", index=True)
+    titulo: Mapped[str] = mapped_column(String)
+    texto: Mapped[str] = mapped_column(Text)
+    lida: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    link: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # URL opcional para ação
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
 # ── Engine & session factory ──────────────────────────────────────────────────
 
 def _get_database_url() -> str:

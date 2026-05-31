@@ -155,6 +155,19 @@ async def executar_pipeline(
                 flags=relatorio.flags,
             ))
 
+        # Notificação in-app
+        if user_id:
+            from app.routers.notificacoes import criar_notificacao
+            score_txt = f" · CARE {relatorio.care_score}/10" if relatorio.care_score else ""
+            refs_txt  = f" · {relatorio.total_referencias} refs" if relatorio.total_referencias else ""
+            asyncio.create_task(criar_notificacao(
+                user_id=user_id,
+                tipo="artigo_concluido",
+                titulo="Artigo pronto!",
+                texto=f"Seu relato clínico foi gerado com sucesso{score_txt}{refs_txt}.",
+                link=f"dashboard.html",
+            ))
+
     except Exception as exc:
         import traceback
         _msg = str(exc)[:1000] or type(exc).__name__
@@ -193,6 +206,18 @@ async def executar_pipeline(
                 destinatario=email_usuario,
                 nome=nome_display,
                 sessao_id=sessao_id,
+            ))
+
+        # Notificação in-app de erro
+        if user_id:
+            from app.routers.notificacoes import criar_notificacao
+            asyncio.create_task(criar_notificacao(
+                user_id=user_id,
+                tipo="erro_pipeline",
+                titulo="Erro na geração",
+                texto=f"Houve um problema ao gerar seu relato (etapa: {_etapa_atual}). "
+                      "Tente novamente ou entre em contato com o suporte.",
+                link="dashboard.html",
             ))
         raise
     finally:
