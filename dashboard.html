@@ -4540,6 +4540,15 @@ function _renderAreaVersoes(sessaoId, detalhe, versoes) {
 
   let html = `<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%">`;
 
+  // Estilo do botão PDF (vermelho suave)
+  const btnPdfStyle = `
+    display:inline-flex;align-items:center;gap:4px;
+    padding:5px 10px;border-radius:6px;font-size:11px;font-weight:500;
+    cursor:pointer;border:1.5px solid #FFD0D0;
+    background:#FFF5F5;color:#C0392B;
+    transition:border-color .15s,background .15s;white-space:nowrap;
+  `;
+
   // Botão original (pipeline)
   if (temOriginal) {
     html += `<button style="${btnStyle}"
@@ -4554,15 +4563,29 @@ function _renderAreaVersoes(sessaoId, detalhe, versoes) {
     </button>`;
   }
 
+  // Botão PDF do documento atual
+  html += `<button style="${btnPdfStyle}"
+    onmouseover="this.style.borderColor='#C0392B';this.style.background='#FFE8E8'" onmouseout="this.style.borderColor='#FFD0D0';this.style.background='#FFF5F5'"
+    onclick="downloadPDF('${sessaoId}')" title="Baixar como PDF">
+    📕 PDF
+  </button>`;
+
   // Versões salvas pelo usuário
   if (versoes.length > 0) {
     html += versoes.map(v => `
-      <button style="${btnStyle}"
-        onmouseover="this.style.borderColor='var(--acid)'" onmouseout="this.style.borderColor='var(--card-bdr)'"
-        onclick="downloadVersao('${sessaoId}','${v.id}',${v.numero})"
-        title="${v.descricao ? v.descricao + ' — ' : ''}${fmtDate(v.created_at)} · ${v.size_kb} KB">
-        ↓ v${v.numero}${v.descricao ? ' · ' + v.descricao.substring(0,15) : ''}
-      </button>`).join('');
+      <span style="display:inline-flex;gap:3px;align-items:center">
+        <button style="${btnStyle}"
+          onmouseover="this.style.borderColor='var(--acid)'" onmouseout="this.style.borderColor='var(--card-bdr)'"
+          onclick="downloadVersao('${sessaoId}','${v.id}',${v.numero})"
+          title="${v.descricao ? v.descricao + ' — ' : ''}${fmtDate(v.created_at)} · ${v.size_kb} KB">
+          ↓ v${v.numero}${v.descricao ? ' · ' + v.descricao.substring(0,15) : ''}
+        </button>
+        <button style="${btnPdfStyle};padding:5px 7px;"
+          onmouseover="this.style.borderColor='#C0392B';this.style.background='#FFE8E8'" onmouseout="this.style.borderColor='#FFD0D0';this.style.background='#FFF5F5'"
+          onclick="downloadVersaoPDF('${sessaoId}','${v.id}',${v.numero})" title="Baixar v${v.numero} como PDF">
+          PDF
+        </button>
+      </span>`).join('');
   }
 
   // Botão para salvar nova versão
@@ -4596,6 +4619,55 @@ async function salvarNovaVersao(sessaoId) {
   } catch (err) {
     mostrarToast(`Erro ao salvar versão: ${err.message}`, 'error', '⚠️');
     if (btn) { btn.disabled = false; btn.textContent = '+ Nova Versão'; }
+  }
+}
+
+async function downloadPDF(sessaoId, versao) {
+  const v = versao || 'editado';
+  mostrarToast('Gerando PDF…', 'info', '📄');
+  try {
+    const res = await fetch(`${API}/artigo/${sessaoId}/resultado/pdf?versao=${v}`, {
+      headers: authHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `CaseOS_${sessaoId.slice(0,8)}${v === 'original' ? '_original' : ''}.pdf`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    mostrarToast('PDF baixado!', 'success', '✅');
+  } catch (err) {
+    mostrarToast(`Erro ao gerar PDF: ${err.message}`, 'error', '⚠️');
+  }
+}
+
+async function downloadVersaoPDF(sessaoId, versaoId, numero) {
+  mostrarToast(`Gerando PDF v${numero}…`, 'info', '📄');
+  try {
+    const res = await fetch(`${API}/artigo/${sessaoId}/versao/${versaoId}/pdf`, {
+      headers: authHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `CaseOS_${sessaoId.substring(0,8)}_v${numero}.pdf`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    mostrarToast(`PDF v${numero} baixado!`, 'success', '✅');
+  } catch (err) {
+    mostrarToast(`Erro ao gerar PDF v${numero}: ${err.message}`, 'error', '⚠️');
   }
 }
 

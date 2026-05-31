@@ -571,6 +571,100 @@ async def download_resultado(
         raise HTTPException(status_code=500, detail=f"Erro ao gerar DOCX: {exc}")
 
 
+@router.get("/{sessao_id}/resultado/pdf")
+async def download_resultado_pdf(
+    sessao_id: str,
+    versao: str = Query("editado", description="'editado' (padrão) ou 'original'"),
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    """
+    Entrega o artigo como PDF (converte o DOCX armazenado via PyMuPDF).
+    Aceita o mesmo parâmetro ?versao=original|editado do endpoint DOCX.
+    """
+    from app.services.pdf_generator import docx_to_pdf_bytes
+
+    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
+    sessao = result.scalar_one_or_none()
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    if sessao.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+    if sessao.status != "concluido":
+        raise HTTPException(status_code=425,
+                            detail=f"Artigo ainda não concluído. Status: {sessao.status}")
+
+    try:
+        if versao == "original":
+            docx_bytes = sessao.docx_original_bytes
+            sufixo = "_original"
+        else:
+            docx_bytes = sessao.docx_editado_bytes or sessao.docx_original_bytes
+            sufixo = "_editado" if sessao.docx_editado_bytes else ""
+
+        if not docx_bytes:
+            if not sessao.resultado:
+                raise HTTPException(status_code=404, detail="Conteúdo do artigo não encontrado.")
+            docx_bytes = await _gerar_bytes_do_resultado(sessao)
+            sessao.docx_original_bytes = docx_bytes
+            await db.commit()
+
+        pdf_bytes = docx_to_pdf_bytes(docx_bytes)
+        filename = f"CaseOS_{sessao_id[:8]}{sufixo}.pdf"
+        _log.info("Download PDF sessão=%s versao=%s bytes=%d", sessao_id, versao, len(pdf_bytes))
+        return StreamingResponse(
+            content=io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        _log.error("Erro ao gerar PDF sessão %s: %s", sessao_id, exc)
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar PDF: {exc}")
+
+
+@router.get("/{sessao_id}/versao/{versao_id}/pdf")
+async def download_versao_pdf(
+    sessao_id: str,
+    versao_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    """Download de uma versão específica em PDF."""
+    from app.services.pdf_generator import docx_to_pdf_bytes
+
+    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
+    sessao = result.scalar_one_or_none()
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    if sessao.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+
+    versao_q = await db.execute(
+        select(VersaoDocx).where(
+            VersaoDocx.id == versao_id,
+            VersaoDocx.sessao_external_id == sessao_id,
+        )
+    )
+    versao = versao_q.scalar_one_or_none()
+    if not versao:
+        raise HTTPException(status_code=404, detail="Versão não encontrada.")
+
+    try:
+        pdf_bytes = docx_to_pdf_bytes(versao.docx_bytes)
+        filename = f"CaseOS_{sessao_id[:8]}_v{versao.numero}.pdf"
+        return StreamingResponse(
+            content=io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except Exception as exc:
+        _log.error("Erro ao gerar PDF versão %s: %s", versao_id, exc)
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar PDF: {exc}")
+
+
 @router.get("/{sessao_id}/diagnostico")
 async def diagnostico_resultado(
     sessao_id: str,
