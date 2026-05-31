@@ -140,7 +140,7 @@ body.sidebar-open .main{margin-left:320px}
   min-height:calc(100vh - 120px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px 0 38px;
   transition:min-height .22s ease,justify-content .22s ease,padding .22s ease;
 }
-.review-hero.conversation{min-height:calc(100vh - 16px);justify-content:flex-start;padding-top:72px;padding-bottom:154px}
+.review-hero.conversation{min-height:calc(100vh - 16px);justify-content:flex-start;padding-top:72px;padding-bottom:190px}
 .review-title{font-family:var(--head);font-size:42px;font-weight:600;letter-spacing:0;color:#1B1B1E;margin-bottom:34px}
 .review-hero.conversation .review-title{font-size:34px;margin-bottom:22px}
 .command-card{
@@ -156,17 +156,20 @@ body.sidebar-open .main{margin-left:320px}
 .command-card.compact .chat-send{border-radius:999px}
 .prompt-intro{padding:18px 22px 0;color:var(--t2);font-size:14px;line-height:1.45}
 .prompt-intro strong{color:var(--t1)}
-.chat-thread{min-height:300px;overflow:visible;padding:10px 4px 146px;display:grid;align-content:start;gap:18px}
-.chat-message{display:flex;gap:10px;align-items:flex-start;max-width:86%}
+.chat-thread{width:min(920px,100%);min-height:300px;overflow:visible;padding:10px 4px 190px;display:grid;align-content:start;gap:22px;margin:0 auto}
+.chat-message{display:flex;gap:10px;align-items:flex-start;max-width:78%}
 .chat-message.user{margin-left:auto;flex-direction:row-reverse}
 .chat-avatar{width:28px;height:28px;border-radius:999px;background:var(--acid);display:grid;place-items:center;flex:0 0 28px;overflow:hidden;font-size:11px;font-weight:800}
 .chat-message.assistant .chat-avatar{display:none}
 .chat-avatar img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
-.chat-bubble{border:0;border-radius:0;background:transparent;padding:4px 2px;font-size:15px;line-height:1.65;color:var(--t1);box-shadow:none;white-space:pre-wrap}
+.chat-content{display:grid;justify-items:start;gap:8px;max-width:100%}
+.chat-message.user .chat-content{justify-items:end}
+.chat-bubble{border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.9);padding:14px 16px;font-size:15px;line-height:1.65;color:var(--t1);box-shadow:var(--shadow-xs);white-space:pre-wrap}
+.chat-message.assistant .chat-bubble{border-left:3px solid var(--acid);border-top-left-radius:8px}
 .chat-message.user .chat-bubble{background:#080808;color:#fff;border-color:#080808}
 .chat-message.user .chat-bubble{border-radius:18px;padding:12px 15px}
-.chat-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.message-tools{display:flex;gap:8px;align-items:center;margin-top:8px}
+.chat-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:0;padding:10px;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.78);box-shadow:var(--shadow-xs)}
+.message-tools{display:flex;gap:8px;align-items:center;margin-top:0}
 .message-tool{
   border:0;background:transparent;color:var(--t2);font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:5px;
   padding:6px 7px;border-radius:8px;cursor:pointer;
@@ -190,10 +193,10 @@ body.sidebar-open .main{margin-left:320px}
 .chat-input-wrap{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:12px 16px;background:#fff;box-shadow:var(--shadow-lg)}
 body.review-chat-active .chat-input-wrap,
 .command-card.active .chat-input-wrap{
-  position:fixed;left:50%;bottom:22px;transform:translateX(-50%);width:min(920px,calc(100vw - 156px));z-index:290;
+  position:fixed;left:50%;bottom:58px;transform:translateX(-50%);width:min(920px,calc(100vw - 156px));z-index:290;
 }
 .chat-local-notice{
-  display:none;position:fixed;left:50%;bottom:102px;transform:translateX(-50%);width:min(760px,calc(100vw - 180px));z-index:291;
+  display:none;position:fixed;left:50%;bottom:138px;transform:translateX(-50%);width:min(760px,calc(100vw - 180px));z-index:291;
   border:1px solid var(--border);background:rgba(255,255,255,.94);box-shadow:var(--shadow-sm);border-radius:999px;padding:9px 14px;
   color:var(--t2);font-size:12.5px;font-weight:700;text-align:center;
 }
@@ -204,9 +207,14 @@ body.review-chat-active .chat-input-wrap,
 .chat-input{min-height:42px;max-height:130px;resize:none;border:0;background:transparent;outline:none;font-size:15px;line-height:1.45;padding:8px 0}
 .chat-send{width:42px;height:42px;border-radius:999px;border:0;background:#080808;color:#fff;font-weight:900;cursor:pointer}
 .setup-summary{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+body.review-chat-active .setup-summary{
+  position:fixed;left:50%;bottom:16px;transform:translateX(-50%);width:min(920px,calc(100vw - 156px));z-index:289;
+  justify-content:flex-start;margin:0;padding:0 14px;pointer-events:none;
+}
+body.review-chat-active .setup-summary:empty{display:none}
 .summary-pill{border:1px solid var(--border);background:rgba(255,255,255,.76);backdrop-filter:blur(8px);border-radius:999px;padding:7px 10px;font-size:12px;color:var(--t2)}
 .context-tabs{
-  display:none;position:fixed;left:50%;bottom:88px;transform:translateX(-50%);z-index:289;
+  display:none;position:fixed;left:50%;bottom:132px;transform:translateX(-50%);z-index:289;
   width:min(920px,calc(100vw - 156px));justify-content:flex-start;gap:8px;flex-wrap:wrap;pointer-events:none;
 }
 body.review-chat-active .context-tabs{display:flex}
@@ -333,12 +341,13 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
   .page{padding:30px 68px 44px 14px}
   .review-title{font-size:30px;margin-bottom:24px}
   .review-hero{min-height:calc(100vh - 80px);justify-content:center}
-  .review-hero.conversation{min-height:calc(100vh - 80px);padding-top:34px}
+  .review-hero.conversation{min-height:calc(100vh - 80px);padding-top:34px;padding-bottom:170px}
   .review-hero.conversation .review-title{font-size:26px}
   .command-card{border-radius:20px}
   .command-card.compact{border-radius:999px}
-  body.review-chat-active .chat-input-wrap,.command-card.active .chat-input-wrap{left:56px;right:10px;bottom:12px;transform:none;width:auto}
-  .chat-local-notice{left:56px;right:10px;bottom:92px;transform:none;width:auto;border-radius:14px}
+  body.review-chat-active .chat-input-wrap,.command-card.active .chat-input-wrap{left:56px;right:10px;bottom:48px;transform:none;width:auto}
+  body.review-chat-active .setup-summary{left:56px;right:10px;bottom:10px;transform:none;width:auto;padding:0 8px}
+  .chat-local-notice{left:56px;right:10px;bottom:126px;transform:none;width:auto;border-radius:14px}
   .chat-message{max-width:96%}
   .sidebar-drawer{width:calc(100vw - 56px)}
   body.sidebar-open .main{margin-left:56px}
@@ -349,7 +358,7 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
   }
   .context-panels.show{transform:translateY(0) scale(1)}
   .studio-btn::after{display:none}
-  body.review-chat-active .context-tabs{left:56px;right:10px;bottom:82px;transform:none;width:auto}
+  body.review-chat-active .context-tabs{left:56px;right:10px;bottom:116px;transform:none;width:auto}
 }
 </style>
 </head>
@@ -790,7 +799,7 @@ function appendReviewChat(role,text,fontes=[],actions=[]){
   </div>`:'';
   const item=document.createElement('div');
   item.className=`chat-message ${role==='user'?'user':'assistant'}`;
-  item.innerHTML=`<div class="chat-avatar">${avatar}</div><div><div class="chat-bubble">${_formatReviewText(text)}</div>${refs}${buttons}${tools}</div>`;
+  item.innerHTML=`<div class="chat-avatar">${avatar}</div><div class="chat-content"><div class="chat-bubble">${_formatReviewText(text)}</div>${refs}${buttons}${tools}</div>`;
   thread.appendChild(item);
   item.scrollIntoView({block:'end',behavior:'smooth'});
   _saveReviewWorkspace();
