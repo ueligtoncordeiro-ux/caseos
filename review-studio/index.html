@@ -150,7 +150,7 @@ body.sidebar-open .main{margin-left:320px}
 .command-card.active{width:min(920px,100%);border-radius:0;background:transparent;border:0;box-shadow:none;overflow:visible}
 .command-card.compact .prompt-intro,.command-card.compact .chat-thread{display:none}
 .command-card.active .prompt-intro{display:none}
-.command-card.compact .chat-input-wrap{border-top:0;padding:9px 12px 9px 18px;min-height:64px}
+.command-card.compact .chat-input-wrap{border-top:0;padding:8px 12px 8px 18px;min-height:60px}
 .command-card.compact .chat-input{height:42px;min-height:42px;padding:11px 0 9px}
 .command-card.compact .chat-plus{background:#fff;font-size:28px;color:#111}
 .command-card.compact .chat-send{border-radius:999px}
@@ -204,7 +204,7 @@ body.review-chat-active .chat-input-wrap,
 .chat-local-notice.warn{border-color:#f0d26a;background:#fff9de;color:#6b5700}
 .chat-local-notice.error{border-color:#f3a8a8;background:#fff1f1;color:#8c1d1d}
 .chat-plus{width:36px;height:36px;border:0;border-radius:999px;background:var(--muted);font-size:25px;line-height:1;cursor:pointer;color:#111;display:grid;place-items:center;padding-bottom:2px}
-.chat-input{height:42px;min-height:42px;max-height:130px;resize:none;border:0;background:transparent;outline:none;font-size:15px;line-height:1.35;padding:11px 0 9px;overflow:hidden;color:var(--t1)}
+.chat-input{height:42px;min-height:42px;max-height:130px;resize:none;border:0;background:transparent;outline:none;font-size:15px;line-height:1.35;padding:11px 0 9px;overflow:hidden;color:var(--t1);white-space:nowrap}
 .chat-input::placeholder{color:#777B80;opacity:.86}
 .chat-send{width:42px;height:42px;border-radius:999px;border:0;background:#080808;color:#fff;font-weight:900;cursor:pointer;display:grid;place-items:center;padding-left:2px}
 .setup-summary{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
@@ -448,7 +448,7 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
         <div class="chat-local-notice" id="chatLocalNotice"></div>
         <div class="chat-input-wrap">
           <button class="chat-plus" onclick="mostrarPaineis('fontes')" title="Adicionar fontes">+</button>
-          <textarea id="reviewChatInput" class="chat-input" placeholder="Organize fontes e gere sua revisão com base nos artigos selecionados. Comece por aqui." onfocus="startReviewConversation()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMensagemReviewChat()}"></textarea>
+          <textarea id="reviewChatInput" class="chat-input" placeholder="Peça ao Review..." aria-label="Peça ao Review Studio" onfocus="startReviewConversation()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMensagemReviewChat()}"></textarea>
           <button class="chat-send" id="reviewChatSendBtn" onclick="enviarMensagemReviewChat()">➤</button>
         </div>
       </div>
@@ -649,7 +649,7 @@ function _setReviewBusy(btn,busy,label){
 function _formatReviewText(text){return _esc(text).replace(/\n/g,'<br>')}
 function _setReviewInputPlaceholder(started){
   const input=document.getElementById('reviewChatInput');if(!input)return;
-  input.placeholder=started?'Peça ao Review...':'Organize fontes e gere sua revisão com base nos artigos selecionados. Comece por aqui.';
+  input.placeholder='Peça ao Review...';
 }
 
 let reviewAtivaId=null;
