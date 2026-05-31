@@ -2679,8 +2679,12 @@ tbody td {
 #tourOverlay {
   position: fixed; inset: 0; z-index: 9000;
   pointer-events: none;
+  display: none;                /* OCULTO por padrão — só aparece via JS */
 }
-#tourOverlay.active { pointer-events: all; }
+#tourOverlay.active {
+  display: block;
+  pointer-events: all;
+}
 
 /* Escuridão ao redor do spotlight */
 .tour-mask {
@@ -2696,6 +2700,7 @@ tbody td {
               0 0 0 2px var(--acid);
   transition: all .35s cubic-bezier(.4,0,.2,1);
   pointer-events: none;
+  display: none;                /* OCULTO por padrão */
 }
 
 /* Tooltip do tour */
@@ -2707,6 +2712,7 @@ tbody td {
   box-shadow: 0 8px 40px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.07);
   padding: 22px 22px 18px;
   transition: all .35s cubic-bezier(.4,0,.2,1);
+  display: none;                /* OCULTO por padrão */
 }
 .tour-step-badge {
   display: inline-block;
@@ -6114,9 +6120,15 @@ function tourFinish() {
   const ov = _tourEl('tourOverlay');
   const tt = _tourEl('tourTooltip');
   const sp = _tourEl('tourSpotlight');
-  if (ov) { ov.classList.remove('active'); ov.style.pointerEvents = 'none'; }
+  if (ov) {
+    ov.classList.remove('active');
+    ov.style.pointerEvents = 'none';
+    ov.style.display = 'none';   // garante que o overlay some completamente
+  }
   if (tt) tt.style.display = 'none';
   if (sp) sp.style.display = 'none';
+  // Remove a máscara de fundo caso exista como elemento separado
+  document.querySelectorAll('.tour-mask').forEach(el => el.style.display = 'none');
 }
 
 function tourStart() {

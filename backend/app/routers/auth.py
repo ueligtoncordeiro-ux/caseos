@@ -47,6 +47,39 @@ _LOGIN_JANELA_SEG = 900  # 15 minutos
 
 _login_hits: dict[str, list[float]] = defaultdict(list)
 
+# ── One-time OAuth codes (Security: evita JWT na URL) ─────────────────────────
+# code → (access_token, expires_at)  · TTL de 60 s · uso único
+_OAUTH_CODE_TTL = 60  # segundos
+_oauth_codes: dict[str, tuple[str, float]] = {}
+
+
+def _issue_oauth_code(access_token: str) -> str:
+    """Gera um código de uso único e armazena o access token associado."""
+    _purge_expired_oauth_codes()
+    code = secrets.token_urlsafe(32)
+    _oauth_codes[code] = (access_token, time.time() + _OAUTH_CODE_TTL)
+    return code
+
+
+def _consume_oauth_code(code: str) -> str | None:
+    """Troca o código pelo access token (remove imediatamente — uso único)."""
+    _purge_expired_oauth_codes()
+    entry = _oauth_codes.pop(code, None)
+    if entry is None:
+        return None
+    token, expires_at = entry
+    if time.time() > expires_at:
+        return None
+    return token
+
+
+def _purge_expired_oauth_codes() -> None:
+    """Remove códigos expirados para evitar crescimento indefinido."""
+    agora = time.time()
+    expired = [k for k, (_, exp) in _oauth_codes.items() if agora > exp]
+    for k in expired:
+        _oauth_codes.pop(k, None)
+
 
 def _check_login_rate_limit(request: Request) -> None:
     """
@@ -493,12 +526,31 @@ async def google_callback(
     access  = create_access_token(user.id, user.email, user.plano)
     refresh = create_refresh_token(user.id)
 
+    # Segurança: nunca coloca o JWT na URL (logs do servidor, histórico do browser).
+    # Emite um código de uso único (60 s) e o frontend troca pelo token via API.
+    code = _issue_oauth_code(access)
+
     return_to = _safe_oauth_return_to(request.cookies.get("oauth_return_to"))
-    redirect = RedirectResponse(f"{return_to}?token={access}")
+    redirect = RedirectResponse(f"{return_to}?code={code}")
     _set_refresh_cookie(redirect, refresh)
     redirect.delete_cookie("oauth_state")
     redirect.delete_cookie("oauth_return_to")
     return redirect
+
+
+@router.get("/oauth/exchange")
+async def oauth_exchange_code(code: str = Query(...)):
+    """
+    Troca o código OAuth de uso único (60 s) pelo access token.
+    O código é destruído imediatamente após o primeiro uso.
+    """
+    token = _consume_oauth_code(code)
+    if not token:
+        raise HTTPException(
+            status_code=400,
+            detail="Código inválido, expirado ou já utilizado.",
+        )
+    return {"access_token": token, "token_type": "bearer"}
 
 
 # ── Planos ────────────────────────────────────────────────────────────────────

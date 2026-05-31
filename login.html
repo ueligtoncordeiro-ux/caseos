@@ -722,9 +722,31 @@ function avaliarSenha(val) {
   const p = new URLSearchParams(location.search);
 
   if (p.get('token')) {
+    // Legado: suporte ao fluxo antigo (pode ser removido após deploy estável)
     sessionStorage.setItem('rccs_token', p.get('token'));
     history.replaceState({}, '', location.pathname);
     location.href = getPostLoginUrl();
+    return;
+  }
+
+  if (p.get('code')) {
+    // Novo fluxo OAuth: troca código de uso único pelo access token (não expõe JWT na URL)
+    const code = p.get('code');
+    history.replaceState({}, '', location.pathname);  // remove ?code= do histórico
+    (async () => {
+      try {
+        const res = await fetch(`${API}/auth/oauth/exchange?code=${encodeURIComponent(code)}`);
+        if (res.ok) {
+          const data = await res.json();
+          sessionStorage.setItem('rccs_token', data.access_token);
+          location.href = getPostLoginUrl();
+        } else {
+          showAlert('Falha ao autenticar com Google. Tente novamente.', 'error');
+        }
+      } catch {
+        showAlert('Erro de rede ao autenticar. Tente novamente.', 'error');
+      }
+    })();
     return;
   }
 
