@@ -171,11 +171,12 @@ body.sidebar-open .main{margin-left:320px}
 .chat-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:0;padding:10px;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.78);box-shadow:var(--shadow-xs)}
 .message-tools{display:flex;gap:8px;align-items:center;margin-top:0}
 .message-tool{
-  border:0;background:transparent;color:var(--t2);font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:5px;
-  padding:6px 7px;border-radius:8px;cursor:pointer;
+  border:0;background:transparent;color:#5f6368;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px;
+  padding:6px;border-radius:999px;cursor:pointer;
 }
 .message-tool:hover{background:rgba(0,0,0,.05);color:var(--t1)}
-.message-tool svg{width:14px;height:14px}
+.message-tool svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9}
+.message-tool.copy-only span{display:none}
 .typing-dots{display:inline-flex;align-items:center;gap:5px;padding:10px 2px}
 .typing-dots span{width:7px;height:7px;border-radius:999px;background:var(--acid);animation:reviewDot 1s infinite ease-in-out}
 .typing-dots span:nth-child(2){animation-delay:.14s}
@@ -210,19 +211,25 @@ body.review-chat-active .chat-input-wrap,
 .setup-summary{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
 body.review-chat-active .setup-summary{
   position:fixed;left:50%;bottom:16px;transform:translateX(-50%);width:min(920px,calc(100vw - 156px));z-index:289;
-  justify-content:flex-start;margin:0;padding:0 14px;pointer-events:none;
+  justify-content:flex-start;margin:0;padding:0 14px;pointer-events:auto;
 }
 body.review-chat-active .setup-summary:empty{display:none}
-.summary-pill{border:1px solid var(--border);background:rgba(255,255,255,.76);backdrop-filter:blur(8px);border-radius:999px;padding:7px 10px;font-size:12px;color:var(--t2)}
+.summary-pill{
+  border:1px solid var(--border);background:rgba(255,255,255,.80);backdrop-filter:blur(8px);border-radius:999px;
+  padding:7px 10px;font:inherit;font-size:12px;color:var(--t2);cursor:pointer;box-shadow:var(--shadow-xs);
+  display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+}
+.summary-pill:hover{border-color:var(--acid);background:var(--acid-dim);color:var(--t1)}
+.summary-pill strong{color:var(--t1);font-weight:800}
 .context-tabs{
-  display:none;position:fixed;left:50%;bottom:132px;transform:translateX(-50%);z-index:289;
-  width:min(920px,calc(100vw - 156px));justify-content:flex-start;gap:8px;flex-wrap:wrap;pointer-events:none;
+  display:none;position:fixed;right:22px;top:112px;z-index:289;
+  width:278px;justify-content:flex-start;align-items:stretch;gap:10px;flex-direction:column;pointer-events:none;
 }
 body.review-chat-active .context-tabs{display:flex}
 .context-tab{
-  border:1px solid var(--border);background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-radius:999px;
-  min-height:34px;padding:0 12px;display:inline-flex;align-items:center;gap:7px;color:var(--t2);
-  font-size:12px;font-weight:800;box-shadow:var(--shadow-xs);cursor:pointer;pointer-events:auto;
+  border:1px solid rgba(0,0,0,.08);background:rgba(255,255,255,.92);backdrop-filter:blur(16px);border-radius:18px;
+  min-height:48px;padding:10px 12px;display:flex;align-items:center;gap:9px;color:var(--t2);
+  font-size:12px;font-weight:800;box-shadow:var(--shadow-sm);cursor:pointer;pointer-events:auto;text-align:left;
 }
 .context-tab:hover,.context-tab.active{background:var(--acid-dim);border-color:var(--acid);color:var(--t1)}
 .context-tab svg{width:14px;height:14px}
@@ -248,19 +255,19 @@ body.review-chat-active .context-tabs{display:flex}
 }
 .studio-btn:hover::after{opacity:1}
 .context-panels{
-  position:fixed;left:50%;bottom:136px;width:min(620px,calc(100vw - 180px));max-height:min(62vh,640px);z-index:288;
+  position:fixed;right:316px;top:112px;width:min(620px,calc(100vw - 430px));max-height:calc(100vh - 150px);z-index:288;
   display:grid;grid-template-rows:auto minmax(0,1fr);gap:12px;align-items:start;overflow:hidden;background:rgba(255,255,255,.97);
   border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-lg);padding:14px;
-  transform:translate(-50%,18px) scale(.98);opacity:0;pointer-events:none;transition:transform .2s ease,opacity .2s ease,width .18s ease;
+  transform:translateX(18px) scale(.98);opacity:0;pointer-events:none;transition:transform .2s ease,opacity .2s ease,width .18s ease;
 }
-.context-panels.show{transform:translate(-50%,0) scale(1);opacity:1;pointer-events:auto}
+.context-panels.show{transform:translateX(0) scale(1);opacity:1;pointer-events:auto}
 .context-panels::after{
-  content:"";position:absolute;left:50%;bottom:-9px;transform:translateX(-50%) rotate(45deg);
-  width:16px;height:16px;background:rgba(255,255,255,.97);border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+  content:"";position:absolute;right:-9px;top:32px;transform:rotate(45deg);
+  width:16px;height:16px;background:rgba(255,255,255,.97);border-top:1px solid var(--border);border-right:1px solid var(--border);
 }
-body.review-panel-tipo .context-panels{width:min(520px,calc(100vw - 180px))}
-body.review-panel-fontes .context-panels{width:min(640px,calc(100vw - 180px))}
-body.review-panel-secoes .context-panels{width:min(760px,calc(100vw - 180px))}
+body.review-panel-tipo .context-panels{width:min(520px,calc(100vw - 430px))}
+body.review-panel-fontes .context-panels{width:min(640px,calc(100vw - 430px))}
+body.review-panel-secoes .context-panels{width:min(760px,calc(100vw - 430px))}
 .panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding:2px 2px 12px}
 .panel-title{font-family:var(--head);font-size:18px;font-weight:800;color:var(--t1)}
 .panel-subtitle{font-size:12.5px;color:var(--t3);line-height:1.45;margin-top:2px}
@@ -336,7 +343,10 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
   .sources-panel{position:static}
   .review-status{grid-template-columns:repeat(2,minmax(0,1fr))}
   .page{padding:22px 74px 42px 18px}
-  .context-panels,body.review-panel-tipo .context-panels,body.review-panel-fontes .context-panels,body.review-panel-secoes .context-panels{width:min(640px,calc(100vw - 130px))}
+  .context-tabs{right:16px;top:96px;width:240px}
+  .context-panels,body.review-panel-tipo .context-panels,body.review-panel-fontes .context-panels,body.review-panel-secoes .context-panels{
+    right:274px;top:96px;width:min(560px,calc(100vw - 350px));max-height:calc(100vh - 130px);
+  }
 }
 @media(max-width:720px){
   .page{padding:30px 68px 44px 14px}
@@ -355,11 +365,17 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
   body.sidebar-open .side-rail{opacity:0;pointer-events:none;transform:translateX(-12px)}
   .studio-rail{display:none}
   .context-panels,body.review-panel-tipo .context-panels,body.review-panel-fontes .context-panels,body.review-panel-secoes .context-panels{
-    left:56px;right:10px;bottom:128px;transform:translateY(18px) scale(.98);width:auto;max-height:56vh;border-radius:14px;
+    left:56px;right:10px;top:auto;bottom:128px;transform:translateY(18px) scale(.98);width:auto;max-height:56vh;border-radius:14px;
   }
+  .context-panels::after{display:none}
   .context-panels.show{transform:translateY(0) scale(1)}
   .studio-btn::after{display:none}
-  body.review-chat-active .context-tabs{left:56px;right:10px;bottom:116px;transform:none;width:auto}
+  body.review-chat-active .context-tabs{
+    left:auto;right:10px;top:96px;bottom:auto;transform:none;width:48px;gap:8px;
+  }
+  .context-tab{width:48px;min-height:48px;height:48px;padding:0;justify-content:center;border-radius:14px}
+  .context-tab span:not(.context-tab-dot),.context-tab-count{display:none}
+  .context-tab svg{width:16px;height:16px}
 }
 </style>
 </head>
@@ -696,11 +712,16 @@ function atualizarResumoReview(){
   const formato=document.getElementById('reviewFormato')?.selectedOptions?.[0]?.textContent||'Formato não definido';
   const tema=document.getElementById('reviewTema')?.value?.trim();
   const fontes=Number(reviewCorpusStats.fontes_aprovadas||0);
+  const secoes=_contarSecoesPreenchidas();
+  const proxima=_proximaAbaReview();
+  const temaCurto=tema?`${tema.slice(0,54)}${tema.length>54?'...':''}`:'';
   el.innerHTML=[
-    `<span class="summary-pill">${_esc(tipo)}</span>`,
-    `<span class="summary-pill">${_esc(formato)}</span>`,
-    `<span class="summary-pill">${fontes} fonte${fontes===1?'':'s'} aprovada${fontes===1?'':'s'}</span>`,
-    tema?`<span class="summary-pill">${_esc(tema.slice(0,70))}${tema.length>70?'...':''}</span>`:''
+    `<button type="button" class="summary-pill" onclick="mostrarPaineis('${proxima}')"><strong>Próximo</strong>${_esc(_stageLabelReview())}</button>`,
+    `<button type="button" class="summary-pill" onclick="mostrarPaineis('tipo')"><strong>Tipo</strong>${_esc(tipo)}</button>`,
+    `<button type="button" class="summary-pill" onclick="mostrarPaineis('tipo')"><strong>Formato</strong>${_esc(formato)}</button>`,
+    `<button type="button" class="summary-pill" onclick="mostrarPaineis('fontes')"><strong>Base</strong>${fontes} aprovada${fontes===1?'':'s'}</button>`,
+    `<button type="button" class="summary-pill" onclick="mostrarPaineis('secoes')"><strong>Seções</strong>${secoes}/${reviewSections.length}</button>`,
+    tema?`<button type="button" class="summary-pill" onclick="mostrarPaineis('tipo')"><strong>Tema</strong>${_esc(temaCurto)}</button>`:''
   ].join('');
   atualizarAbasContextuaisReview();
 }
@@ -709,6 +730,17 @@ function _contarSecoesPreenchidas(){
     const texto=document.getElementById(`reviewSection_${s.id}`)?.value?.trim();
     return total+(texto?1:0);
   },0);
+}
+function _stageLabelReview(){
+  const labels={
+    tipo:'Definir tipo',
+    tema:'Informar tema',
+    pergunta:'Pergunta e objetivo',
+    formato:'Escolher formato',
+    fontes:'Adicionar fontes',
+    secoes:'Gerar seções'
+  };
+  return labels[reviewFlowStage||'tipo']||'Revisão em andamento';
 }
 function _proximaAbaReview(){
   const fontes=Number(reviewCorpusStats.fontes_aprovadas||0);
@@ -795,7 +827,7 @@ function appendReviewChat(role,text,fontes=[],actions=[]){
   const refs=_renderReviewRefs(fontes);
   const buttons=Array.isArray(actions)&&actions.length?`<div class="chat-actions">${actions.map(a=>`<button class="choice-chip" onclick="${_esc(a.onclick)}">${_esc(a.label)}</button>`).join('')}</div>`:'';
   const tools=role==='assistant'&&text?`<div class="message-tools">
-    <button class="message-tool" onclick="copiarChatMensagem(${idx})" title="Copiar resposta" aria-label="Copiar resposta"><svg><use href="assets/pixel-icons.svg#px-docstar"/></svg><span>Copiar</span></button>
+    <button class="message-tool copy-only" onclick="copiarChatMensagem(${idx})" title="Copiar resposta" aria-label="Copiar resposta"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="10" height="12" rx="2"></rect><rect x="5" y="3" width="10" height="12" rx="2"></rect></svg><span>Copiar</span></button>
     <button class="message-tool" onclick="salvarChatComoRascunho(${idx})">Salvar rascunho</button>
   </div>`:'';
   const item=document.createElement('div');
