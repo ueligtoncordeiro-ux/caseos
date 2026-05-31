@@ -73,6 +73,7 @@ button,input,textarea,select{font:inherit}
 .side-rail{
   position:fixed;left:0;top:0;bottom:0;width:56px;background:#fff;border-right:1px solid var(--border);
   z-index:310;display:flex;flex-direction:column;align-items:center;padding:18px 8px 14px;gap:14px;
+  transition:opacity .16s ease,transform .18s ease;
 }
 .caseos-symbol,.rail-btn{
   width:36px;height:36px;border:0;border-radius:12px;background:#fff;display:grid;place-items:center;cursor:pointer;color:#111;
@@ -95,6 +96,7 @@ button,input,textarea,select{font:inherit}
   display:flex;flex-direction:column;padding:18px 12px;overflow:auto;
 }
 body.sidebar-open .sidebar-drawer{transform:translateX(0)}
+body.sidebar-open .side-rail{opacity:0;pointer-events:none;transform:translateX(-12px)}
 body.sidebar-open .main{margin-left:320px}
 .drawer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
 .drawer-brand{display:flex;align-items:center;gap:10px;font-family:var(--head);font-weight:800}
@@ -114,6 +116,7 @@ body.sidebar-open .main{margin-left:320px}
 .drawer-link{display:flex;align-items:center;gap:10px;text-decoration:none;border-radius:10px;padding:10px 11px;font-size:13px;font-weight:700;color:var(--t2)}
 .drawer-link:hover,.drawer-link.active{background:var(--muted);color:var(--t1)}
 .drawer-link svg{width:15px;height:15px}
+.drawer-link .chevron{margin-left:auto;color:var(--t3);font-size:16px;line-height:1}
 .drawer-sub{margin-left:26px;display:grid;gap:2px}
 .drawer-sub .drawer-link{font-size:12.5px;font-weight:600;padding:8px 10px}
 .sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
@@ -137,7 +140,7 @@ body.sidebar-open .main{margin-left:320px}
   min-height:calc(100vh - 120px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px 0 38px;
   transition:min-height .22s ease,justify-content .22s ease,padding .22s ease;
 }
-.review-hero.conversation{min-height:calc(100vh - 16px);justify-content:flex-start;padding-top:72px;padding-bottom:142px}
+.review-hero.conversation{min-height:calc(100vh - 16px);justify-content:flex-start;padding-top:72px;padding-bottom:154px}
 .review-title{font-family:var(--head);font-size:42px;font-weight:600;letter-spacing:0;color:#1B1B1E;margin-bottom:34px}
 .review-hero.conversation .review-title{font-size:34px;margin-bottom:22px}
 .command-card{
@@ -153,7 +156,7 @@ body.sidebar-open .main{margin-left:320px}
 .command-card.compact .chat-send{border-radius:999px}
 .prompt-intro{padding:18px 22px 0;color:var(--t2);font-size:14px;line-height:1.45}
 .prompt-intro strong{color:var(--t1)}
-.chat-thread{min-height:300px;overflow:visible;padding:10px 4px 130px;display:grid;align-content:start;gap:18px}
+.chat-thread{min-height:300px;overflow:visible;padding:10px 4px 146px;display:grid;align-content:start;gap:18px}
 .chat-message{display:flex;gap:10px;align-items:flex-start;max-width:86%}
 .chat-message.user{margin-left:auto;flex-direction:row-reverse}
 .chat-avatar{width:28px;height:28px;border-radius:999px;background:var(--acid);display:grid;place-items:center;flex:0 0 28px;overflow:hidden;font-size:11px;font-weight:800}
@@ -185,6 +188,7 @@ body.sidebar-open .main{margin-left:320px}
 .inline-card textarea{min-height:84px}
 .chat-refs{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
 .chat-input-wrap{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:12px 16px;background:#fff;box-shadow:var(--shadow-lg)}
+body.review-chat-active .chat-input-wrap,
 .command-card.active .chat-input-wrap{
   position:fixed;left:50%;bottom:22px;transform:translateX(-50%);width:min(920px,calc(100vw - 156px));z-index:290;
 }
@@ -201,33 +205,64 @@ body.sidebar-open .main{margin-left:320px}
 .chat-send{width:42px;height:42px;border-radius:999px;border:0;background:#080808;color:#fff;font-weight:900;cursor:pointer}
 .setup-summary{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
 .summary-pill{border:1px solid var(--border);background:rgba(255,255,255,.76);backdrop-filter:blur(8px);border-radius:999px;padding:7px 10px;font-size:12px;color:var(--t2)}
+.context-tabs{
+  display:none;position:fixed;left:50%;bottom:88px;transform:translateX(-50%);z-index:289;
+  width:min(920px,calc(100vw - 156px));justify-content:flex-start;gap:8px;flex-wrap:wrap;pointer-events:none;
+}
+body.review-chat-active .context-tabs{display:flex}
+.context-tab{
+  border:1px solid var(--border);background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-radius:999px;
+  min-height:34px;padding:0 12px;display:inline-flex;align-items:center;gap:7px;color:var(--t2);
+  font-size:12px;font-weight:800;box-shadow:var(--shadow-xs);cursor:pointer;pointer-events:auto;
+}
+.context-tab:hover,.context-tab.active{background:var(--acid-dim);border-color:var(--acid);color:var(--t1)}
+.context-tab svg{width:14px;height:14px}
+.context-tab-count{font-size:11px;color:var(--t3);font-weight:800}
+.context-tab.is-next{border-color:var(--acid);box-shadow:0 0 0 3px var(--acid-dim),var(--shadow-xs)}
+.context-tab.is-complete .context-tab-count{color:var(--green)}
+.context-tab.is-warning .context-tab-count{color:#8A5A00}
+.context-tab-dot{width:7px;height:7px;border-radius:999px;background:var(--acid);box-shadow:0 0 0 3px var(--acid-dim)}
 .section-header{display:flex;align-items:center;gap:10px;margin:18px 0 12px}
 .section-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--t3)}
 
-.studio-rail{
-  position:fixed;right:16px;top:108px;z-index:280;width:48px;display:grid;gap:10px;
-}
+.studio-rail{display:none}
 .studio-btn{
-  width:48px;height:48px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--shadow-sm);
-  display:grid;place-items:center;cursor:pointer;color:#111;
+  width:54px;height:54px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-sm);
+  display:grid;place-items:center;cursor:pointer;color:#111;position:relative;transition:border-color .16s ease,background .16s ease,transform .16s ease;
 }
-.studio-btn:hover,.studio-btn.active{background:var(--acid-dim);border-color:var(--acid)}
+.studio-btn:hover,.studio-btn.active{background:var(--acid-dim);border-color:var(--acid);transform:translateX(-2px)}
 .studio-btn svg{width:18px;height:18px}
-.context-panels{
-  position:fixed;right:74px;top:96px;bottom:22px;width:min(460px,calc(100vw - 140px));z-index:270;
-  display:grid;grid-template-columns:1fr;gap:14px;align-items:start;overflow:auto;background:rgba(255,255,255,.96);
-  border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-lg);padding:14px;
-  transform:translateX(calc(100% + 92px));opacity:0;pointer-events:none;transition:transform .22s ease,opacity .22s ease;
+.studio-btn::after{
+  content:attr(data-label);position:absolute;right:62px;top:50%;transform:translateY(-50%);
+  background:#080808;color:#fff;border-radius:999px;padding:8px 11px;font-size:12px;font-weight:800;white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .16s ease;box-shadow:var(--shadow-sm);
 }
-.context-panels.show{transform:translateX(0);opacity:1;pointer-events:auto}
+.studio-btn:hover::after{opacity:1}
+.context-panels{
+  position:fixed;left:50%;bottom:136px;width:min(620px,calc(100vw - 180px));max-height:min(62vh,640px);z-index:288;
+  display:grid;grid-template-rows:auto minmax(0,1fr);gap:12px;align-items:start;overflow:hidden;background:rgba(255,255,255,.97);
+  border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-lg);padding:14px;
+  transform:translate(-50%,18px) scale(.98);opacity:0;pointer-events:none;transition:transform .2s ease,opacity .2s ease,width .18s ease;
+}
+.context-panels.show{transform:translate(-50%,0) scale(1);opacity:1;pointer-events:auto}
+.context-panels::after{
+  content:"";position:absolute;left:50%;bottom:-9px;transform:translateX(-50%) rotate(45deg);
+  width:16px;height:16px;background:rgba(255,255,255,.97);border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+body.review-panel-tipo .context-panels{width:min(520px,calc(100vw - 180px))}
+body.review-panel-fontes .context-panels{width:min(640px,calc(100vw - 180px))}
+body.review-panel-secoes .context-panels{width:min(760px,calc(100vw - 180px))}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding:2px 2px 12px}
+.panel-title{font-family:var(--head);font-size:18px;font-weight:800;color:var(--t1)}
+.panel-subtitle{font-size:12.5px;color:var(--t3);line-height:1.45;margin-top:2px}
+.panel-close{width:32px;height:32px;border:1px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;font-weight:900;color:var(--t2)}
+.panel-body{min-height:0;overflow:auto;display:grid;gap:14px;padding-right:2px}
 body.review-panel-fontes #reviewSectionsPanel{display:none}
 body.review-panel-secoes #reviewSourcesPanel{display:none}
-.config-panel{display:none;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-sm);padding:16px;gap:10px}
-.config-panel::before{content:"Tipo e formato";font-family:var(--head);font-size:16px;font-weight:800;color:var(--t1)}
-.config-panel::after{content:"Defina a estrutura antes de gerar a revisão. Esses campos continuam alimentando o chat e os rascunhos.";font-size:12.5px;color:var(--t3);line-height:1.45;order:1}
+.config-panel{display:none;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-xs);padding:14px;gap:10px}
 body.review-panel-tipo #reviewConfigPanel{display:grid}
 body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSectionsPanel{display:none}
-.review-card{background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-sm);padding:16px}
+.review-card{background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-xs);padding:14px}
 .review-card-title{font-family:var(--head);font-size:16px;font-weight:800;color:var(--t1);margin-bottom:4px}
 .review-card-sub{font-size:12.5px;color:var(--t3);line-height:1.5;margin-bottom:14px}
 .review-form{display:grid;gap:10px}
@@ -292,7 +327,7 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
   .sources-panel{position:static}
   .review-status{grid-template-columns:repeat(2,minmax(0,1fr))}
   .page{padding:22px 74px 42px 18px}
-  .context-panels{right:68px;width:min(420px,calc(100vw - 130px))}
+  .context-panels,body.review-panel-tipo .context-panels,body.review-panel-fontes .context-panels,body.review-panel-secoes .context-panels{width:min(640px,calc(100vw - 130px))}
 }
 @media(max-width:720px){
   .page{padding:30px 68px 44px 14px}
@@ -302,13 +337,19 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
   .review-hero.conversation .review-title{font-size:26px}
   .command-card{border-radius:20px}
   .command-card.compact{border-radius:999px}
-  .command-card.active .chat-input-wrap{left:56px;right:10px;bottom:12px;transform:none;width:auto}
+  body.review-chat-active .chat-input-wrap,.command-card.active .chat-input-wrap{left:56px;right:10px;bottom:12px;transform:none;width:auto}
   .chat-local-notice{left:56px;right:10px;bottom:92px;transform:none;width:auto;border-radius:14px}
   .chat-message{max-width:96%}
   .sidebar-drawer{width:calc(100vw - 56px)}
   body.sidebar-open .main{margin-left:56px}
-  .studio-rail{right:8px;top:96px}
-  .context-panels{right:62px;top:84px;bottom:16px;width:calc(100vw - 78px);border-radius:14px}
+  body.sidebar-open .side-rail{opacity:0;pointer-events:none;transform:translateX(-12px)}
+  .studio-rail{display:none}
+  .context-panels,body.review-panel-tipo .context-panels,body.review-panel-fontes .context-panels,body.review-panel-secoes .context-panels{
+    left:56px;right:10px;bottom:128px;transform:translateY(18px) scale(.98);width:auto;max-height:56vh;border-radius:14px;
+  }
+  .context-panels.show{transform:translateY(0) scale(1)}
+  .studio-btn::after{display:none}
+  body.review-chat-active .context-tabs{left:56px;right:10px;bottom:82px;transform:none;width:auto}
 }
 </style>
 </head>
@@ -341,20 +382,20 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
     <div class="drawer-brand"><img src="assets/favicon.svg" alt=""> Review Studio</div>
     <button class="drawer-close" onclick="toggleSidebar(false)" aria-label="Fechar">‹</button>
   </div>
-  <button class="btn btn-primary" onclick="novaRevisaoForm()">Nova revisão</button>
+  <button class="btn btn-primary" onclick="novaRevisaoForm();toggleSidebar(false)">Nova revisão</button>
   <div class="drawer-search">
     <svg><use href="assets/pixel-icons.svg#px-magnify"/></svg>
     <input type="search" placeholder="Pesquisar revisões">
   </div>
   <div class="drawer-section">Ferramentas</div>
-  <a class="drawer-link active" href="https://reviewstudio.voandonaia.com"><svg><use href="assets/pixel-icons.svg#px-docstar"/></svg> Nova revisão</a>
   <a class="drawer-link" href="https://caseos.voandonaia.com/dashboard#busca-cientifica"><svg><use href="assets/pixel-icons.svg#px-magnify"/></svg> Buscar artigos</a>
-  <a class="drawer-link" href="https://caseos.voandonaia.com/dashboard"><svg><use href="assets/pixel-icons.svg#px-home"/></svg> Dashboard</a>
+  <a class="drawer-link" href="https://caseos.voandonaia.com/dashboard"><svg><use href="assets/pixel-icons.svg#px-home"/></svg> Dashboard <span class="chevron">›</span></a>
   <div class="drawer-sub">
     <a class="drawer-link" href="https://caseos.voandonaia.com/dashboard">CaseOS</a>
     <a class="drawer-link" href="https://caseos.voandonaia.com/dashboard#ferramentas">Prompts</a>
   </div>
   <div class="drawer-section">Revisões</div>
+  <a class="drawer-link active" href="https://reviewstudio.voandonaia.com"><svg><use href="assets/pixel-icons.svg#px-docstar"/></svg> Nova revisão</a>
   <a class="drawer-link" href="https://reviewstudio.voandonaia.com"><svg><use href="assets/pixel-icons.svg#px-list"/></svg> Todas as revisões</a>
   <div class="drawer-section">Recentes</div>
   <div class="conversation-list" id="reviewConversationList">
@@ -374,13 +415,13 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
 </aside>
 
 <aside class="studio-rail" aria-label="Ferramentas do Review Studio">
-  <button class="studio-btn" id="studioTipoBtn" title="Tipo de revisão" onclick="mostrarPaineis('tipo')">
+  <button class="studio-btn" id="studioTipoBtn" title="Tipo de revisão" data-label="Tipo de revisão" onclick="mostrarPaineis('tipo')">
     <svg><use href="assets/pixel-icons.svg#px-docstar"/></svg>
   </button>
-  <button class="studio-btn" id="studioFontesBtn" title="Base da revisão" onclick="mostrarPaineis('fontes')">
+  <button class="studio-btn" id="studioFontesBtn" title="Base da revisão" data-label="Base da revisão" onclick="mostrarPaineis('fontes')">
     <svg><use href="assets/pixel-icons.svg#px-magnify"/></svg>
   </button>
-  <button class="studio-btn" id="studioSecoesBtn" title="Rascunho por seção" onclick="mostrarPaineis('secoes')">
+  <button class="studio-btn" id="studioSecoesBtn" title="Rascunhos por seção" data-label="Rascunhos por seção" onclick="mostrarPaineis('secoes')">
     <svg><use href="assets/pixel-icons.svg#px-list"/></svg>
   </button>
 </aside>
@@ -402,10 +443,18 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
         </div>
       </div>
       <div class="setup-summary" id="reviewSetupSummary"></div>
+      <div class="context-tabs" id="reviewContextTabs" aria-label="Ações contextuais"></div>
     </section>
 
     <section class="context-panels" id="reviewContextPanels">
-      <div>
+      <header class="panel-head">
+        <div>
+          <div class="panel-title" id="reviewPanelTitle">Base da revisão</div>
+          <div class="panel-subtitle" id="reviewPanelSubtitle">Fontes aprovadas definem o que a IA pode usar.</div>
+        </div>
+        <button class="panel-close" onclick="fecharPaineisReview()" aria-label="Fechar painel">×</button>
+      </header>
+      <div class="panel-body">
         <div class="config-panel" id="reviewConfigPanel">
           <div class="review-field">
             <label for="reviewSelect">Revisão ativa</label>
@@ -448,7 +497,6 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
           <div class="section-grid" id="reviewSectionGrid"></div>
           <button class="final-docx" onclick="gerarVersaoFinalReview()">Gerar versão final da revisão em DOCX</button>
         </div>
-      </div>
 
       <aside class="sources-panel" id="reviewSourcesPanel">
         <div class="review-card">
@@ -500,6 +548,7 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
           </div>
         </div>
       </aside>
+      </div>
     </section>
   </div>
 </main>
@@ -543,11 +592,28 @@ function mostrarPaineis(alvo){
   const sameOpen=panel?.classList.contains('show')&&document.body.classList.contains(`review-panel-${alvo}`);
   document.body.classList.remove('review-panel-tipo','review-panel-fontes','review-panel-secoes');
   document.querySelectorAll('.studio-btn').forEach(btn=>btn.classList.remove('active'));
-  if(sameOpen){panel?.classList.remove('show');return}
+  if(sameOpen){panel?.classList.remove('show');atualizarAbasContextuaisReview();return}
   const painel=alvo==='tipo'?'tipo':alvo==='secoes'?'secoes':'fontes';
   document.body.classList.add(`review-panel-${painel}`);
   panel?.classList.add('show');
+  if(panel)panel.dataset.panel=painel;
   document.getElementById(painel==='tipo'?'studioTipoBtn':painel==='secoes'?'studioSecoesBtn':'studioFontesBtn')?.classList.add('active');
+  const labels={
+    tipo:['Tipo de revisão','Ajuste estrutura, formato e pergunta da revisão.'],
+    fontes:['Base da revisão','Fontes aprovadas definem o que a IA pode usar.'],
+    secoes:['Rascunhos por seção','Gere e edite cada parte antes do DOCX final.']
+  };
+  _setText('reviewPanelTitle',labels[painel][0]);
+  _setText('reviewPanelSubtitle',labels[painel][1]);
+  atualizarAbasContextuaisReview();
+}
+function fecharPaineisReview(){
+  const panel=document.getElementById('reviewContextPanels');
+  panel?.classList.remove('show');
+  if(panel)panel.dataset.panel='';
+  document.body.classList.remove('review-panel-tipo','review-panel-fontes','review-panel-secoes');
+  document.querySelectorAll('.studio-btn').forEach(btn=>btn.classList.remove('active'));
+  atualizarAbasContextuaisReview();
 }
 async function logout(){try{await fetch(`${API}/auth/logout`,{method:'POST',credentials:'include'})}catch{}sessionStorage.removeItem('rccs_token');sessionStorage.removeItem('rccs_user');location.href='login.html'}
 function mostrarToast(mensagem,tipo='info',icone='ℹ️',duracao=4000){
@@ -583,6 +649,7 @@ let reviewChatHistory=[];
 let reviewSavedDrafts=[];
 let reviewFlowStage='tipo';
 let reviewConversationStarted=false;
+let reviewSavePromise=null;
 const reviewSections=[
   {id:'resumo',label:'Resumo'},
   {id:'introducao',label:'Introdução'},
@@ -594,7 +661,6 @@ const reviewSections=[
 
 function _reviewKey(suffix){return `caseos_review_${reviewAtivaId||'nova'}_${suffix}`}
 function _saveReviewWorkspace(){
-  if(!reviewAtivaId)return;
   const sections={};
   reviewSections.forEach(s=>{sections[s.id]=document.getElementById(`reviewSection_${s.id}`)?.value||''});
   localStorage.setItem(_reviewKey('sections'),JSON.stringify(sections));
@@ -626,6 +692,66 @@ function atualizarResumoReview(){
     `<span class="summary-pill">${fontes} fonte${fontes===1?'':'s'} aprovada${fontes===1?'':'s'}</span>`,
     tema?`<span class="summary-pill">${_esc(tema.slice(0,70))}${tema.length>70?'...':''}</span>`:''
   ].join('');
+  atualizarAbasContextuaisReview();
+}
+function _contarSecoesPreenchidas(){
+  return reviewSections.reduce((total,s)=>{
+    const texto=document.getElementById(`reviewSection_${s.id}`)?.value?.trim();
+    return total+(texto?1:0);
+  },0);
+}
+function _proximaAbaReview(){
+  const fontes=Number(reviewCorpusStats.fontes_aprovadas||0);
+  if((reviewFlowStage||'tipo')==='tipo'||reviewFlowStage==='tema'||reviewFlowStage==='pergunta'||reviewFlowStage==='formato')return 'tipo';
+  if(!fontes)return 'fontes';
+  if(_contarSecoesPreenchidas()<reviewSections.length)return 'secoes';
+  return 'secoes';
+}
+function atualizarAbasContextuaisReview(){
+  const box=document.getElementById('reviewContextTabs');if(!box)return;
+  const fontes=Number(reviewCorpusStats.fontes_aprovadas||0);
+  const trechos=Number(reviewCorpusStats.chunks_total||0);
+  const secoesProntas=_contarSecoesPreenchidas();
+  const stage=reviewFlowStage||'tipo';
+  const nextKey=_proximaAbaReview();
+  const aberta=document.getElementById('reviewContextPanels')?.classList.contains('show');
+  const activeTipo=document.body.classList.contains('review-panel-tipo');
+  const activeFontes=document.body.classList.contains('review-panel-fontes');
+  const activeSecoes=document.body.classList.contains('review-panel-secoes');
+  const tabs=[
+    {
+      key:'tipo',
+      icon:'px-docstar',
+      label:stage==='tipo'?'Definir tipo':'Configuração',
+      count:document.getElementById('reviewFormato')?.selectedOptions?.[0]?.textContent||'',
+      show:true,
+      active:activeTipo,
+      state:stage==='tipo'||stage==='tema'||stage==='pergunta'||stage==='formato'?'is-next':'is-complete',
+      action:"mostrarPaineis('tipo')"
+    },
+    {
+      key:'fontes',
+      icon:'px-magnify',
+      label:fontes?'Base aprovada':'Adicionar fontes',
+      count:fontes?`${fontes} fonte${fontes===1?'':'s'} · ${trechos} trecho${trechos===1?'':'s'}`:'pendente',
+      show:stage!=='tipo'||fontes>0,
+      active:activeFontes,
+      state:fontes?'is-complete':nextKey==='fontes'?'is-next is-warning':'is-warning',
+      action:"mostrarPaineis('fontes')"
+    },
+    {
+      key:'secoes',
+      icon:'px-list',
+      label:'Seções',
+      count:fontes?`${secoesProntas}/${reviewSections.length} preenchidas`:'aguardando fontes',
+      show:fontes>0||stage==='fontes'||stage==='secoes',
+      active:activeSecoes,
+      state:fontes&&secoesProntas===reviewSections.length?'is-complete':nextKey==='secoes'?'is-next':'',
+      action:"mostrarPaineis('secoes')"
+    }
+  ].filter(tab=>tab.show);
+  box.innerHTML=tabs.map(tab=>`<button class="context-tab ${tab.active?'active':''} ${tab.state||''}" onclick="${tab.action}" aria-pressed="${tab.active?'true':'false'}">${tab.key===nextKey?'<span class="context-tab-dot"></span>':''}<svg><use href="assets/pixel-icons.svg#${tab.icon}"/></svg><span>${_esc(tab.label)}</span>${tab.count?`<span class="context-tab-count">${_esc(tab.count)}</span>`:''}</button>`).join('');
+  box.style.opacity=aberta?'.96':'1';
 }
 function renderConversationList(){
   const box=document.getElementById('reviewConversationList');if(!box)return;
@@ -644,7 +770,7 @@ function renderReviewSections(){
         <input id="reviewSectionInstr_${_esc(s.id)}" type="text" placeholder="Digite a instrução: tamanho, tom, foco, lacunas...">
         <button class="btn mini-ai-btn" onclick="gerarSecaoReview('${_esc(s.id)}')">Gerar IA</button>
       </div>
-      <textarea id="reviewSection_${_esc(s.id)}" placeholder="O rascunho da seção aparecerá aqui. Você também pode editar manualmente."></textarea>
+      <textarea id="reviewSection_${_esc(s.id)}" placeholder="O rascunho da seção aparecerá aqui. Você também pode editar manualmente." oninput="_saveReviewWorkspace();atualizarAbasContextuaisReview()"></textarea>
       <div class="review-toolbar" style="margin-top:0">
         <button class="btn btn-secondary" onclick="gerarSecaoReview('${_esc(s.id)}')">Gerar de novo</button>
         <button class="btn btn-ghost" onclick="salvarSecaoReview('${_esc(s.id)}')">Salvar</button>
@@ -674,14 +800,17 @@ function renderChatHistory(){
   const saved=[...reviewChatHistory];
   thread.innerHTML='';reviewChatHistory=[];
   saved.forEach(m=>appendReviewChat(m.role,m.text,m.fontes||[],m.actions||[]));
+  if(saved.length)startReviewConversation(false);
 }
 function startReviewConversation(seedInitial=true){
   const card=document.getElementById('reviewCommandCard');
   const hero=document.getElementById('reviewHero');
+  document.body.classList.add('review-chat-active');
   card?.classList.remove('compact');
   card?.classList.add('active');
   hero?.classList.add('conversation');
   _setReviewInputPlaceholder(true);
+  atualizarAbasContextuaisReview();
   if(!reviewConversationStarted){
     reviewConversationStarted=true;
     if(seedInitial&&!reviewChatHistory.length)renderInitialChat();
@@ -690,14 +819,18 @@ function startReviewConversation(seedInitial=true){
 function resetReviewConversationView(){
   const card=document.getElementById('reviewCommandCard');
   const hero=document.getElementById('reviewHero');
+  if(reviewChatHistory.length)return startReviewConversation(false);
   reviewConversationStarted=false;
+  document.body.classList.remove('review-chat-active');
   card?.classList.add('compact');
   card?.classList.remove('active');
   hero?.classList.remove('conversation');
   _setReviewInputPlaceholder(false);
+  atualizarAbasContextuaisReview();
 }
 function renderInitialChat(){
   const thread=document.getElementById('reviewChatThread');if(!thread)return;
+  startReviewConversation(false);
   thread.innerHTML='';reviewChatHistory=[];
   reviewFlowStage='tipo';
   appendReviewChat('assistant','Organize fontes e gere sua revisão com base nos artigos selecionados.\n\nVamos começar pelo tipo de revisão?',[],[
@@ -715,7 +848,7 @@ function selecionarOpcaoReview(campo,value,label){
     const titulo=document.getElementById('reviewTitulo');if(titulo&&!titulo.value.trim())titulo.value=label;
     reviewFlowStage='tema';
     appendReviewChat('assistant','Perfeito. Agora me diga o tema da revisão em uma frase. Você pode escrever livremente no campo abaixo.');
-    salvarRevisaoAtual().then(()=>{renderConversationList();_saveReviewWorkspace()}).catch(console.error);
+    salvarRevisaoAtual({silent:true}).then(()=>{renderConversationList();_saveReviewWorkspace()}).catch(console.error);
   }
   if(campo==='formato'){
     const formato=document.getElementById('reviewFormato');if(formato)formato.value=value;
@@ -787,12 +920,14 @@ function novaRevisaoForm(){
   _resetReviewCorpusUI();
   const thread=document.getElementById('reviewChatThread');if(thread)thread.innerHTML='';
   reviewChatHistory=[];reviewFlowStage='tipo';
+  reviewConversationStarted=false;
+  document.body.classList.remove('review-chat-active');
   resetReviewConversationView();
   renderSavedDrafts();
   mostrarToast('Nova revisão pronta para preencher.','info','ℹ️');
 }
 
-async function carregarRevisoes(){
+async function carregarRevisoes(opts={}){
   if(!getToken()){mostrarToast('Faça login para usar o Review Studio.','info','🔒');return}
   const res=await fetch(`${API}/revisoes?por_pagina=50`,{headers:authHeaders()});
   if(!res.ok)throw new Error(`HTTP ${res.status}`);
@@ -803,9 +938,10 @@ async function carregarRevisoes(){
     select.innerHTML='<option value="">Nova revisão</option>'+reviewCache.map(r=>`<option value="${_esc(r.id)}">${_esc(r.titulo||r.tema||'Revisão sem título')}</option>`).join('');
   }
   if(reviewAtivaId&&!reviewCache.some(r=>String(r.id)===String(reviewAtivaId)))reviewAtivaId=null;
-  if(!reviewAtivaId&&reviewCache.length)reviewAtivaId=reviewCache[0].id;
+  if(!reviewAtivaId&&opts.autoSelect&&reviewCache.length)reviewAtivaId=reviewCache[0].id;
   renderConversationList();
-  if(reviewAtivaId)selecionarRevisaoAtiva(reviewAtivaId,{silent:true});else _resetReviewCorpusUI();
+  if(reviewAtivaId&&opts.loadActive!==false)selecionarRevisaoAtiva(reviewAtivaId,{silent:true});
+  else if(opts.resetCorpus!==false)_resetReviewCorpusUI();
 }
 
 function selecionarRevisaoAtiva(id,opts={}){
@@ -842,31 +978,61 @@ function _payloadRevisaoAtual(){
   };
 }
 
-async function salvarRevisaoAtual(){
-  if(!getToken()){mostrarToast('Faça login para salvar a revisão.','info','🔒');return null}
-  const btn=document.getElementById('reviewSaveBtn');_setReviewBusy(btn,true,'Salvando...');
-  try{
+async function salvarRevisaoAtual(opts={}){
+  const silent=Boolean(opts.silent);
+  if(!getToken()){
+    _saveReviewWorkspace();
+    if(!silent)mostrarToast('Faça login para salvar a revisão.','info','🔒');
+    return null;
+  }
+  if(reviewSavePromise)return reviewSavePromise;
+  const btn=document.getElementById('reviewSaveBtn');
+  if(!silent)_setReviewBusy(btn,true,'Salvando...');
+  const persistir=async(forcePost=false)=>{
     const payload=_payloadRevisaoAtual();
-    const url=reviewAtivaId?`${API}/revisoes/${reviewAtivaId}`:`${API}/revisoes`;
-    const method=reviewAtivaId?'PATCH':'POST';
+    const hasId=reviewAtivaId&&!forcePost;
+    const url=hasId?`${API}/revisoes/${reviewAtivaId}`:`${API}/revisoes`;
+    const method=hasId?'PATCH':'POST';
     const res=await fetch(url,{method,headers:authHeaders(),body:JSON.stringify(payload)});
-    if(!res.ok)throw new Error(`HTTP ${res.status}`);
-    const data=await res.json();
+    const data=await _safeJson(res);
+    if(!res.ok){
+      if(res.status===404&&hasId){
+        console.warn('[CaseOS] Revisão ativa não existe mais no backend. Criando novo rascunho.');
+        reviewAtivaId=null;
+        return persistir(true);
+      }
+      throw new Error(_erroApi(data,`HTTP ${res.status}`));
+    }
     reviewAtivaId=data.id||data.revisao?.id||reviewAtivaId;
-    mostrarToast('Revisão salva.','success','✓');
-    await carregarRevisoes();
+    _saveReviewWorkspace();
+    await carregarRevisoes({autoSelect:false,loadActive:false,resetCorpus:false}).catch(console.warn);
     return reviewAtivaId;
-  }catch(err){
-    console.error('[CaseOS] Erro ao salvar revisão:',err);mostrarToast('Não foi possível salvar a revisão.','error','⚠️');return null;
-  }finally{_setReviewBusy(btn,false)}
+  };
+  reviewSavePromise=(async()=>{
+    try{
+      const id=await persistir(false);
+      if(!silent)mostrarToast('Revisão salva.','success','✓');
+      return id;
+    }catch(err){
+      console.error('[CaseOS] Erro ao salvar revisão:',err);
+      _saveReviewWorkspace();
+      if(silent)mostrarAvisoChatLocal('Rascunho salvo neste navegador. Sincronizo quando o backend responder.','warn',4200);
+      else mostrarToast(`Não foi possível salvar a revisão: ${err.message}`,'error','⚠️',6500);
+      return null;
+    }finally{
+      if(!silent)_setReviewBusy(btn,false);
+    }
+  })();
+  try{return await reviewSavePromise}finally{reviewSavePromise=null}
 }
 
-async function _garantirRevisaoAtiva(){return reviewAtivaId||await salvarRevisaoAtual()}
+async function _garantirRevisaoAtiva(opts={}){return reviewAtivaId||await salvarRevisaoAtual({silent:opts.silent!==false})}
 function _resetReviewCorpusUI(){
   reviewCorpusStats={fontes_total:0,fontes_aprovadas:0,chunks_total:0,caracteres_indexados:0};
   ['reviewFontesTotal','reviewFontesAprovadas','reviewChunksTotal','reviewCharsTotal'].forEach(id=>_setText(id,'—'));
   const lista=document.getElementById('reviewSourcesList');if(lista)lista.innerHTML='<div class="review-small-note">Selecione ou salve uma revisão para ver as fontes.</div>';
   const preview=document.getElementById('reviewCorpusPreview');if(preview)preview.innerHTML='<div class="review-small-note">Atualize e visualize a base antes de pedir sínteses.</div>';
+  atualizarAbasContextuaisReview();
 }
 async function carregarResumoCorpusReview(){
   if(!reviewAtivaId)return _resetReviewCorpusUI();
@@ -1060,13 +1226,12 @@ async function enviarMensagemReviewChat(){
   startReviewConversation();
   appendReviewChat('user',pergunta);input.value='';
   showReviewTyping();
-  const id=await _garantirRevisaoAtiva();if(!id){appendReviewChat('assistant','Salve a revisão para começar.');return}
   if(reviewFlowStage==='tema'){
     const tema=document.getElementById('reviewTema');if(tema)tema.value=pergunta;
     const titulo=document.getElementById('reviewTitulo');if(titulo&&!titulo.value.trim())titulo.value=`Revisão sobre ${pergunta}`.slice(0,200);
     reviewFlowStage='pergunta';
     atualizarResumoReview();
-    await salvarRevisaoAtual();
+    await salvarRevisaoAtual({silent:true});
     appendReviewChat('assistant','Ótimo. Posso transformar esse tema em pergunta norteadora e objetivo, ou você pode escrever manualmente no chat.',[],[
       {label:'Gerar pergunta e objetivo',onclick:'gerarPerguntaObjetivoReview()'},
       {label:'Escolher formato agora',onclick:"selecionarOpcaoReview('formato','vancouver','Vancouver')"}
@@ -1075,7 +1240,7 @@ async function enviarMensagemReviewChat(){
   }
   if(reviewFlowStage==='pergunta'){
     const perguntaEl=document.getElementById('reviewPergunta');if(perguntaEl&&!perguntaEl.value.trim())perguntaEl.value=pergunta;
-    reviewFlowStage='formato';atualizarResumoReview();await salvarRevisaoAtual();
+    reviewFlowStage='formato';atualizarResumoReview();await salvarRevisaoAtual({silent:true});
     appendReviewChat('assistant','Perfeito. Agora escolha o formato das referências.',[],[
       {label:'Vancouver',onclick:"selecionarOpcaoReview('formato','vancouver','Vancouver')"},
       {label:'ABNT',onclick:"selecionarOpcaoReview('formato','abnt','ABNT')"},
@@ -1085,6 +1250,11 @@ async function enviarMensagemReviewChat(){
   }
   const textLower=pergunta.toLowerCase();
   const pareceEvidencia=/fonte|artigo|estudo|evid[êe]ncia|resultado|achado|literatura|refer[êe]ncia|base/.test(textLower);
+  const id=await _garantirRevisaoAtiva({silent:true});
+  if(!id&&Number(reviewCorpusStats.fontes_aprovadas||0)>0){
+    appendReviewChat('assistant','Seu rascunho está salvo neste navegador, mas ainda não sincronizei com o servidor. Tente novamente em instantes para consultar as fontes.');
+    return;
+  }
   if(Number(reviewCorpusStats.fontes_aprovadas||0)===0&&pareceEvidencia){
     appendReviewChat('assistant','Ainda não há fontes aprovadas. Busque artigos ou envie arquivos na Base da revisão; depois respondo usando apenas esses materiais.');
     return;
@@ -1129,12 +1299,14 @@ async function gerarSecaoReview(secao){
     if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
     if(textarea)textarea.value=data.rascunho||data.resposta||'';
     _saveReviewWorkspace();
+    atualizarAbasContextuaisReview();
     mostrarToast('Seção gerada com base nas fontes.','success','✓');
   }catch(err){console.error('[CaseOS] Erro ao gerar seção:',err);mostrarToast(err.message||'Não foi possível gerar a seção.','error','⚠️')}
   finally{_setReviewBusy(btn,false)}
 }
 function salvarSecaoReview(secao){
   _saveReviewWorkspace();
+  atualizarAbasContextuaisReview();
   mostrarToast('Seção salva no navegador.','success','✓');
 }
 function gerarVersaoFinalReview(){
@@ -1147,11 +1319,14 @@ window.addEventListener('DOMContentLoaded',()=>{
   renderUser();
   renderReviewSections();
   resetReviewConversationView();
-  carregarRevisoes().catch(err=>{console.error(err);mostrarToast('Não foi possível carregar suas revisões.','error','⚠️')});
+  carregarRevisoes({autoSelect:false}).catch(err=>{console.error(err);mostrarToast('Não foi possível carregar suas revisões.','error','⚠️')});
 });
 document.addEventListener('click',(ev)=>{
   const dd=document.getElementById('userDropdown');
   if(dd&&!ev.target.closest('.user-avatar')&&!ev.target.closest('.user-dropdown'))dd.classList.remove('open');
+  if(document.getElementById('reviewContextPanels')?.classList.contains('show')&&!ev.target.closest('#reviewContextPanels')&&!ev.target.closest('#reviewContextTabs')&&!ev.target.closest('.chat-plus')){
+    fecharPaineisReview();
+  }
   if(document.body.classList.contains('sidebar-open')&&!ev.target.closest('.side-rail')&&!ev.target.closest('.sidebar-drawer')){
     toggleSidebar(false);
   }
