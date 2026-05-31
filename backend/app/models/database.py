@@ -138,6 +138,9 @@ class Sessao(Base):
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     error_stage:   Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
+    # Soft-delete — preenchido ao excluir; usuário não vê, admin vê para auditoria
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
     versoes_docx: Mapped[List["VersaoDocx"]] = relationship(
         "VersaoDocx", back_populates="sessao", lazy="noload",
         order_by="VersaoDocx.numero",
@@ -425,6 +428,7 @@ async def init_db():
             ("sessoes",  "error_stage",         "VARCHAR", "VARCHAR(100)"),
             ("sessoes",  "docx_original_bytes", "BLOB",    "BYTEA"),
             ("sessoes",  "docx_editado_bytes",  "BLOB",    "BYTEA"),
+            ("sessoes",  "deleted_at",           "DATETIME", "TIMESTAMP"),
         ]
         for tabela, coluna, tipo_sqlite, tipo_pg in migrations:
             try:

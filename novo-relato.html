@@ -23,6 +23,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1)
   --bg:          #FFFFFF;
   --light:       #F7F7F5;
   --light2:      #EFEFED;
+  --surface:     #F7F7F5;
   --border:      #E9E9E7;
   --sidebar-bg:  #F7F7F5;
   --card-bg:     #FFFFFF;
@@ -2497,10 +2498,13 @@ function adicionarAutor() {
   const id = ++_autorIdCounter;
   autorsList.push({ id, nome: '', instituicao: '', orcid: '', email: '', correspondente: false });
   renderAutoresList();
-  // Focus the nome field of the new row
+  // Scroll to the new card and focus the nome field
   setTimeout(function() {
     const el = document.getElementById('autor-nome-' + id);
-    if (el) el.focus();
+    if (el) {
+      el.closest('div[style]').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      el.focus();
+    }
   }, 50);
 }
 

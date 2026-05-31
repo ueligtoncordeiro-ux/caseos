@@ -12,6 +12,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime
 from sqlalchemy import delete, select, func, desc
 
 from app.models.schemas import CKO, IniciarResponse, StatusResponse
@@ -265,13 +266,13 @@ async def historico(
     status: Optional[str] = Query(default=None),
 ):
     """Lista os relatos do usuário com paginação."""
-    q = select(Sessao).where(Sessao.user_id == user.id)
+    q = select(Sessao).where(Sessao.user_id == user.id, Sessao.deleted_at == None)
     if status:
         q = q.where(Sessao.status == status)
     q = q.order_by(desc(Sessao.created_at))
 
     total_q = select(func.count()).select_from(
-        select(Sessao).where(Sessao.user_id == user.id).subquery()
+        select(Sessao).where(Sessao.user_id == user.id, Sessao.deleted_at == None).subquery()
     )
     total_r = await db.execute(total_q)
     total = total_r.scalar() or 0
@@ -311,7 +312,7 @@ async def stats(
 ):
     """Estatísticas do usuário para o dashboard."""
     result = await db.execute(
-        select(Sessao).where(Sessao.user_id == user.id)
+        select(Sessao).where(Sessao.user_id == user.id, Sessao.deleted_at == None)
     )
     sessoes = result.scalars().all()
 
@@ -377,17 +378,24 @@ async def deletar_sessao(
     db: AsyncSession = Depends(get_db),
     user: Usuario = Depends(get_verified_user),
 ):
-    """Remove um relato do usuário e mantém apenas rastro administrativo."""
+    """
+    Soft-delete: marca deleted_at, apaga dados do paciente e bytes DOCX.
+    O registro permanece para auditoria do admin; usuário não vê mais.
+    """
     result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
     sessao = result.scalar_one_or_none()
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada.")
     if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
+    if sessao.deleted_at is not None:
+        # Já deletado — retorna OK idempotente
+        return {"deletado": True, "sessao_id": sessao_id}
 
     arquivos_removidos: list[str] = []
     erros_limpeza: list[str] = []
 
+    # Remove arquivo DOCX do filesystem (Render é efêmero, mas por via das dúvidas)
     if sessao.docx_path and Path(sessao.docx_path).exists():
         try:
             Path(sessao.docx_path).unlink()
@@ -429,11 +437,19 @@ async def deletar_sessao(
         },
     ))
 
+    # Apaga versões filhas (resolve FK constraint)
     await db.execute(
         delete(VersaoDocx).where(VersaoDocx.sessao_external_id == sessao.external_id)
     )
 
-    await db.delete(sessao)
+    # Soft-delete: sinaliza exclusão e limpa dados sensíveis do paciente
+    sessao.deleted_at = datetime.utcnow()
+    sessao.resultado = None
+    sessao.cko = {}
+    sessao.docx_original_bytes = None
+    sessao.docx_editado_bytes = None
+    sessao.docx_path = None
+
     await db.commit()
     return {
         "deletado": True,
