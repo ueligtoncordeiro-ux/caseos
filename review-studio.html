@@ -144,15 +144,15 @@ body.sidebar-open .main{margin-left:320px}
 .review-title{font-family:var(--head);font-size:42px;font-weight:600;letter-spacing:0;color:#1B1B1E;margin-bottom:34px}
 .review-hero.conversation .review-title{font-size:34px;margin-bottom:22px}
 .command-card{
-  width:min(860px,100%);background:#fff;border:1px solid var(--border);border-radius:999px;box-shadow:var(--shadow-lg);overflow:hidden;text-align:left;
+  width:min(760px,100%);background:#fff;border:1px solid var(--border);border-radius:999px;box-shadow:var(--shadow-lg);overflow:hidden;text-align:left;
   transition:border-radius .22s ease,width .22s ease,box-shadow .22s ease;
 }
 .command-card.active{width:min(920px,100%);border-radius:0;background:transparent;border:0;box-shadow:none;overflow:visible}
 .command-card.compact .prompt-intro,.command-card.compact .chat-thread{display:none}
 .command-card.active .prompt-intro{display:none}
-.command-card.compact .chat-input-wrap{border-top:0;padding:12px 16px}
-.command-card.compact .chat-input{min-height:40px}
-.command-card.compact .chat-plus{background:#fff;font-size:30px}
+.command-card.compact .chat-input-wrap{border-top:0;padding:9px 12px 9px 18px;min-height:64px}
+.command-card.compact .chat-input{height:42px;min-height:42px;padding:11px 0 9px}
+.command-card.compact .chat-plus{background:#fff;font-size:28px;color:#111}
 .command-card.compact .chat-send{border-radius:999px}
 .prompt-intro{padding:18px 22px 0;color:var(--t2);font-size:14px;line-height:1.45}
 .prompt-intro strong{color:var(--t1)}
@@ -190,7 +190,7 @@ body.sidebar-open .main{margin-left:320px}
 .inline-card input,.inline-card textarea{width:100%;border:1px solid var(--border);border-radius:10px;background:var(--muted);padding:11px 12px;font-size:13.5px;outline:none;resize:vertical}
 .inline-card textarea{min-height:84px}
 .chat-refs{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
-.chat-input-wrap{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:12px 16px;background:#fff;box-shadow:var(--shadow-lg)}
+.chat-input-wrap{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:10px 12px 10px 18px;background:#fff;box-shadow:var(--shadow-lg)}
 body.review-chat-active .chat-input-wrap,
 .command-card.active .chat-input-wrap{
   position:fixed;left:50%;bottom:58px;transform:translateX(-50%);width:min(920px,calc(100vw - 156px));z-index:290;
@@ -203,9 +203,10 @@ body.review-chat-active .chat-input-wrap,
 .chat-local-notice.show{display:block}
 .chat-local-notice.warn{border-color:#f0d26a;background:#fff9de;color:#6b5700}
 .chat-local-notice.error{border-color:#f3a8a8;background:#fff1f1;color:#8c1d1d}
-.chat-plus{width:38px;height:38px;border:0;border-radius:999px;background:var(--muted);font-size:26px;line-height:1;cursor:pointer;color:#111}
-.chat-input{min-height:42px;max-height:130px;resize:none;border:0;background:transparent;outline:none;font-size:15px;line-height:1.45;padding:8px 0}
-.chat-send{width:42px;height:42px;border-radius:999px;border:0;background:#080808;color:#fff;font-weight:900;cursor:pointer}
+.chat-plus{width:36px;height:36px;border:0;border-radius:999px;background:var(--muted);font-size:25px;line-height:1;cursor:pointer;color:#111;display:grid;place-items:center;padding-bottom:2px}
+.chat-input{height:42px;min-height:42px;max-height:130px;resize:none;border:0;background:transparent;outline:none;font-size:15px;line-height:1.35;padding:11px 0 9px;overflow:hidden;color:var(--t1)}
+.chat-input::placeholder{color:#777B80;opacity:.86}
+.chat-send{width:42px;height:42px;border-radius:999px;border:0;background:#080808;color:#fff;font-weight:900;cursor:pointer;display:grid;place-items:center;padding-left:2px}
 .setup-summary{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
 body.review-chat-active .setup-summary{
   position:fixed;left:50%;bottom:16px;transform:translateX(-50%);width:min(920px,calc(100vw - 156px));z-index:289;
