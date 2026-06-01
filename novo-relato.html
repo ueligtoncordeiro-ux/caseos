@@ -2161,6 +2161,20 @@ async function tryRefreshToken() {
   } catch { return false; }
 }
 
+// Silent refresh: renova o access token a cada 12 min (TTL=15 min).
+// Importante aqui: o formulário pode ser preenchido por mais de 15 min.
+(function _iniciarSilentRefresh() {
+  setInterval(async () => {
+    if (!getToken()) return; // sem sessão ativa — não interferir
+    const ok = await tryRefreshToken();
+    if (!ok) {
+      // Sessão expirou (refresh revogado) — avisa sem redirecionar
+      // (não queremos perder dados do formulário em progresso)
+      console.warn('[CaseOS] Sessão expirada. Salve seu trabalho e faça login novamente.');
+    }
+  }, 12 * 60 * 1000);
+})();
+
 function getUser() {
   try { return JSON.parse(sessionStorage.getItem('rccs_user') || 'null'); } catch { return null; }
 }

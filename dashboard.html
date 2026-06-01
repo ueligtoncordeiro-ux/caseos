@@ -3769,6 +3769,21 @@ async function refreshToken() {
   } catch { return false; }
 }
 
+// Silent refresh proativo: renova o access token a cada 12 min (TTL=15 min).
+// Evita que requests expirarem durante uso ativo sem que o usuário perceba.
+let _silentRefreshTimer = null;
+function _iniciarSilentRefresh() {
+  if (_silentRefreshTimer) clearInterval(_silentRefreshTimer);
+  _silentRefreshTimer = setInterval(async () => {
+    const ok = await refreshToken();
+    if (!ok) {
+      // Refresh falhou (refresh token expirado ou revogado) → redireciona para login
+      clearInterval(_silentRefreshTimer);
+      location.href = 'login.html?msg=session_expired';
+    }
+  }, 12 * 60 * 1000); // 12 minutos
+}
+
 async function logout() {
   try { await fetch(`${API}/auth/logout`, { method: 'POST', credentials: 'include' }); } catch {}
   sessionStorage.removeItem('rccs_token');
@@ -5953,8 +5968,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     carregarHistorico(1),
   ]);
 
-  // Inicia polling de notificações (após auth garantida)
+  // Inicia polling de notificações e silent refresh (após auth garantida)
   _iniciarPollingNotificacoes();
+  _iniciarSilentRefresh();
 });
 
 // ══════════════════════════════════════════════════════════════

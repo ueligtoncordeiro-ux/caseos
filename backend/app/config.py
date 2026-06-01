@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     secret_key: str = "dev-secret-key-troque-em-producao"
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 1440  # 24 h — reduz expiração mid-session
+    access_token_expire_minutes: int = 15    # 15 min — janela curta; frontend faz silent refresh
 
     environment: str = "development"
     frontend_url: str = "http://localhost:5500"
