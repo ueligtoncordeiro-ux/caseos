@@ -43,6 +43,27 @@ class MelhorarSecaoRequest(BaseModel):
     instrucao:      str = Field(default="", max_length=_MAX_CHARS_INSTR)
 
 
+# ── Helper: busca sessão ativa (não soft-deletada) ───────────────────────────
+
+async def _get_sessao_ativa(db: AsyncSession, sessao_id: str) -> Sessao:
+    """
+    Retorna a sessão com o external_id informado, desde que não esteja
+    soft-deletada (deleted_at IS NULL).
+    Levanta HTTP 404 se não encontrar — mesmo comportamento para
+    sessões inexistentes e deletadas (não revela a existência).
+    """
+    result = await db.execute(
+        select(Sessao).where(
+            Sessao.external_id == sessao_id,
+            Sessao.deleted_at  == None,   # noqa: E711
+        )
+    )
+    sessao = result.scalar_one_or_none()
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    return sessao
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # HELPERS COMPARTILHADOS — usados por download e editar_secao
 # ══════════════════════════════════════════════════════════════════════════════
@@ -361,10 +382,7 @@ async def atualizar_sessao(
     user: Usuario = Depends(get_verified_user),
 ):
     """Atualiza título do relato."""
-    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
-    sessao = result.scalar_one_or_none()
-    if not sessao:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    sessao = await _get_sessao_ativa(db, sessao_id)
     if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
 
@@ -400,10 +418,7 @@ async def deletar_sessao(
     Soft-delete: marca deleted_at, apaga dados do paciente e bytes DOCX.
     O registro permanece para auditoria do admin; usuário não vê mais.
     """
-    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
-    sessao = result.scalar_one_or_none()
-    if not sessao:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    sessao = await _get_sessao_ativa(db, sessao_id)
     if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
     if sessao.deleted_at is not None:
@@ -482,10 +497,7 @@ async def status_sessao(
     db: AsyncSession = Depends(get_db),
     user: Usuario = Depends(get_verified_user),
 ):
-    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
-    sessao = result.scalar_one_or_none()
-    if not sessao:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    sessao = await _get_sessao_ativa(db, sessao_id)
     # Verificação estrita: sessão sem dono (demo não reivindicada) também é negada.
     # Só o dono pode consultar o status de um relato.
     if sessao.user_id != user.id:
@@ -505,10 +517,7 @@ async def detalhe_sessao(
     user: Usuario = Depends(get_verified_user),
 ):
     """Retorna dados completos da sessão (cko + resultado + relatorio) para visualização."""
-    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
-    sessao = result.scalar_one_or_none()
-    if not sessao:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    sessao = await _get_sessao_ativa(db, sessao_id)
     if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
 
@@ -541,11 +550,7 @@ async def download_resultado(
     Serve direto dos bytes armazenados no banco (gerados pelo pipeline ou ao salvar edições).
     Fallback: regenera do JSON para sessões antigas sem bytes no banco.
     """
-    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
-    sessao = result.scalar_one_or_none()
-
-    if not sessao:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    sessao = await _get_sessao_ativa(db, sessao_id)
     if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
     if sessao.status != "concluido":
@@ -602,10 +607,7 @@ async def download_resultado_pdf(
     """
     from app.services.pdf_generator import docx_to_pdf_bytes
 
-    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
-    sessao = result.scalar_one_or_none()
-    if not sessao:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    sessao = await _get_sessao_ativa(db, sessao_id)
     if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
     if sessao.status != "concluido":
@@ -653,10 +655,7 @@ async def download_versao_pdf(
     """Download de uma versão específica em PDF."""
     from app.services.pdf_generator import docx_to_pdf_bytes
 
-    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
-    sessao = result.scalar_one_or_none()
-    if not sessao:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    sessao = await _get_sessao_ativa(db, sessao_id)
     if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
 
@@ -697,9 +696,8 @@ async def diagnostico_resultado(
     import copy
     from app.models.schemas import ArtigoGerado
 
-    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
-    sessao = result.scalar_one_or_none()
-    if not sessao or sessao.user_id != user.id:
+    sessao = await _get_sessao_ativa(db, sessao_id)
+    if sessao.user_id != user.id:
         raise HTTPException(status_code=404, detail="Sessão não encontrada.")
 
     raw = sessao.resultado or {}
@@ -743,10 +741,7 @@ async def criar_versao(
     Cria uma nova versão DOCX a partir do estado atual do artigo.
     Cada versão é imutável e fica disponível para download posterior.
     """
-    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
-    sessao = result.scalar_one_or_none()
-    if not sessao:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    sessao = await _get_sessao_ativa(db, sessao_id)
     if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
     if sessao.status != "concluido":
@@ -815,10 +810,7 @@ async def listar_versoes(
     user: Usuario = Depends(get_verified_user),
 ):
     """Lista todas as versões DOCX salvas pelo usuário para este relato."""
-    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
-    sessao = result.scalar_one_or_none()
-    if not sessao:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    sessao = await _get_sessao_ativa(db, sessao_id)
     if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
 
@@ -852,10 +844,7 @@ async def download_versao(
     user: Usuario = Depends(get_verified_user),
 ):
     """Download de uma versão DOCX específica."""
-    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
-    sessao = result.scalar_one_or_none()
-    if not sessao:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    sessao = await _get_sessao_ativa(db, sessao_id)
     if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
 
@@ -883,10 +872,7 @@ async def confirmar_flags(
     db: AsyncSession = Depends(get_db),
     user: Usuario = Depends(get_verified_user),
 ):
-    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
-    sessao = result.scalar_one_or_none()
-    if not sessao:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    sessao = await _get_sessao_ativa(db, sessao_id)
     if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
     return {"sessao_id": sessao_id, "confirmado": True}
@@ -955,10 +941,7 @@ async def editar_secao(
     user: Usuario = Depends(get_verified_user),
 ):
     """Salva edição manual de uma seção do artigo."""
-    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
-    sessao = result.scalar_one_or_none()
-    if not sessao:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    sessao = await _get_sessao_ativa(db, sessao_id)
     if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
     if not sessao.resultado:
@@ -1027,10 +1010,7 @@ async def melhorar_secao(
     user: Usuario = Depends(get_verified_user),
 ):
     """Reescreve uma seção usando IA (consome tokens)."""
-    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
-    sessao = result.scalar_one_or_none()
-    if not sessao:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    sessao = await _get_sessao_ativa(db, sessao_id)
     if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
     if not sessao.resultado:
@@ -1117,10 +1097,7 @@ async def adicionar_referencia(
     user: Usuario = Depends(get_verified_user),
 ):
     """Adiciona uma referência bibliográfica ao resultado de um relato."""
-    result = await db.execute(select(Sessao).where(Sessao.external_id == sessao_id))
-    sessao = result.scalar_one_or_none()
-    if not sessao:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    sessao = await _get_sessao_ativa(db, sessao_id)
     if sessao.user_id != user.id:
         raise HTTPException(status_code=403, detail="Acesso negado.")
     if not sessao.resultado:
