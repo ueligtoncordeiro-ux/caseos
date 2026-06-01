@@ -59,8 +59,11 @@ def create_access_token(user_id: str, email: str, plano: str) -> str:
     )
 
 def create_refresh_token(user_id: str) -> str:
+    # Inclui `iat` explícito (Unix timestamp, segundos) para validação contra pw_changed_at.
+    # O padrão JWT já define `iat`, mas python-jose não o adiciona automaticamente.
+    import time as _time
     return _make_token(
-        {"sub": user_id, "type": "refresh"},
+        {"sub": user_id, "type": "refresh", "iat": int(_time.time())},
         timedelta(days=settings.refresh_token_expire_days),
     )
 
@@ -237,4 +240,16 @@ async def get_user_from_refresh(
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Sessão inválida. Faça login novamente.")
+
+    # Invalida tokens emitidos ANTES da última troca de senha.
+    # pw_changed_at == None → senha nunca foi trocada → todos os tokens são válidos.
+    if user.pw_changed_at is not None:
+        token_iat = payload.get("iat", 0)           # Unix timestamp (int)
+        pw_ts = user.pw_changed_at.timestamp()      # converte datetime → Unix
+        if token_iat < pw_ts:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Sessão expirada após troca de senha. Faça login novamente.",
+            )
+
     return user

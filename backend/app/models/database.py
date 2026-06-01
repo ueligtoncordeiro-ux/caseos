@@ -83,6 +83,10 @@ class Usuario(Base):
     # Consentimento LGPD
     lgpd_aceito_em: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
+    # Timestamp da última troca de senha — usado para invalidar refresh tokens emitidos antes.
+    # NULL = senha nunca trocada (todos os tokens válidos até expirar normalmente).
+    pw_changed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime,
                                                   default=datetime.utcnow,
@@ -456,6 +460,7 @@ async def init_db():
             ("sessoes",  "docx_original_bytes", "BLOB",    "BYTEA"),
             ("sessoes",  "docx_editado_bytes",  "BLOB",    "BYTEA"),
             ("sessoes",  "deleted_at",           "DATETIME", "TIMESTAMP"),
+            ("usuarios", "pw_changed_at",         "DATETIME", "TIMESTAMP"),
         ]
         for tabela, coluna, tipo_sqlite, tipo_pg in migrations:
             try:

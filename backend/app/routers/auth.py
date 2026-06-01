@@ -319,7 +319,8 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado.")
 
-    user.hashed_pw = hash_password(body.nova_senha)
+    user.hashed_pw    = hash_password(body.nova_senha)
+    user.pw_changed_at = datetime.utcnow()   # invalida todos os refresh tokens anteriores
     await db.commit()
     return {"mensagem": "Senha redefinida com sucesso. Faça login."}
 
@@ -412,7 +413,8 @@ async def trocar_senha(
     if not verify_password(body.senha_atual, user.hashed_pw):
         raise HTTPException(status_code=400, detail="Senha atual incorreta.")
 
-    user.hashed_pw = hash_password(body.senha_nova)
+    user.hashed_pw    = hash_password(body.senha_nova)
+    user.pw_changed_at = datetime.utcnow()   # invalida todos os refresh tokens anteriores
     await db.commit()
     return {"mensagem": "Senha alterada com sucesso."}
 
