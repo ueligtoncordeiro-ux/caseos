@@ -588,6 +588,62 @@ function getToken(){return sessionStorage.getItem('rccs_token')}
 function getUser(){try{return JSON.parse(sessionStorage.getItem('rccs_user')||'null')}catch{return null}}
 function authHeaders(){const t=getToken();return t?{'Authorization':`Bearer ${t}`,'Content-Type':'application/json'}:{'Content-Type':'application/json'}}
 function authBearerHeaders(){const t=getToken();return t?{'Authorization':`Bearer ${t}`}:{}}
+let reviewAuthRefreshPromise=null;
+function _storeAuthPayload(data){
+  if(!data)return false;
+  if(data.access_token)sessionStorage.setItem('rccs_token',data.access_token);
+  if(data.usuario)sessionStorage.setItem('rccs_user',JSON.stringify(data.usuario));
+  renderUser();
+  return Boolean(data.access_token);
+}
+async function refreshReviewSession(){
+  if(reviewAuthRefreshPromise)return reviewAuthRefreshPromise;
+  reviewAuthRefreshPromise=(async()=>{
+    try{
+      const res=await fetch(`${API}/auth/refresh`,{method:'POST',credentials:'include'});
+      const data=await _safeJson(res);
+      if(!res.ok||!data?.access_token)return false;
+      return _storeAuthPayload(data);
+    }catch(err){
+      console.warn('[CaseOS] Não foi possível renovar a sessão:',err);
+      return false;
+    }finally{
+      reviewAuthRefreshPromise=null;
+    }
+  })();
+  return reviewAuthRefreshPromise;
+}
+function _reviewRequestHeaders(options={}){
+  const headers=new Headers(options.headers||{});
+  const isForm=options.body instanceof FormData;
+  if(!isForm&&options.body&&!headers.has('Content-Type'))headers.set('Content-Type','application/json');
+  const token=getToken();
+  if(token&&!headers.has('Authorization'))headers.set('Authorization',`Bearer ${token}`);
+  return headers;
+}
+async function reviewFetch(path,options={},config={}){
+  const url=String(path).startsWith('http')?path:`${API}${path}`;
+  const request={...options,credentials:'include',headers:_reviewRequestHeaders(options)};
+  const retryOnAuth=config.retryOnAuth!==false;
+  let res;
+  try{
+    res=await fetch(url,request);
+  }catch(err){
+    console.error('[CaseOS] Falha de conexão com a API:',err);
+    throw new Error('Não consegui conectar ao servidor agora. Verifique sua conexão e tente novamente.');
+  }
+  if(res.status===401&&retryOnAuth){
+    const refreshed=await refreshReviewSession();
+    if(refreshed){
+      const retry={...options,credentials:'include',headers:_reviewRequestHeaders(options)};
+      try{return await fetch(url,retry)}catch(err){
+        console.error('[CaseOS] Falha de conexão após renovar sessão:',err);
+        throw new Error('Não consegui conectar ao servidor agora. Verifique sua conexão e tente novamente.');
+      }
+    }
+  }
+  return res;
+}
 function _esc(str){if(!str)return '';return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function _fmtTok(n){n=Number(n||0);if(n>=1000000)return(n/1000000).toFixed(1)+'M';if(n>=1000)return(n/1000).toFixed(1)+'k';return String(n)}
 function _setText(id,value){const el=document.getElementById(id);if(el)el.textContent=value}
@@ -908,7 +964,7 @@ async function gerarPerguntaObjetivoReview(){
   if(!tema){appendReviewChat('assistant','Me diga o tema primeiro para eu estruturar a pergunta e o objetivo.');return}
   appendReviewChat('user','Gerar pergunta e objetivo');
   try{
-    const res=await fetch(`${API}/chat/assist-texto`,{method:'POST',headers:authHeaders(),body:JSON.stringify({
+    const res=await reviewFetch('/chat/assist-texto',{method:'POST',body:JSON.stringify({
       texto:tema,
       acao:'melhorar',
       contexto_campo:'tema de revisão científica',
@@ -953,6 +1009,27 @@ function copiarRascunhoParaArea(idx){
   const first=document.getElementById('reviewSection_introducao');
   if(first){first.value=(first.value?`${first.value}\n\n`: '')+texto;_saveReviewWorkspace();mostrarToast('Rascunho enviado para Introdução.','success','✓')}
 }
+function extrairConsultaBuscaReview(texto){
+  const raw=String(texto||'').trim();
+  if(!raw)return '';
+  const lower=raw.toLowerCase();
+  const temIntencao=/\b(bus(ca|que|car)|pesquis(a|e|ar)|procur(a|e|ar)|encontr(e|ar)|import(e|ar))\b/.test(lower);
+  const temFonte=/\b(artigos?|fontes?|estudos?|pubmed|openalex|semantic|literatura|refer[êe]ncias?)\b/.test(lower);
+  if(!(temIntencao&&temFonte))return '';
+  let query=raw
+    .replace(/^(por favor|pode|quero|fa[çc]a|fazer|vamos)?\s*/i,'')
+    .replace(/\b(bus(ca|que|car)|pesquis(a|e|ar)|procur(a|e|ar)|encontr(e|ar)|import(e|ar))\b/ig,' ')
+    .replace(/\b(artigos?|fontes?|estudos?|refer[êe]ncias?|literatura|cient[ií]fica|pubmed|openalex|semantic scholar|semantic)\b/ig,' ')
+    .replace(/\b(sobre|de|do|da|dos|das|para|por|na|no|nas|nos|com|em|a)\b/ig,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+  if(query.length<3){
+    query=document.getElementById('reviewTema')?.value?.trim()
+      ||document.getElementById('reviewPergunta')?.value?.trim()
+      ||'';
+  }
+  return query;
+}
 
 function novaRevisaoForm(){
   reviewAtivaId=null;
@@ -971,7 +1048,7 @@ function novaRevisaoForm(){
 
 async function carregarRevisoes(opts={}){
   if(!getToken()){mostrarToast('Faça login para usar o Review Studio.','info','🔒');return}
-  const res=await fetch(`${API}/revisoes?por_pagina=50`,{headers:authHeaders()});
+  const res=await reviewFetch('/revisoes?por_pagina=50');
   if(!res.ok)throw new Error(`HTTP ${res.status}`);
   const data=await res.json();
   reviewCache=data.items||data.itens||data.revisoes||[];
@@ -1035,7 +1112,7 @@ async function salvarRevisaoAtual(opts={}){
     const hasId=reviewAtivaId&&!forcePost;
     const url=hasId?`${API}/revisoes/${reviewAtivaId}`:`${API}/revisoes`;
     const method=hasId?'PATCH':'POST';
-    const res=await fetch(url,{method,headers:authHeaders(),body:JSON.stringify(payload)});
+    const res=await reviewFetch(url,{method,body:JSON.stringify(payload)});
     const data=await _safeJson(res);
     if(!res.ok){
       if(res.status===404&&hasId){
@@ -1058,8 +1135,7 @@ async function salvarRevisaoAtual(opts={}){
     }catch(err){
       console.error('[CaseOS] Erro ao salvar revisão:',err);
       _saveReviewWorkspace();
-      if(silent)mostrarAvisoChatLocal('Rascunho salvo neste navegador. Sincronizo quando o backend responder.','warn',4200);
-      else mostrarToast(`Não foi possível salvar a revisão: ${err.message}`,'error','⚠️',6500);
+      if(!silent)mostrarToast(_mensagemReviewApi(err,'Não consegui salvar sua revisão agora. Tente novamente em instantes.'),'error','⚠️',6500);
       return null;
     }finally{
       if(!silent)_setReviewBusy(btn,false);
@@ -1078,7 +1154,7 @@ function _resetReviewCorpusUI(){
 }
 async function carregarResumoCorpusReview(){
   if(!reviewAtivaId)return _resetReviewCorpusUI();
-  const res=await fetch(`${API}/revisoes/${reviewAtivaId}/corpus/resumo`,{headers:authHeaders()});
+  const res=await reviewFetch(`/revisoes/${reviewAtivaId}/corpus/resumo`);
   if(!res.ok)throw new Error(`HTTP ${res.status}`);
   const stats=await res.json();
   reviewCorpusStats=stats||reviewCorpusStats;
@@ -1097,6 +1173,16 @@ function _erroApi(data,fallback){
   if(Array.isArray(detail))return detail.map(item=>item.msg||item.message||String(item)).join(' ');
   if(typeof detail==='object')return detail.message||JSON.stringify(detail);
   return detail||fallback;
+}
+function _mensagemReviewApi(err,fallback='Não consegui concluir agora. Tente novamente em instantes.'){
+  const msg=String(err?.message||'').trim();
+  if(!msg)return fallback;
+  if(/sess[aã]o|401|unauthorized|not authenticated|credentials/i.test(msg))return 'Sua sessão expirou. Entre novamente para continuar sua revisão.';
+  if(/network|failed to fetch|conectar|servidor|load failed/i.test(msg))return 'Não consegui conectar ao servidor agora. Verifique sua conexão e tente novamente.';
+  if(/quota|limite|cr[eé]dito|token/i.test(msg))return msg;
+  if(/corpus fechado vazio|base da revisão.*vazia|aprove fontes|fontes/i.test(msg))return msg;
+  if(/^HTTP\s?\d+/i.test(msg))return fallback;
+  return msg.length>180?fallback:msg;
 }
 async function _exigirCorpusFechado(){
   try{
@@ -1123,23 +1209,39 @@ async function _exigirCorpusFechado(){
     return false;
   }
 }
-async function buscarFontesReview(){
+async function buscarFontesReview(opts={}){
   const id=await _garantirRevisaoAtiva();if(!id)return;
   const input=document.getElementById('reviewSearchInput');
-  const query=input?.value?.trim()||document.getElementById('reviewPergunta')?.value?.trim()||document.getElementById('reviewTema')?.value?.trim();
-  if(!query||query.length<3){mostrarToast('Digite uma busca com pelo menos 3 caracteres.','info','🔍');return}
+  const query=opts.query?.trim?.()||input?.value?.trim()||document.getElementById('reviewPergunta')?.value?.trim()||document.getElementById('reviewTema')?.value?.trim();
+  if(input&&query)input.value=query;
+  if(!query||query.length<3){
+    const msg='Me diga o tema ou pergunta para buscar artigos.';
+    if(opts.fromChat)appendReviewChat('assistant',msg);
+    else mostrarToast('Digite uma busca com pelo menos 3 caracteres.','info','🔍');
+    return null;
+  }
   const btn=document.getElementById('reviewSearchBtn');_setReviewBusy(btn,true,'Importando...');
   try{
-    const res=await fetch(`${API}/revisoes/${id}/importar-fontes`,{method:'POST',headers:authHeaders(),body:JSON.stringify({query,max:12,fontes:['pubmed','openalex','semantic']})});
-    if(!res.ok)throw new Error(`HTTP ${res.status}`);
-    const data=await res.json();
+    const res=await reviewFetch(`/revisoes/${id}/importar-fontes`,{method:'POST',body:JSON.stringify({query,max:12,fontes:['pubmed','openalex','semantic']})});
+    const data=await _safeJson(res);
+    if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
     await carregarReviewSources();await carregarResumoCorpusReview();
     mostrarPaineis('fontes');
-    appendReviewChat('assistant',`${data.importadas??data.total??'Fontes'} importadas. Aprove as fontes que devem entrar na Base da revisão.`,[],[
+    const total=data.importadas??data.total??'Fontes';
+    appendReviewChat('assistant',`${total} importadas para "${query}". Revise os resultados na Base da revisão e aprove apenas o que deve entrar na escrita.`,[],[
+      {label:'Abrir base',onclick:"mostrarPaineis('fontes')"},
       {label:'Ver seções editáveis',onclick:"mostrarPaineis('secoes')"}
     ]);
-    mostrarToast(`${data.importadas??data.total??'Fontes'} importadas para triagem.`,'success','✓');
-  }catch(err){console.error('[CaseOS] Erro ao importar fontes:',err);mostrarToast('Não foi possível importar fontes agora.','error','⚠️')}
+    mostrarToast(`${total} importadas para triagem.`,'success','✓');
+    reviewFlowStage='fontes';atualizarResumoReview();_saveReviewWorkspace();
+    return data;
+  }catch(err){
+    console.error('[CaseOS] Erro ao importar fontes:',err);
+    const msg=_mensagemReviewApi(err,'Não consegui buscar artigos agora. Tente novamente em instantes.');
+    if(opts.fromChat)appendReviewChat('assistant',msg);
+    mostrarToast(msg,'error','⚠️');
+    return null;
+  }
   finally{_setReviewBusy(btn,false)}
 }
 async function uploadFonteReview(){
@@ -1149,7 +1251,7 @@ async function uploadFonteReview(){
   const form=new FormData();form.append('arquivo',file);form.append('aprovar_para_escrita','true');
   const btn=document.getElementById('reviewUploadBtn');_setReviewBusy(btn,true,'Enviando...');
   try{
-    const res=await fetch(`${API}/revisoes/${id}/fontes/upload`,{method:'POST',headers:authBearerHeaders(),body:form});
+    const res=await reviewFetch(`/revisoes/${id}/fontes/upload`,{method:'POST',body:form});
     if(!res.ok)throw new Error(`HTTP ${res.status}`);
     input.value='';await carregarReviewSources();await reconstruirCorpusReview({silent:true});mostrarPaineis('fontes');
     appendReviewChat('assistant','Fonte enviada e aprovada. Abaixo do chat, os cards por seção estão disponíveis para edição.',[],[
@@ -1162,7 +1264,7 @@ async function uploadFonteReview(){
 async function carregarReviewSources(){
   const lista=document.getElementById('reviewSourcesList');if(!lista)return;if(!reviewAtivaId)return _resetReviewCorpusUI();
   lista.innerHTML='<div class="review-small-note">Carregando fontes...</div>';
-  const res=await fetch(`${API}/revisoes/${reviewAtivaId}/fontes?por_pagina=100`,{headers:authHeaders()});
+  const res=await reviewFetch(`/revisoes/${reviewAtivaId}/fontes?por_pagina=100`);
   if(!res.ok)throw new Error(`HTTP ${res.status}`);
   const data=await res.json();const fontes=data.items||data.itens||data.fontes||[];
   if(!fontes.length){lista.innerHTML='<div class="review-small-note">Nenhuma fonte ainda. Busque artigos ou envie arquivos.</div>';return}
@@ -1176,7 +1278,7 @@ async function carregarReviewSources(){
 async function decidirFonteReview(fonteId,decisao){
   if(!reviewAtivaId||!fonteId)return;
   try{
-    const res=await fetch(`${API}/revisoes/${reviewAtivaId}/fontes/${fonteId}/decisao`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({decisao})});
+    const res=await reviewFetch(`/revisoes/${reviewAtivaId}/fontes/${fonteId}/decisao`,{method:'PATCH',body:JSON.stringify({decisao})});
     if(!res.ok)throw new Error(`HTTP ${res.status}`);
     await carregarReviewSources();await reconstruirCorpusReview({silent:true});mostrarPaineis('fontes');
     if(decisao==='incluida'){
@@ -1191,7 +1293,7 @@ async function decidirFonteReview(fonteId,decisao){
 async function reconstruirCorpusReview(opts={}){
   if(!reviewAtivaId){if(!opts.silent)mostrarToast('Selecione uma revisão primeiro.','info','📚');return}
   try{
-    const res=await fetch(`${API}/revisoes/${reviewAtivaId}/corpus/reconstruir`,{method:'POST',headers:authHeaders(),body:JSON.stringify({somente_aprovadas:true})});
+    const res=await reviewFetch(`/revisoes/${reviewAtivaId}/corpus/reconstruir`,{method:'POST',body:JSON.stringify({somente_aprovadas:true})});
     const data=await _safeJson(res);
     if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
     await carregarResumoCorpusReview();if(!opts.silent)mostrarToast('Base atualizada com fontes aprovadas.','success','✓');
@@ -1203,7 +1305,7 @@ async function carregarPreviewCorpusReview(){
   if(out)out.innerHTML='<div class="review-small-note">Carregando trechos aprovados...</div>';_setReviewBusy(btn,true,'Carregando...');
   try{
     const ok=await _exigirCorpusFechado();if(!ok){if(out)out.innerHTML='<div class="review-small-note">Base da revisão vazia.</div>';return}
-    const res=await fetch(`${API}/revisoes/${reviewAtivaId}/corpus?por_pagina=20`,{headers:authHeaders()});
+    const res=await reviewFetch(`/revisoes/${reviewAtivaId}/corpus?por_pagina=20`);
     const data=await _safeJson(res);
     if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
     const chunks=data.items||data.itens||[];
@@ -1220,7 +1322,7 @@ async function perguntarCorpusReview(){
   const pergunta=document.getElementById('reviewQuestion')?.value?.trim();if(!pergunta){mostrarToast('Digite uma pergunta para a base da revisão.','info','ℹ️');return}
   if(!await _exigirCorpusFechado())return;
   try{
-    const res=await fetch(`${API}/revisoes/${reviewAtivaId}/corpus/perguntar`,{method:'POST',headers:authHeaders(),body:JSON.stringify({pergunta,max_chunks:10})});
+    const res=await reviewFetch(`/revisoes/${reviewAtivaId}/corpus/perguntar`,{method:'POST',body:JSON.stringify({pergunta,max_chunks:10})});
     const data=await _safeJson(res);
     if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
     appendReviewChat('assistant',data.resposta||'Sem resposta.',data.fontes||data.fontes_usadas||[]);
@@ -1233,7 +1335,7 @@ async function gerarRascunhoReview(){
   const instrucao=document.getElementById('reviewDraftInstruction')?.value?.trim()||'';
   if(!await _exigirCorpusFechado())return;
   try{
-    const res=await fetch(`${API}/revisoes/${reviewAtivaId}/rascunho`,{method:'POST',headers:authHeaders(),body:JSON.stringify({secao,instrucao,max_chunks:maxChunks})});
+    const res=await reviewFetch(`/revisoes/${reviewAtivaId}/rascunho`,{method:'POST',body:JSON.stringify({secao,instrucao,max_chunks:maxChunks})});
     const data=await _safeJson(res);
     if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
     appendReviewChat('assistant',data.rascunho||data.resposta||'Sem rascunho.',data.fontes_usadas||data.fontes||[]);
@@ -1268,6 +1370,15 @@ async function enviarMensagemReviewChat(){
   startReviewConversation();
   appendReviewChat('user',pergunta);input.value='';
   showReviewTyping();
+  const consultaBusca=extrairConsultaBuscaReview(pergunta);
+  if(consultaBusca){
+    reviewFlowStage='fontes';
+    atualizarResumoReview();
+    await salvarRevisaoAtual({silent:true});
+    await buscarFontesReview({query:consultaBusca,fromChat:true});
+    hideReviewTyping();
+    return;
+  }
   if(reviewFlowStage==='tema'){
     const tema=document.getElementById('reviewTema');if(tema)tema.value=pergunta;
     const titulo=document.getElementById('reviewTitulo');if(titulo&&!titulo.value.trim())titulo.value=`Revisão sobre ${pergunta}`.slice(0,200);
@@ -1278,6 +1389,7 @@ async function enviarMensagemReviewChat(){
       {label:'Gerar pergunta e objetivo',onclick:'gerarPerguntaObjetivoReview()'},
       {label:'Escolher formato agora',onclick:"selecionarOpcaoReview('formato','vancouver','Vancouver')"}
     ]);
+    hideReviewTyping();
     return;
   }
   if(reviewFlowStage==='pergunta'){
@@ -1288,6 +1400,7 @@ async function enviarMensagemReviewChat(){
       {label:'ABNT',onclick:"selecionarOpcaoReview('formato','abnt','ABNT')"},
       {label:'APA',onclick:"selecionarOpcaoReview('formato','apa','APA')"}
     ]);
+    hideReviewTyping();
     return;
   }
   const textLower=pergunta.toLowerCase();
@@ -1305,7 +1418,7 @@ async function enviarMensagemReviewChat(){
   try{
     if(Number(reviewCorpusStats.fontes_aprovadas||0)>0){
       const ok=await _exigirCorpusFechado();if(!ok){hideReviewTyping();return}
-      const res=await fetch(`${API}/revisoes/${reviewAtivaId}/corpus/perguntar`,{method:'POST',headers:authHeaders(),body:JSON.stringify({pergunta,max_chunks:10})});
+      const res=await reviewFetch(`/revisoes/${reviewAtivaId}/corpus/perguntar`,{method:'POST',body:JSON.stringify({pergunta,max_chunks:10})});
       const data=await _safeJson(res);
       if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
       appendReviewChat('assistant',data.resposta||'Sem resposta.',data.fontes||data.fontes_usadas||[]);
@@ -1321,7 +1434,7 @@ async function ajustarCampoReviewIA(fieldId,label){
   const instrucao=document.getElementById(`${fieldId}Instrucao`)?.value?.trim()||'Melhore clareza, precisão científica e objetividade.';
   const btn=(typeof event!=='undefined'&&event?.currentTarget)?event.currentTarget:null;_setReviewBusy(btn,true,'...');
   try{
-    const res=await fetch(`${API}/chat/assist-texto`,{method:'POST',headers:authHeaders(),body:JSON.stringify({texto,acao:'melhorar',contexto_campo:label,instrucao})});
+    const res=await reviewFetch('/chat/assist-texto',{method:'POST',body:JSON.stringify({texto,acao:'melhorar',contexto_campo:label,instrucao})});
     const data=await _safeJson(res);
     if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
     field.value=(data.resposta||'').trim()||field.value;
@@ -1336,7 +1449,7 @@ async function gerarSecaoReview(secao){
   const textarea=document.getElementById(`reviewSection_${secao}`);
   const btn=(typeof event!=='undefined'&&event?.currentTarget)?event.currentTarget:null;_setReviewBusy(btn,true,'Gerando...');
   try{
-    const res=await fetch(`${API}/revisoes/${reviewAtivaId}/rascunho`,{method:'POST',headers:authHeaders(),body:JSON.stringify({secao,instrucao,max_chunks:14})});
+    const res=await reviewFetch(`/revisoes/${reviewAtivaId}/rascunho`,{method:'POST',body:JSON.stringify({secao,instrucao,max_chunks:14})});
     const data=await _safeJson(res);
     if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
     if(textarea)textarea.value=data.rascunho||data.resposta||'';
@@ -1355,13 +1468,16 @@ function gerarVersaoFinalReview(){
   _saveReviewWorkspace();
   mostrarToast('As seções estão salvas. A exportação DOCX final será conectada na próxima etapa do backend.','info','ℹ️',6000);
 }
-window.addEventListener('DOMContentLoaded',()=>{
-  if(!getToken())location.href='login.html';
+window.addEventListener('DOMContentLoaded',async()=>{
+  if(!getToken()){
+    const renewed=await refreshReviewSession();
+    if(!renewed){location.href='login.html';return}
+  }
   renderizarData();
   renderUser();
   renderReviewSections();
   resetReviewConversationView();
-  carregarRevisoes({autoSelect:false}).catch(err=>{console.error(err);mostrarToast('Não foi possível carregar suas revisões.','error','⚠️')});
+  carregarRevisoes({autoSelect:false}).catch(err=>{console.error(err);mostrarToast(_mensagemReviewApi(err,'Não foi possível carregar suas revisões.'),'error','⚠️')});
 });
 document.addEventListener('click',(ev)=>{
   const dd=document.getElementById('userDropdown');
