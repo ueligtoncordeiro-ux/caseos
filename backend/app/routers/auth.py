@@ -40,12 +40,17 @@ from app.services.email import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# ── Rate limiting para /auth/login (brute-force guard) ────────────────────────
+# ── Rate limiting genérico por IP ─────────────────────────────────────────────
 # Instância única do Render: in-memory é suficiente. Em multi-instância usar Redis.
-_LOGIN_MAX        = 10   # tentativas por IP na janela
-_LOGIN_JANELA_SEG = 900  # 15 minutos
+#
+# Limites por endpoint:
+#   login           → 10 tentativas / 15 min  (brute-force guard)
+#   register        →  5 cadastros  / 60 min  (abuso de banco + e-mail spam)
+#   forgot-password →  3 resets     / 60 min  (disparo de e-mail, custo real)
 
-_login_hits: dict[str, list[float]] = defaultdict(list)
+_login_hits:    dict[str, list[float]] = defaultdict(list)
+_register_hits: dict[str, list[float]] = defaultdict(list)
+_forgot_hits:   dict[str, list[float]] = defaultdict(list)
 
 # ── One-time OAuth codes (Security: evita JWT na URL) ─────────────────────────
 # code → (access_token, expires_at)  · TTL de 60 s · uso único
@@ -81,31 +86,50 @@ def _purge_expired_oauth_codes() -> None:
         _oauth_codes.pop(k, None)
 
 
-def _check_login_rate_limit(request: Request) -> None:
+def _rate_limit(
+    request: Request,
+    bucket: dict[str, list[float]],
+    max_hits: int,
+    janela_seg: int,
+    msg_erro: str,
+) -> None:
     """
-    Bloqueia IPs que excedem _LOGIN_MAX tentativas de login em _LOGIN_JANELA_SEG segundos.
-    Conta todas as tentativas (válidas e inválidas) — um usuário legítimo raramente faz
-    mais de 2-3 logins por sessão, então 10/15 min é seguro sem falsos positivos.
-    Adiciona header Retry-After para conformidade com RFC 6585.
+    Verifica e registra uma tentativa no bucket de rate-limiting.
+    Levanta HTTP 429 com header Retry-After (RFC 6585) se o limite for excedido.
+    Buckets são por IP e independentes entre si (sliding window).
     """
     ip = request.client.host if request.client else "unknown"
     agora = time.time()
-    janela_inicio = agora - _LOGIN_JANELA_SEG
 
-    # Remove timestamps fora da janela
-    _login_hits[ip] = [t for t in _login_hits[ip] if t > janela_inicio]
+    # Desliza a janela — descarta timestamps expirados
+    bucket[ip] = [t for t in bucket[ip] if t > agora - janela_seg]
 
-    if len(_login_hits[ip]) >= _LOGIN_MAX:
-        retry_after = int(_login_hits[ip][0] + _LOGIN_JANELA_SEG - agora) + 1
+    if len(bucket[ip]) >= max_hits:
+        retry_after = int(bucket[ip][0] + janela_seg - agora) + 1
         raise HTTPException(
             status_code=429,
-            detail=(
-                f"Muitas tentativas de login neste IP. "
-                f"Aguarde {max(1, retry_after // 60)} min e tente novamente."
-            ),
+            detail=f"{msg_erro} Aguarde {max(1, retry_after // 60)} min.",
             headers={"Retry-After": str(retry_after)},
         )
-    _login_hits[ip].append(agora)
+    bucket[ip].append(agora)
+
+
+def _check_login_rate_limit(request: Request) -> None:
+    """10 tentativas de login por IP a cada 15 min."""
+    _rate_limit(request, _login_hits, max_hits=10, janela_seg=900,
+                msg_erro="Muitas tentativas de login neste IP.")
+
+
+def _check_register_rate_limit(request: Request) -> None:
+    """5 cadastros por IP a cada 60 min — evita spam de contas e e-mails."""
+    _rate_limit(request, _register_hits, max_hits=5, janela_seg=3600,
+                msg_erro="Muitos cadastros a partir deste IP.")
+
+
+def _check_forgot_rate_limit(request: Request) -> None:
+    """3 pedidos de redefinição de senha por IP a cada 60 min."""
+    _rate_limit(request, _forgot_hits, max_hits=3, janela_seg=3600,
+                msg_erro="Muitas solicitações de redefinição de senha neste IP.")
 
 
 # ── Price IDs hardcoded como fallback — evita NameError caso env vars não estejam configuradas.
@@ -182,7 +206,8 @@ def _token_response(response: Response, user: Usuario) -> TokenResponse:
 # ── Cadastro ──────────────────────────────────────────────────────────────────
 
 @router.post("/register", status_code=201)
-async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(request: Request, body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    _check_register_rate_limit(request)
     existing = await db.execute(select(Usuario).where(Usuario.email == body.email.lower()))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="E-mail já cadastrado.")
@@ -266,24 +291,6 @@ async def logout(response: Response):
 
 
 # ── Recuperação de senha ──────────────────────────────────────────────────────
-
-_forgot_hits: dict[str, list[float]] = defaultdict(list)
-_FORGOT_MAX        = 5
-_FORGOT_JANELA_SEG = 3600  # 1 hora
-
-
-def _check_forgot_rate_limit(request: Request) -> None:
-    ip = request.client.host if request.client else "unknown"
-    agora = time.time()
-    _forgot_hits[ip] = [t for t in _forgot_hits[ip] if t > agora - _FORGOT_JANELA_SEG]
-    if len(_forgot_hits[ip]) >= _FORGOT_MAX:
-        raise HTTPException(
-            status_code=429,
-            detail="Muitas solicitações de recuperação de senha. Aguarde 1 hora.",
-            headers={"Retry-After": "3600"},
-        )
-    _forgot_hits[ip].append(agora)
-
 
 @router.post("/forgot-password", status_code=200)
 async def forgot_password(request: Request, body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
