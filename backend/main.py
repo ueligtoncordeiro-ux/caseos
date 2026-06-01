@@ -1,5 +1,6 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from typing import Optional
 import logging
@@ -11,6 +12,12 @@ from app.services.auth import decode_token
 from app.routers import artigo, auth, webhooks, chat, imagens, admin, revisoes, notificacoes
 
 logger = logging.getLogger(__name__)
+
+# ── Limite global de payload ──────────────────────────────────────────────────
+# 512 KB cobre qualquer JSON válido da plataforma (CKO completo ≈ 30-80 KB).
+# Bloqueia uploads acidentais ou ataques de body-stuffing antes de chegar
+# ao Pydantic ou ao banco de dados.
+_MAX_BODY_BYTES = 512 * 1024  # 512 KB
 
 
 @asynccontextmanager
@@ -88,6 +95,28 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
+
+
+@app.middleware("http")
+async def limit_body_size(request: Request, call_next):
+    """
+    Rejeita requests cujo Content-Length exceda _MAX_BODY_BYTES (512 KB).
+    Cobre uploads acidentais e ataques de body-stuffing contra qualquer endpoint.
+    Nota: Content-Length ausente (chunked) passa pelo middleware mas o Pydantic
+    ainda valida o tamanho do conteúdo via schemas com max_length.
+    """
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            size = int(content_length)
+        except ValueError:
+            return JSONResponse({"detail": "Content-Length inválido."}, status_code=400)
+        if size > _MAX_BODY_BYTES:
+            return JSONResponse(
+                {"detail": f"Payload excede o limite de {_MAX_BODY_BYTES // 1024} KB."},
+                status_code=413,
+            )
+    return await call_next(request)
 
 app.include_router(artigo.router)
 app.include_router(auth.router)

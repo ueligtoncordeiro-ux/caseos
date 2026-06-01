@@ -24,6 +24,24 @@ from app.services.scientific_search import buscar_literatura
 router = APIRouter(prefix="/artigo", tags=["artigo"])
 _log = logging.getLogger(__name__)
 
+# ── Limites de payload por endpoint ──────────────────────────────────────────
+# Uma seção de artigo médico típica tem 500-2 000 palavras ≈ 3-15 KB de texto.
+# O limite de 30 000 chars por campo (≈ 60 KB UTF-8) é generoso para o uso real,
+# mas bloqueia payloads de vários MB que sobrecarregariam o LLM e o banco.
+_MAX_CHARS_SECAO  = 30_000   # conteúdo de uma seção (texto + parágrafos)
+_MAX_CHARS_INSTR  =    500   # instrução de melhoria IA (frase do usuário)
+
+
+class EditarSecaoRequest(BaseModel):
+    secao:    str   = Field(..., min_length=1, max_length=50)
+    conteudo: Any   # lista ou dict — validação de tipo feita no handler
+
+
+class MelhorarSecaoRequest(BaseModel):
+    secao:          str = Field(..., min_length=1, max_length=50)
+    conteudo_atual: str = Field(default="", max_length=_MAX_CHARS_SECAO)
+    instrucao:      str = Field(default="", max_length=_MAX_CHARS_INSTR)
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # HELPERS COMPARTILHADOS — usados por download e editar_secao
@@ -932,7 +950,7 @@ async def buscar_biblioteca(
 @router.patch("/{sessao_id}/secao")
 async def editar_secao(
     sessao_id: str,
-    body: dict,
+    body: EditarSecaoRequest,
     db: AsyncSession = Depends(get_db),
     user: Usuario = Depends(get_verified_user),
 ):
@@ -946,13 +964,13 @@ async def editar_secao(
     if not sessao.resultado:
         raise HTTPException(status_code=400, detail="Artigo não gerado ainda.")
 
-    secao = body.get("secao")
-    conteudo = body.get("conteudo")
+    secao    = body.secao
+    conteudo = body.conteudo
     SECOES_VALIDAS = {"introducao", "caso_clinico", "discussao", "conclusao", "palavras_chave", "resumo", "referencias"}
     if secao not in SECOES_VALIDAS:
-        raise HTTPException(status_code=400, detail=f"Seção inválida.")
+        raise HTTPException(status_code=400, detail="Seção inválida.")
 
-    # Type validation per section
+    # Validação de tipo por seção
     if secao in {"introducao", "caso_clinico", "discussao", "conclusao"}:
         if not isinstance(conteudo, list):
             raise HTTPException(status_code=400, detail="conteudo deve ser uma lista de parágrafos.")
@@ -965,6 +983,15 @@ async def editar_secao(
     elif secao == "referencias":
         if not isinstance(conteudo, list):
             raise HTTPException(status_code=400, detail="conteudo deve ser uma lista de referências.")
+
+    # Limite de tamanho do conteúdo (segunda barreira, complementa o middleware global)
+    import json as _json
+    conteudo_str = _json.dumps(conteudo, ensure_ascii=False)
+    if len(conteudo_str) > _MAX_CHARS_SECAO:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Conteúdo da seção excede o limite de {_MAX_CHARS_SECAO:,} caracteres.",
+        )
 
     from sqlalchemy.orm.attributes import flag_modified
 
@@ -995,7 +1022,7 @@ async def editar_secao(
 @router.post("/{sessao_id}/melhorar-secao")
 async def melhorar_secao(
     sessao_id: str,
-    body: dict,
+    body: MelhorarSecaoRequest,
     db: AsyncSession = Depends(get_db),
     user: Usuario = Depends(get_verified_user),
 ):
@@ -1009,9 +1036,9 @@ async def melhorar_secao(
     if not sessao.resultado:
         raise HTTPException(status_code=400, detail="Artigo não gerado ainda.")
 
-    secao = body.get("secao")
-    conteudo_atual = body.get("conteudo_atual", "")
-    instrucao = body.get("instrucao", "")
+    secao          = body.secao
+    conteudo_atual = body.conteudo_atual
+    instrucao      = body.instrucao
     SECOES_VALIDAS = {"introducao", "caso_clinico", "discussao", "conclusao"}
     if secao not in SECOES_VALIDAS:
         raise HTTPException(status_code=400, detail="Seção inválida.")
