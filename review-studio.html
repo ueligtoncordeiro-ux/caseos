@@ -141,10 +141,11 @@ body.sidebar-open .main{margin-left:320px}
   transition:min-height .22s ease,justify-content .22s ease,padding .22s ease;
 }
 .review-hero.conversation{min-height:calc(100vh - 16px);justify-content:flex-start;padding-top:72px;padding-bottom:220px}
+body.review-chat-active .review-hero.conversation{height:calc(100vh - 16px);overflow:hidden}
 @media(min-width:1121px){
   body.review-chat-active .review-hero{padding-right:330px}
   body.review-chat-active .command-card.active{width:min(920px,calc(100vw - 520px))}
-  body.review-chat-active .chat-thread{width:min(920px,calc(100vw - 520px));padding-bottom:240px}
+  body.review-chat-active .chat-thread{width:min(920px,calc(100vw - 520px))}
 }
 .review-title{font-family:var(--head);font-size:42px;font-weight:600;letter-spacing:0;color:#1B1B1E;margin-bottom:34px}
 .review-hero.conversation .review-title{font-size:34px;margin-bottom:22px}
@@ -162,6 +163,11 @@ body.sidebar-open .main{margin-left:320px}
 .prompt-intro{padding:18px 22px 0;color:var(--t2);font-size:14px;line-height:1.45}
 .prompt-intro strong{color:var(--t1)}
 .chat-thread{width:min(920px,100%);min-height:300px;overflow:visible;padding:10px 4px 190px;display:grid;align-content:start;gap:22px;margin:0 auto}
+body.review-chat-active .chat-thread{
+  min-height:0;max-height:calc(100vh - 320px);overflow-y:auto;padding:10px 4px 36px;scroll-padding-bottom:36px;
+}
+body.review-chat-active .chat-thread::-webkit-scrollbar{width:0;height:0}
+body.review-chat-active .chat-thread{scrollbar-width:none}
 .chat-message{display:flex;gap:10px;align-items:flex-start;max-width:78%}
 .chat-message.user{margin-left:auto;flex-direction:row-reverse}
 .chat-avatar{width:28px;height:28px;border-radius:999px;background:var(--acid);display:grid;place-items:center;flex:0 0 28px;overflow:hidden;font-size:11px;font-weight:800}
