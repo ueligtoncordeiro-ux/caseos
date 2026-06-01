@@ -4711,11 +4711,11 @@ function _renderModalRelato(d) {
     const textoJunto = paragrafos.join('\n\n').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     return `<div class="relato-secao" id="sec-wrap-${chave}">
       <div class="relato-secao-titulo">
-        ${titulo}
+        ${_escHtml(titulo)}
         <button class="btn-editar-secao" onclick="toggleEditarSecao('${chave}')">✏ Editar</button>
       </div>
       <div id="sec-view-${chave}">
-        ${paragrafos.map(p => `<p class="relato-paragrafo">${p}</p>`).join('')}
+        ${paragrafos.map(p => `<p class="relato-paragrafo">${_escHtml(p)}</p>`).join('')}
       </div>
       <div id="sec-edit-${chave}" style="display:none">
         <textarea class="sec-textarea" id="sec-ta-${chave}">${textoJunto}</textarea>
@@ -4732,11 +4732,11 @@ function _renderModalRelato(d) {
     const rs = r.resumo;
     if (!rs) return '';
     const partes = [
-      rs.introducao && `<strong>Introdução:</strong> ${rs.introducao}`,
-      rs.relato     && `<strong>Relato:</strong> ${rs.relato}`,
-      rs.caso       && `<strong>Relato:</strong> ${rs.caso}`,
-      rs.discussao  && `<strong>Discussão:</strong> ${rs.discussao}`,
-      rs.conclusao  && `<strong>Conclusão:</strong> ${rs.conclusao}`,
+      rs.introducao && `<strong>Introdução:</strong> ${_escHtml(rs.introducao)}`,
+      rs.relato     && `<strong>Relato:</strong> ${_escHtml(rs.relato)}`,
+      rs.caso       && `<strong>Relato:</strong> ${_escHtml(rs.caso)}`,
+      rs.discussao  && `<strong>Discussão:</strong> ${_escHtml(rs.discussao)}`,
+      rs.conclusao  && `<strong>Conclusão:</strong> ${_escHtml(rs.conclusao)}`,
     ].filter(Boolean);
     // Build textarea text: labeled sections
     const resumoTexto = [
@@ -4775,7 +4775,7 @@ function _renderModalRelato(d) {
     );
     const refsViewHtml = refs.map((ref, i) => {
       const num = typeof ref === 'object' && ref.numero ? ref.numero : (i + 1);
-      return `<li data-ref-idx="${i}"><span class="ref-num">${num}.</span> ${refTexts[i]}</li>`;
+      return `<li data-ref-idx="${i}"><span class="ref-num">${_escHtml(String(num))}.</span> ${_escHtml(refTexts[i])}</li>`;
     }).join('');
     // textarea: one formatted ref per line (without leading number if already present)
     const refsTextarea = refTexts.map((t, i) => {
@@ -4804,10 +4804,10 @@ function _renderModalRelato(d) {
 
   const scoreHtml = score !== null ? `
     <div class="care-banner">
-      <span class="score-num">${score}/100</span>
+      <span class="score-num">${_escHtml(String(score))}/100</span>
       <div class="care-banner-info">
         <strong>CARE Score</strong><br>
-        ${rel.observacoes || 'Relato revisado conforme checklist CARE 2013.'}
+        ${_escHtml(rel.observacoes || 'Relato revisado conforme checklist CARE 2013.')}
       </div>
     </div>` : '';
 
@@ -4821,7 +4821,7 @@ function _renderModalRelato(d) {
         <button class="btn-editar-secao" onclick="toggleEditarSecao('palavras_chave')">✏ Editar</button>
       </div>
       <div id="sec-view-palavras_chave">
-        <p class="relato-paragrafo">${kws.join(' · ')}</p>
+        <p class="relato-paragrafo">${kws.map(k => _escHtml(k)).join(' · ')}</p>
       </div>
       <div id="sec-edit-palavras_chave" style="display:none">
         <textarea class="sec-textarea" id="sec-ta-palavras_chave" rows="3" style="min-height:80px" placeholder="Separe com ponto e vírgula: palavra1; palavra2; palavra3">${kwEsc}</textarea>
@@ -4837,8 +4837,8 @@ function _renderModalRelato(d) {
     <div class="relato-meta">
       <span class="badge badge-concluido">Concluído</span>
       <span class="relato-meta-item">📅 ${data}</span>
-      ${r.autores ? `<span class="relato-meta-item">✍️ ${r.autores}</span>` : ''}
-      ${r.instituicao ? `<span class="relato-meta-item">🏥 ${r.instituicao}</span>` : ''}
+      ${r.autores ? `<span class="relato-meta-item">✍️ ${_escHtml(r.autores)}</span>` : ''}
+      ${r.instituicao ? `<span class="relato-meta-item">🏥 ${_escHtml(r.instituicao)}</span>` : ''}
     </div>
     ${scoreHtml}
     ${kwHtml}
@@ -4920,19 +4920,19 @@ async function salvarSecao(chave) {
     // Update view
     const view = document.getElementById(`sec-view-${chave}`);
     if (chave === 'referencias') {
-      if (view) view.innerHTML = `<ol class="relato-refs">${conteudo.map((ref, i) => `<li data-ref-idx="${i}"><span class="ref-num">${ref.numero}.</span> ${ref.formatada}</li>`).join('')}</ol>`;
+      if (view) view.innerHTML = `<ol class="relato-refs">${conteudo.map((ref, i) => `<li data-ref-idx="${i}"><span class="ref-num">${_escHtml(String(ref.numero || i + 1))}.</span> ${_escHtml(ref.formatada || '')}</li>`).join('')}</ol>`;
     } else if (chave === 'palavras_chave') {
-      if (view) view.innerHTML = `<p class="relato-paragrafo">${conteudo.join(' · ')}</p>`;
+      if (view) view.innerHTML = `<p class="relato-paragrafo">${conteudo.map(k => _escHtml(k)).join(' · ')}</p>`;
     } else if (chave === 'resumo') {
       const partes = [
-        conteudo.introducao && `<strong>Introdução:</strong> ${conteudo.introducao}`,
-        (conteudo.relato || conteudo.caso) && `<strong>Relato:</strong> ${conteudo.relato || conteudo.caso}`,
-        conteudo.discussao && `<strong>Discussão:</strong> ${conteudo.discussao}`,
-        conteudo.conclusao && `<strong>Conclusão:</strong> ${conteudo.conclusao}`,
+        conteudo.introducao && `<strong>Introdução:</strong> ${_escHtml(conteudo.introducao)}`,
+        (conteudo.relato || conteudo.caso) && `<strong>Relato:</strong> ${_escHtml(conteudo.relato || conteudo.caso)}`,
+        conteudo.discussao && `<strong>Discussão:</strong> ${_escHtml(conteudo.discussao)}`,
+        conteudo.conclusao && `<strong>Conclusão:</strong> ${_escHtml(conteudo.conclusao)}`,
       ].filter(Boolean);
       if (view) view.innerHTML = partes.map(p => `<p class="relato-paragrafo">${p}</p>`).join('');
     } else {
-      if (view) view.innerHTML = conteudo.map(p => `<p class="relato-paragrafo">${p}</p>`).join('');
+      if (view) view.innerHTML = conteudo.map(p => `<p class="relato-paragrafo">${_escHtml(p)}</p>`).join('');
     }
     cancelarEdicaoSecao(chave);
     mostrarToast('Seção salva!', 'success', '💾');
