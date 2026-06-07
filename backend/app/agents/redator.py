@@ -268,8 +268,23 @@ async def executar(cko: CKO, artigos: list[dict]) -> ArtigoGerado:
 
     # ── Pass 1: titulo, palavras_chave, resumo, introducao, caso_clinico ─────
     prompt1 = _TEMPLATE_PASS1.format(**kw, referencias=refs_txt, n_imagens=n_imagens, imagens_txt=imagens_txt)
-    resp1 = await chamar(_SYSTEM, prompt1, complexidade=Complexidade.ALTA, max_tokens=5000)
-    data1 = extrair_json(resp1)
+
+    _pass1_exc: Exception | None = None
+    data1: dict = {}
+    for _tentativa in range(1, 3):  # até 2 tentativas (1 + 1 retry)
+        try:
+            resp1 = await chamar(_SYSTEM, prompt1, complexidade=Complexidade.ALTA, max_tokens=5000)
+            data1 = extrair_json(resp1)
+            _pass1_exc = None
+            break
+        except Exception as exc:
+            _pass1_exc = exc
+            logger.warning("Redator Pass 1 falhou (tentativa %d/2): %s", _tentativa, exc)
+
+    if _pass1_exc is not None:
+        raise RuntimeError(
+            f"Pass 1 (Introdução/Caso Clínico) falhou após 2 tentativas: {_pass1_exc}"
+        ) from _pass1_exc
 
     titulo = data1.get("titulo", f"Relato de Caso: {cko.diagnostico.diagnostico_definitivo}")
     palavras_chave = data1.get("palavras_chave", [])

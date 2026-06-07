@@ -4,8 +4,11 @@ Agente Revisor — duas camadas:
   Nível B (global):  Claude Sonnet 4.6 — CARE Score, flags, revisão científica profunda
 """
 import asyncio
+import logging
 from app.models.schemas import CKO, ArtigoGerado, Resumo, RelatorioGerado
 from app.services.llm_router import chamar, extrair_json, Complexidade
+
+logger = logging.getLogger(__name__)
 
 _CARE_ITENS = {
     "care_1":  "Título contém 'relato de caso' e área de foco",
@@ -126,8 +129,22 @@ async def _avaliar_care(artigo: ArtigoGerado, cko: CKO) -> RelatorioGerado:
         perspectiva="Sim" if cko.perspectiva_paciente else "Não",
     )
 
-    resp = await chamar(_SYS_B, prompt, complexidade=Complexidade.ALTA, max_tokens=4096)
-    data = extrair_json(resp)
+    _care_exc: Exception | None = None
+    data: dict = {}
+    for _tentativa in range(1, 3):  # até 2 tentativas (1 + 1 retry)
+        try:
+            resp = await chamar(_SYS_B, prompt, complexidade=Complexidade.ALTA, max_tokens=4096)
+            data = extrair_json(resp)
+            _care_exc = None
+            break
+        except Exception as exc:
+            _care_exc = exc
+            logger.warning("Revisor CARE falhou (tentativa %d/2): %s", _tentativa, exc)
+
+    if _care_exc is not None:
+        raise RuntimeError(
+            f"Avaliação CARE falhou após 2 tentativas: {_care_exc}"
+        ) from _care_exc
 
     _CARE_MAX = len(_CARE_ITENS)  # 26 itens no checklist CARE 2013
 
