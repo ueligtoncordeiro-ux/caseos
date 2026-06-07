@@ -366,7 +366,7 @@ def _proximo_reset() -> str:
 @router.patch("/me", response_model=UsuarioPublico)
 async def update_me(
     body: UpdateProfileRequest,
-    user: Usuario = Depends(get_current_user),
+    user: Usuario = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     if body.nome:
@@ -381,7 +381,7 @@ async def update_me(
 @router.delete("/me", status_code=204)
 async def delete_me(
     response: Response,
-    user: Usuario = Depends(get_current_user),
+    user: Usuario = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
     """LGPD: exclusão de conta e dados pessoais."""
@@ -400,10 +400,10 @@ async def delete_me(
 @router.post("/senha", status_code=200)
 async def trocar_senha(
     body: TrocarSenhaRequest,
-    user: Usuario = Depends(get_current_user),
+    user: Usuario = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Troca senha com confirmação da senha atual. Exige estar autenticado."""
+    """Troca senha com confirmação da senha atual. Exige e-mail verificado."""
     if not user.hashed_pw:
         raise HTTPException(
             status_code=400,

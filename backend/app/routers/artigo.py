@@ -196,10 +196,29 @@ async def _gerar_bytes_do_resultado(sessao: Sessao) -> bytes:
     cko = _cko_fallback(sessao.external_id, sessao.cko or {})
     return await gerar_docx_bytes(artigo, cko, sessao.external_id)
 
-# ── Rate limiting simples para /demo (sem dependência externa) ────────────────
+# ── Rate limiting simples (sem dependência externa) ───────────────────────────
 _DEMO_MAX_POR_HORA = 3          # máximo de demos por IP por hora
 _DEMO_JANELA_SEG   = 3600       # janela de 1 hora
 _demo_hits: dict[str, list[float]] = defaultdict(list)   # ip → [timestamps]
+
+# Buscas bibliográficas: 30 por IP a cada 60 s — evita hammering das APIs externas
+_BUSCA_MAX        = 30
+_BUSCA_JANELA_SEG = 60
+_busca_hits: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_busca_rate_limit(request: Request) -> None:
+    """30 buscas bibliográficas por IP por minuto. Protege PubMed/OpenAlex/Crossref."""
+    ip    = request.client.host if request.client else "unknown"
+    agora = time.time()
+    _busca_hits[ip] = [t for t in _busca_hits[ip] if t > agora - _BUSCA_JANELA_SEG]
+    if len(_busca_hits[ip]) >= _BUSCA_MAX:
+        raise HTTPException(
+            status_code=429,
+            detail="Muitas buscas bibliográficas. Aguarde alguns segundos.",
+            headers={"Retry-After": "60"},
+        )
+    _busca_hits[ip].append(agora)
 
 
 def _check_demo_rate_limit(request: Request) -> None:
@@ -886,11 +905,13 @@ async def confirmar_flags(
 
 @router.get("/pubmed/buscar")
 async def buscar_pubmed(
+    request: Request,
     q: str = Query(..., min_length=3, max_length=200),
     max: int = Query(default=10, ge=1, le=20),
     user: Usuario = Depends(get_verified_user),
 ):
     """Busca artigos no PubMed e retorna lista com links diretos."""
+    _check_busca_rate_limit(request)
     from app.utils.pubmed import pesquisar_pubmed
 
     try:
@@ -927,12 +948,14 @@ async def buscar_pubmed(
 
 @router.get("/biblioteca/buscar")
 async def buscar_biblioteca(
+    request: Request,
     q: str = Query(..., min_length=3, max_length=300),
     max: int = Query(default=12, ge=1, le=30),
     fontes: list[str] = Query(default=["pubmed", "semantic", "openalex", "crossref"]),
     user: Usuario = Depends(get_verified_user),
 ):
     """Busca literatura em múltiplas bases e retorna resultados deduplicados."""
+    _check_busca_rate_limit(request)
     try:
         return await buscar_literatura(q, max_results=max, fontes=fontes)
     except ValueError:
