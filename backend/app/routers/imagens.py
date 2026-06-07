@@ -16,13 +16,47 @@ router = APIRouter(prefix="/imagens", tags=["imagens"])
 IMAGES_DIR = Path("images_output")
 ALLOWED = {".jpg", ".jpeg", ".png", ".gif", ".tiff", ".bmp", ".webp"}
 
+# ── Magic bytes de cada tipo permitido ───────────────────────────────────────
+# Valida o conteúdo real do arquivo, independente da extensão declarada.
+_MAGIC: dict[str, list[bytes]] = {
+    ".jpg":  [b"\xff\xd8\xff"],
+    ".jpeg": [b"\xff\xd8\xff"],
+    ".png":  [b"\x89PNG\r\n\x1a\n"],
+    ".gif":  [b"GIF87a", b"GIF89a"],
+    ".tiff": [b"II*\x00", b"MM\x00*"],   # little-endian e big-endian
+    ".bmp":  [b"BM"],
+    ".webp": [b"RIFF"],                   # WebP começa com RIFF; verificado melhor abaixo
+}
+_MAX_IMAGE_BYTES = 5 * 1024 * 1024   # 5 MB por imagem clínica
+
 
 def _safe_path(base: Path, *parts: str) -> Path:
-    """Resolve caminho e garante que está dentro de base (evita path traversal)."""
+    """
+    Resolve o caminho e garante que está estritamente dentro de base.
+    Usa Path.relative_to() em vez de startswith() para evitar o bypass
+    '/foo/bar' sendo confundido com '/foo/barbaz' e para seguir symlinks corretamente.
+    """
     resolved = (base / Path(*parts)).resolve()
-    if not str(resolved).startswith(str(base.resolve())):
+    try:
+        resolved.relative_to(base.resolve())
+    except ValueError:
         raise HTTPException(status_code=400, detail="Caminho inválido.")
     return resolved
+
+
+def _verificar_magic_bytes(content: bytes, ext: str) -> None:
+    """
+    Verifica se os bytes iniciais do arquivo correspondem ao tipo declarado.
+    Impede upload de arquivos maliciosos com extensão trocada (.php → .jpg).
+    """
+    magics = _MAGIC.get(ext, [])
+    if not magics:
+        return   # extensão não mapeada — só verificação de extensão é feita
+    if not any(content.startswith(m) for m in magics):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Conteúdo do arquivo não corresponde ao tipo declarado ({ext}).",
+        )
 
 
 async def _verificar_dono(sessao_id: str, user_id: str, db: AsyncSession) -> Sessao:
@@ -56,15 +90,26 @@ async def upload_imagem(
     if ext not in ALLOWED:
         raise HTTPException(400, f"Tipo não suportado: {ext}")
 
+    content = await arquivo.read()
+
+    # Limite de tamanho por imagem (antes de qualquer escrita no disco)
+    if len(content) > _MAX_IMAGE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Imagem excede o limite de {_MAX_IMAGE_BYTES // (1024 * 1024)} MB.",
+        )
+
+    # Validação de magic bytes — impede extensão falsificada (.php → .jpg, etc.)
+    _verificar_magic_bytes(content, ext)
+
     sessao_dir = _safe_path(IMAGES_DIR, sessao_id)
     sessao_dir.mkdir(parents=True, exist_ok=True)
 
     filename = f"figura_{numero_figura}{ext}"
     filepath = _safe_path(IMAGES_DIR, sessao_id, filename)
 
-    content = await arquivo.read()
     filepath.write_bytes(content)
-    logger.info("Imagem salva: %s (user=%s)", filepath, user.id)
+    logger.info("Imagem salva: %s (%d bytes, user=%s)", filepath, len(content), user.id)
 
     return {
         "sessao_id": sessao_id,

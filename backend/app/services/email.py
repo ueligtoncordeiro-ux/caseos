@@ -2,6 +2,7 @@
 Serviço de email via Resend — CaseOS.
 Templates dark com identidade visual da plataforma: pixel chars, verde ácido #C8FF00.
 """
+import asyncio
 import httpx
 import logging
 from app.config import settings
@@ -27,23 +28,50 @@ def _headers() -> dict:
     }
 
 
-async def _send(payload: dict) -> bool:
+async def _send(payload: dict, _tentativas: int = 3) -> bool:
+    """
+    Envia o e-mail via Resend com até `_tentativas` tentativas.
+    Retenta apenas em erros transitórios (5xx, timeout de rede).
+    Erros de cliente (4xx) não são retentados.
+    """
     if not settings.resend_api_key:
         log.warning("RESEND_API_KEY não configurado — e-mail não enviado para %s", payload.get("to"))
         return False
-    async with httpx.AsyncClient() as c:
-        try:
-            log.info("Enviando e-mail via Resend: from=%s to=%s subject=%s",
-                     payload.get("from"), payload.get("to"), payload.get("subject"))
-            r = await c.post(f"{_BASE}/emails", json=payload, headers=_headers(), timeout=15)
-            if r.status_code not in (200, 201):
-                log.error("Resend error %s: %s", r.status_code, r.text)
-                return False
-            log.info("E-mail enviado com sucesso: %s", r.json())
-            return True
-        except Exception as exc:
-            log.error("Resend exception: %s", exc)
-            return False
+
+    for tentativa in range(1, _tentativas + 1):
+        async with httpx.AsyncClient() as c:
+            try:
+                log.info(
+                    "Enviando e-mail via Resend (tentativa %d/%d): from=%s to=%s subject=%s",
+                    tentativa, _tentativas,
+                    payload.get("from"), payload.get("to"), payload.get("subject"),
+                )
+                r = await c.post(f"{_BASE}/emails", json=payload, headers=_headers(), timeout=15)
+
+                if r.status_code in (200, 201):
+                    log.info("E-mail enviado com sucesso: %s", r.json())
+                    return True
+
+                # Erros de cliente (4xx) — não adianta retentar
+                if 400 <= r.status_code < 500:
+                    log.error("Resend erro de cliente %s: %s", r.status_code, r.text)
+                    return False
+
+                # Erros de servidor (5xx) — retenta com backoff
+                log.warning("Resend erro de servidor %s (tentativa %d): %s",
+                            r.status_code, tentativa, r.text[:200])
+
+            except (httpx.TimeoutException, httpx.NetworkError) as exc:
+                log.warning("Resend timeout/rede (tentativa %d): %s", tentativa, exc)
+            except Exception as exc:
+                log.error("Resend exceção inesperada: %s", exc)
+                return False   # exceção não-transitória — não retenta
+
+        if tentativa < _tentativas:
+            await asyncio.sleep(2 ** (tentativa - 1))   # backoff: 1s, 2s
+
+    log.error("Resend: todas %d tentativas falharam para %s", _tentativas, payload.get("to"))
+    return False
 
 
 def _base(*, char_url: str, headline: str, body_html: str, cta_url: str,
@@ -249,7 +277,7 @@ async def enviar_boas_vindas(destinatario: str, nome: str, via_google: bool = Fa
             <strong style="color:{_TEXT}">1 relato por mês</strong>.
           </p>
           {metodo_html}""",
-        cta_url=f"{settings.frontend_url}/dashboard",
+        cta_url=f"{settings.frontend_url}/dashboard.html",
         cta_label="Acessar o CaseOS",
         extra_html=features,
     )
@@ -279,7 +307,7 @@ async def enviar_aviso_login_google(destinatario: str, nome: str) -> bool:
             mas sua conta no CaseOS foi criada via Google —
             <strong style="color:{_TEXT}">não há senha para redefinir</strong>.
           </p>""",
-        cta_url=f"{settings.frontend_url}/login",
+        cta_url=f"{settings.frontend_url}/login.html",
         cta_label="Entrar com Google",
         notice_html=f"""
           <div style="background:#0D1425;border-left:3px solid {_ACID};border-radius:0 4px 4px 0;
@@ -376,7 +404,7 @@ async def enviar_boas_vindas_pro(destinatario: str, nome: str) -> bool:
             Gere até <strong style="color:{_TEXT}">30 relatos por mês</strong>
             com todas as funcionalidades desbloqueadas.
           </p>""",
-        cta_url=f"{settings.frontend_url}/dashboard",
+        cta_url=f"{settings.frontend_url}/dashboard.html",
         cta_label="Acessar CaseOS Pro",
         extra_html=extras,
     )
@@ -398,7 +426,7 @@ async def enviar_artigo_pronto(
     if not settings.resend_api_key:
         return False
 
-    download_url = f"{settings.frontend_url}/dashboard"
+    download_url = f"{settings.frontend_url}/dashboard.html"
 
     flags_html = ""
     if flags:
@@ -435,7 +463,7 @@ async def enviar_artigo_pronto(
                   <p style="font-family:monospace;font-size:30px;font-weight:700;
                             color:{score_color};margin:0">{care_score}</p>
                   <p style="font-size:10px;color:{_MUTED};margin:4px 0 0 0;letter-spacing:.08em;
-                            text-transform:uppercase">CARE Score / 13</p>
+                            text-transform:uppercase">CARE Score / 26</p>
                 </td>
                 <td width="4%">&nbsp;</td>
                 <td width="48%" style="background:#0D1425;border-radius:6px;padding:16px;
@@ -472,7 +500,7 @@ async def enviar_artigo_pronto(
     return await _send({
         "from": settings.resend_from_email,
         "to": [destinatario],
-        "subject": f"[CaseOS] Relato pronto — CARE Score {care_score}/13",
+        "subject": f"[CaseOS] Relato pronto — CARE Score {care_score}/26",
         "html": html,
     })
 
@@ -534,7 +562,7 @@ async def enviar_erro_pipeline(destinatario: str, nome: str, sessao_id: str) -> 
             Olá, {nome.split()[0]}. Houve uma falha no processamento do seu relato.
             Nossa equipe foi notificada. Você pode tentar novamente — o crédito não foi consumido.
           </p>""",
-        cta_url=f"{settings.frontend_url}/dashboard",
+        cta_url=f"{settings.frontend_url}/dashboard.html",
         cta_label="Tentar novamente",
         notice_html=f"""
           <p style="font-size:10px;color:{_DIM};margin:14px 0 0 0;font-family:monospace">

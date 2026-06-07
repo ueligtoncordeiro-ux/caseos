@@ -2140,6 +2140,11 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 
 <!-- ── Toast container ── -->
 <div class="toast-wrap" id="toastWrap"></div>
+<!-- ── Session expired banner (fallback when showToast not yet available) ── -->
+<div id="sessionExpiredBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;
+     background:#b91c1c;color:#fff;padding:10px 20px;text-align:center;font-size:14px;font-weight:500">
+  ⚠️ Sua sessão expirou. Salve seu trabalho e <a href="login.html" style="color:#fff;text-decoration:underline">faça login novamente</a>.
+</div>
 
 <!-- ══ JAVASCRIPT ══ -->
 <script>
@@ -2168,9 +2173,16 @@ async function tryRefreshToken() {
     if (!getToken()) return; // sem sessão ativa — não interferir
     const ok = await tryRefreshToken();
     if (!ok) {
-      // Sessão expirou (refresh revogado) — avisa sem redirecionar
-      // (não queremos perder dados do formulário em progresso)
+      // Sessão expirou (refresh revogado) — avisa com toast visível e
+      // não redireciona para não perder dados do formulário em progresso.
       console.warn('[CaseOS] Sessão expirada. Salve seu trabalho e faça login novamente.');
+      try {
+        showToast('⚠️ Sua sessão expirou. Salve seu trabalho e faça login novamente.', 'error');
+      } catch {
+        // showToast pode não estar disponível em contextos muito antigos — fallback visual
+        const banner = document.getElementById('sessionExpiredBanner');
+        if (banner) banner.style.display = 'block';
+      }
     }
   }, 12 * 60 * 1000);
 })();
@@ -2208,41 +2220,90 @@ function renderCaseHeader() {
   if (avatar) avatar.textContent = _getInitials(nome);
   if (userName) userName.textContent = nome;
   if (userPlan) userPlan.textContent = planoLabel;
-  renderCaseNotificacoes();
+  _iniciarPollingCaseNotif();
 }
 
-const _CASE_NOTIF_LS_KEY = 'caseos_notif_lidas_v1'; // same key as dashboard for sync
-const caseNotificacoes = [
-  { id: 1, texto: 'Seu relato está sendo preparado no CaseOS.', tempo: 'agora' },
-  { id: 2, texto: 'Lembre-se de não inserir dados identificáveis do paciente.', tempo: '5 min atrás' },
-];
+/* ── Notificações (carregadas da API, mesmo padrão do dashboard) ── */
+let _caseNotifCache = [];
+let _caseNotifTimer = null;
 
-function _caseNotifLidasIds() {
-  try { return new Set(JSON.parse(localStorage.getItem(_CASE_NOTIF_LS_KEY) || '[]')); } catch { return new Set(); }
-}
-function _caseSalvarLidas(ids) {
-  try { localStorage.setItem(_CASE_NOTIF_LS_KEY, JSON.stringify([...ids])); } catch {}
+function _escHtmlCase(s) {
+  return String(s || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-function renderCaseNotificacoes() {
+function _tempoRelativoCase(iso) {
+  if (!iso) return '';
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (diff < 60)   return 'agora';
+  if (diff < 3600) return Math.floor(diff / 60) + ' min atrás';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h atrás';
+  return Math.floor(diff / 86400) + 'd atrás';
+}
+
+function renderCaseNotificacoes(data) {
   const list  = document.getElementById('caseNotifList');
   const badge = document.getElementById('caseNotifBadge');
-  const lidas = _caseNotifLidasIds();
-  const naoLidas = caseNotificacoes.filter(function(n) { return !lidas.has(n.id); }).length;
+
+  const itens    = (data && data.itens) || _caseNotifCache;
+  const naoLidas = (data && data.nao_lidas != null) ? data.nao_lidas
+                   : itens.filter(function(n) { return !n.lida; }).length;
+
   if (badge) {
-    badge.textContent = naoLidas;
+    badge.textContent = naoLidas > 9 ? '9+' : String(naoLidas);
     badge.style.display = naoLidas > 0 ? 'flex' : 'none';
   }
   if (!list) return;
-  list.innerHTML = caseNotificacoes.map(function(n) {
-    var cls = lidas.has(n.id) ? '' : 'unread';
-    return '<div class="notif-item ' + cls + '"><span class="notif-dot"></span><div><div class="notif-text">' + n.texto + '</div><div class="notif-time">' + n.tempo + '</div></div></div>';
+
+  if (!itens.length) {
+    list.innerHTML = '<div style="padding:20px 16px;font-size:12px;color:#888;text-align:center">Nenhuma notificação</div>';
+    return;
+  }
+
+  list.innerHTML = itens.map(function(n) {
+    return '<div class="notif-item ' + (n.lida ? '' : 'unread') + '">' +
+      '<span class="notif-dot"></span>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div class="notif-text"><span style="margin-right:4px">' + (n.emoji || '🔔') + '</span>' +
+        '<strong>' + _escHtmlCase(n.titulo) + '</strong></div>' +
+        '<div class="notif-text" style="font-weight:400;margin-top:2px">' + _escHtmlCase(n.texto) + '</div>' +
+        '<div class="notif-time">' + _tempoRelativoCase(n.created_at) + '</div>' +
+      '</div></div>';
   }).join('');
 }
 
-function caseMarcarTodasLidas() {
-  _caseSalvarLidas(new Set(caseNotificacoes.map(function(n) { return n.id; })));
-  renderCaseNotificacoes();
+async function _fetchCaseNotificacoes() {
+  const token = getToken();
+  if (!token) return;
+  try {
+    const res = await fetch(API + '/notificacoes', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    _caseNotifCache = data.itens || [];
+    renderCaseNotificacoes(data);
+  } catch {}
+}
+
+async function caseMarcarTodasLidas() {
+  const token = getToken();
+  if (!token) return;
+  try {
+    await fetch(API + '/notificacoes/marcar-todas-lidas', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    _caseNotifCache = _caseNotifCache.map(function(n) { return Object.assign({}, n, { lida: true }); });
+    renderCaseNotificacoes({ itens: _caseNotifCache, nao_lidas: 0 });
+  } catch {}
+}
+
+function _iniciarPollingCaseNotif() {
+  if (_caseNotifTimer) return;
+  _fetchCaseNotificacoes();
+  _caseNotifTimer = setInterval(_fetchCaseNotificacoes, 60000);
 }
 
 function closeCaseDropdowns() {

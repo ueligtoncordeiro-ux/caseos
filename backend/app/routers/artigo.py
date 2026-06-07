@@ -336,7 +336,7 @@ async def historico(
                 "criado_em": s.created_at.isoformat() if s.created_at else None,
                 "created_at": s.created_at.isoformat() if s.created_at else None,
                 "updated_at": s.updated_at.isoformat() if s.updated_at else None,
-                "tem_docx": bool(s.docx_path and Path(s.docx_path).exists()),
+                "tem_docx": bool(s.docx_original_bytes or s.docx_editado_bytes),
                 "versao_edicao": (s.resultado or {}).get("versao_edicao", 1) if s.resultado else 1,
             }
             for s in sessoes
@@ -629,7 +629,11 @@ async def download_resultado_pdf(
             sessao.docx_original_bytes = docx_bytes
             await db.commit()
 
-        pdf_bytes = docx_to_pdf_bytes(docx_bytes)
+        # docx_to_pdf_bytes é CPU-bound (PyMuPDF) — executa em thread pool
+        # para não bloquear o event loop durante a conversão.
+        pdf_bytes = await asyncio.get_event_loop().run_in_executor(
+            None, docx_to_pdf_bytes, docx_bytes
+        )
         filename = f"CaseOS_{sessao_id[:8]}{sufixo}.pdf"
         _log.info("Download PDF sessão=%s versao=%s bytes=%d", sessao_id, versao, len(pdf_bytes))
         return StreamingResponse(
@@ -670,7 +674,9 @@ async def download_versao_pdf(
         raise HTTPException(status_code=404, detail="Versão não encontrada.")
 
     try:
-        pdf_bytes = docx_to_pdf_bytes(versao.docx_bytes)
+        pdf_bytes = await asyncio.get_event_loop().run_in_executor(
+            None, docx_to_pdf_bytes, versao.docx_bytes
+        )
         filename = f"CaseOS_{sessao_id[:8]}_v{versao.numero}.pdf"
         return StreamingResponse(
             content=io.BytesIO(pdf_bytes),

@@ -4098,11 +4098,11 @@ async function carregarStats() {
     }
 
     const elScore = document.getElementById('statScore');
-    if (elScore) elScore.textContent = score !== null ? `${score}/100` : '—';
+    if (elScore) elScore.textContent = score !== null ? `${_careScorePct(score)}/100` : '—';
     // Animate CARE arc (circumference = 2π×17 ≈ 106.8)
     const arcFill = document.getElementById('careArcFill');
     if (arcFill && score !== null) {
-      const pct = Math.min(Math.max(score, 0), 100);
+      const pct = Math.min(Math.max(_careScorePct(score), 0), 100);
       const dash = (pct / 100) * 106.8;
       arcFill.setAttribute('stroke-dasharray', `${dash} ${106.8 - dash}`);
     }
@@ -4217,8 +4217,8 @@ function _renderTabela(itens) {
 
     const scoreHtml = score !== null
       ? `<div class="score-wrap">
-           <div class="score-bar"><div class="score-fill" style="width:${score}%"></div></div>
-           <span class="score-num">${score}/100</span>
+           <div class="score-bar"><div class="score-fill" style="width:${_careScorePct(score)}%"></div></div>
+           <span class="score-num">${_careScorePct(score)}/100</span>
          </div>`
       : '<span style="color:var(--t4);font-size:12px">—</span>';
 
@@ -4226,11 +4226,11 @@ function _renderTabela(itens) {
       ? new Date(data).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' })
       : '—';
 
-    const tituloHtml = titulo.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const tituloHtml = _escHtml(titulo);
 
     return `
       <tr class="tr-clickable" onclick="visualizarRelato('${id}')">
-        <td class="td-titulo" title="${tituloHtml}">${titulo}${versao > 1 ? '<span class="badge-versao" style="margin-left:6px">v'+versao+'</span>' : ''}</td>
+        <td class="td-titulo" title="${tituloHtml}">${tituloHtml}${versao > 1 ? '<span class="badge-versao" style="margin-left:6px">v'+versao+'</span>' : ''}</td>
         <td><span class="badge ${badgeCls}">${badgeLabel}</span></td>
         <td>${scoreHtml}</td>
         <td style="font-size:12.5px;color:var(--t3);white-space:nowrap">${dataFormatada}</td>
@@ -4499,7 +4499,7 @@ async function visualizarRelato(sessaoId) {
     window.__docxTemEditado     = !!d.tem_versao_editada;
     carregarVersoes(sessaoId);
   } catch (err) {
-    body.innerHTML = `<div style="text-align:center;padding:40px;color:var(--red)">❌ Não foi possível carregar o relato.<br><small>${err.message}</small></div>`;
+    body.innerHTML = `<div style="text-align:center;padding:40px;color:var(--red)">❌ Não foi possível carregar o relato.<br><small>${_escHtml(err.message)}</small></div>`;
   }
 }
 
@@ -4819,7 +4819,7 @@ function _renderModalRelato(d) {
 
   const scoreHtml = score !== null ? `
     <div class="care-banner">
-      <span class="score-num">${_escHtml(String(score))}/100</span>
+      <span class="score-num">${_escHtml(String(score))}/26</span>
       <div class="care-banner-info">
         <strong>CARE Score</strong><br>
         ${_escHtml(rel.observacoes || 'Relato revisado conforme checklist CARE 2013.')}
@@ -5314,7 +5314,18 @@ function renderNotificacoes(data) {
 }
 
 function _escHtml(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s || '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+/** Converte care_score (0-26 itens CARE) para exibição percentual (0-100). */
+function _careScorePct(score) {
+  if (score === null || score === undefined) return null;
+  return Math.round(Number(score) / 26 * 100);
 }
 
 async function _fetchNotificacoes() {
