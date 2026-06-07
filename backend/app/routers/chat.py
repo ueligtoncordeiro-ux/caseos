@@ -2,8 +2,11 @@
 Chat com IA — assistente da plataforma RCCS.
 Responde dúvidas sobre uso, pesquisa clínica, relatos de caso, CARE checklist etc.
 """
+import time
+from collections import defaultdict
+
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 
 from app.services.auth import get_verified_user
@@ -11,6 +14,23 @@ from app.models.database import Usuario
 from app.services.llm_router import chamar, Complexidade, mensagem_usuario_erro
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+# ── Rate limit: 20 msgs/min por usuário (evita explosão de tokens) ────────────
+_CHAT_JANELA_SEG = 60
+_CHAT_MAX        = 20
+_chat_hits: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_chat_rate_limit(user_id: str) -> None:
+    agora = time.time()
+    _chat_hits[user_id] = [t for t in _chat_hits[user_id] if t > agora - _CHAT_JANELA_SEG]
+    if len(_chat_hits[user_id]) >= _CHAT_MAX:
+        raise HTTPException(
+            status_code=429,
+            detail="Muitas mensagens por minuto. Aguarde antes de enviar outra.",
+            headers={"Retry-After": "60"},
+        )
+    _chat_hits[user_id].append(agora)
 
 _SYSTEM = """Você é o assistente do CaseOS — chatbox flutuante no dashboard.
 
@@ -46,13 +66,13 @@ REGRAS DE RESPOSTA — CRÍTICO:
 
 
 class MensagemChat(BaseModel):
-    role: str  # "user" | "assistant"
-    content: str
+    role: str = Field(..., max_length=20)   # "user" | "assistant"
+    content: str = Field(..., max_length=8000)
 
 
 class ChatRequest(BaseModel):
-    mensagem: str
-    historico: Optional[List[MensagemChat]] = []
+    mensagem: str = Field(..., min_length=1, max_length=5000)
+    historico: Optional[List[MensagemChat]] = Field(default_factory=list, max_length=50)
 
 
 class ChatResponse(BaseModel):
@@ -64,6 +84,7 @@ async def chat(
     req: ChatRequest,
     user: Usuario = Depends(get_verified_user),
 ):
+    _check_chat_rate_limit(str(user.id))
     # Monta contexto com histórico recente para manter continuidade sem excesso.
     historico = req.historico[-10:] if req.historico else []
     contexto = ""
@@ -94,10 +115,10 @@ Responda em até 3 frases ou 60 palavras. COMPLETO, com ponto final. Nunca corte
 
 
 class AssistTextoRequest(BaseModel):
-    texto: str
-    acao: str  # "melhorar" | "corrigir" | "encurtar" | "expandir" | "formalizar"
-    contexto_campo: Optional[str] = None  # ex: "história da doença atual"
-    instrucao: Optional[str] = None  # instrução personalizada do usuário
+    texto: str = Field(..., min_length=1, max_length=10000)
+    acao: str = Field(..., max_length=50)  # "melhorar" | "corrigir" | "encurtar" | "expandir" | "formalizar"
+    contexto_campo: Optional[str] = Field(None, max_length=200)  # ex: "história da doença atual"
+    instrucao: Optional[str] = Field(None, max_length=1000)      # instrução personalizada do usuário
 
 
 @router.post("/assist-texto", response_model=ChatResponse)
@@ -106,6 +127,7 @@ async def assist_texto(
     user: Usuario = Depends(get_verified_user),
 ):
     """Melhora, corrige ou transforma texto de um campo do formulário."""
+    _check_chat_rate_limit(str(user.id))
     acoes = {
         "melhorar":   "Melhore o texto abaixo para um relato de caso clínico científico, mantendo todas as informações e tornando-o mais preciso e bem escrito.",
         "corrigir":   "Corrija erros de português, concordância e ortografia do texto abaixo, sem alterar o conteúdo.",

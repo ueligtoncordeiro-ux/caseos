@@ -1489,7 +1489,7 @@ function planoBadge(plano) {
     pro:           '<span class="badge badge-purple">Pro</span>',
     institucional: '<span class="badge badge-amber">Institucional</span>',
   };
-  return map[plano] || plano;
+  return map[plano] || escHtml(String(plano));
 }
 
 function statusBadge(is_active, is_verified) {

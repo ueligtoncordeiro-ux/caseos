@@ -99,7 +99,7 @@ def _valor_form(valor: Optional[str]) -> Optional[str]:
 
 
 def _safe_upload_path(user_id: str, revisao_id: str, filename: str) -> Path:
-    ext = Path(filename or "").suffix.lower()
+    ext = Path(Path(filename or "").name).suffix.lower()
     if ext not in _UPLOAD_EXTENSOES_PERMITIDAS:
         permitidas = ", ".join(sorted(_UPLOAD_EXTENSOES_PERMITIDAS))
         raise HTTPException(
@@ -168,7 +168,7 @@ def _extrair_texto_pdf(conteudo: bytes) -> str:
 
 
 def _extrair_texto_upload(filename: str, conteudo: bytes) -> tuple[str, Optional[str]]:
-    ext = Path(filename or "").suffix.lower()
+    ext = Path(Path(filename or "").name).suffix.lower()
     aviso = None
     if ext in {".txt", ".md"}:
         texto = _decodificar_texto(conteudo)
