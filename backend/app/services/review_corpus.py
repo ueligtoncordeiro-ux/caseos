@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Any
 
@@ -5,6 +6,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import RevisaoFonte, RevisaoFonteChunk
+
+_log = logging.getLogger(__name__)
 
 _MAX_CHARS_CHUNK = 1200
 _MIN_CHARS_CHUNK = 120
@@ -110,29 +113,43 @@ async def reconstruir_corpus_fechado(
 
     chunks_criados: list[RevisaoFonteChunk] = []
     fontes_sem_texto: list[str] = []
-    for fonte in fontes:
-        texto = _texto_fonte(fonte)
-        partes = _chunk_texto(texto)
-        if not partes:
-            fontes_sem_texto.append(fonte.id)
-            continue
+    fontes_com_erro: list[str] = []
 
-        for ordem, parte in enumerate(partes, start=1):
-            chunk = RevisaoFonteChunk(
-                fonte_id=fonte.id,
-                ordem=ordem,
-                secao="abstract" if fonte.abstract else "metadados",
-                texto=parte,
-                embedding=None,
-                metadados=_metadados_chunk(fonte),
+    for fonte in fontes:
+        try:
+            texto = _texto_fonte(fonte)
+            partes = _chunk_texto(texto)
+            if not partes:
+                fontes_sem_texto.append(fonte.id)
+                continue
+
+            for ordem, parte in enumerate(partes, start=1):
+                chunk = RevisaoFonteChunk(
+                    fonte_id=fonte.id,
+                    ordem=ordem,
+                    secao="abstract" if fonte.abstract else "metadados",
+                    texto=parte,
+                    embedding=None,
+                    metadados=_metadados_chunk(fonte),
+                )
+                db.add(chunk)
+                chunks_criados.append(chunk)
+
+        except Exception as exc:
+            # Fonte corrompida ou metadados malformados — registra e segue.
+            # Um arquivo problemático não deve impedir o processamento dos demais.
+            _log.warning(
+                "Falha ao processar fonte %s (%s): %s",
+                fonte.id, getattr(fonte, "titulo", "?")[:60], exc,
             )
-            db.add(chunk)
-            chunks_criados.append(chunk)
+            fontes_com_erro.append(fonte.id)
+            continue
 
     await db.commit()
     return {
         "fontes_processadas": len(fontes),
-        "chunks_criados": len(chunks_criados),
-        "fontes_sem_texto": fontes_sem_texto,
-        "somente_aprovadas": somente_aprovadas,
+        "chunks_criados":     len(chunks_criados),
+        "fontes_sem_texto":   fontes_sem_texto,
+        "fontes_com_erro":    fontes_com_erro,
+        "somente_aprovadas":  somente_aprovadas,
     }

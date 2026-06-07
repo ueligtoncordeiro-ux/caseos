@@ -15,7 +15,7 @@ _RATE = asyncio.Semaphore(5)
 
 
 def _email() -> str:
-    return getattr(settings, "polite_email", "") or "rccs@exemplo.com"
+    return settings.polite_email
 
 
 async def _get(client: httpx.AsyncClient, url: str) -> dict:

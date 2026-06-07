@@ -11,6 +11,8 @@ Agente Bibliográfico — pipeline 7 fontes:
 
 Pool final: deduplicado por DOI/PMID, ordenado por citações, máx 40 artigos.
 """
+import re
+import time
 from app.models.schemas import CKO
 from app.utils.pubmed import pesquisar_pubmed
 from app.utils.semantic_scholar import executar_busca as s2_busca
@@ -19,6 +21,37 @@ from app.utils.crossref import validar_lote as crossref_validar, buscar as cross
 from app.utils.europe_pmc import executar_busca as epmc_busca, enriquecer_com_pmc
 from app.utils.unpaywall import enriquecer_pool as unpaywall_enriquecer
 from app.services.llm_router import chamar, extrair_json, Complexidade
+
+# ── Cache TTL em memória (único processo no Render) ───────────────────────────
+# Evita refazer 7 chamadas externas para o mesmo diagnóstico+intervenção.
+# TTL de 6 h — literatura médica não muda a ponto de invalidar em horas.
+_BIBLIO_CACHE: dict[str, tuple[float, list[dict]]] = {}
+_BIBLIO_TTL   = 6 * 3600   # segundos
+_BIBLIO_MAX   = 128         # entradas máximas — evita crescimento ilimitado
+
+
+def _cache_key(cko: CKO) -> str:
+    """Normaliza diagnóstico + tipo de intervenção como chave de cache."""
+    diag = re.sub(r"\s+", " ", (cko.diagnostico.diagnostico_definitivo or "").lower().strip())
+    inter = re.sub(r"\s+", " ", (cko.intervencao.tipo or "").lower().strip())
+    return f"{diag}::{inter}"
+
+
+def _cache_get(key: str) -> list[dict] | None:
+    entry = _BIBLIO_CACHE.get(key)
+    if entry and time.time() - entry[0] < _BIBLIO_TTL:
+        return entry[1]
+    _BIBLIO_CACHE.pop(key, None)
+    return None
+
+
+def _cache_set(key: str, artigos: list[dict]) -> None:
+    if len(_BIBLIO_CACHE) >= _BIBLIO_MAX:
+        # Remove a entrada mais antiga
+        oldest = min(_BIBLIO_CACHE, key=lambda k: _BIBLIO_CACHE[k][0])
+        _BIBLIO_CACHE.pop(oldest, None)
+    _BIBLIO_CACHE[key] = (time.time(), artigos)
+
 
 _SYSTEM = """Você é um especialista em busca bibliográfica biomédica.
 Construa queries PubMed otimizadas. Responda APENAS com JSON válido."""
@@ -94,6 +127,12 @@ def _deduplicar(artigos: list[dict]) -> list[dict]:
 
 
 async def executar(cko: CKO) -> list[dict]:
+    # ── Cache hit — economiza 7 chamadas externas e ~30 s de latência ─────────
+    key = _cache_key(cko)
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
+
     queries = await _construir_queries(cko)
     query_principal = f"{cko.diagnostico.diagnostico_definitivo} {cko.intervencao.tipo}"
     diag = cko.diagnostico.diagnostico_definitivo
@@ -164,4 +203,5 @@ async def executar(cko: CKO) -> list[dict]:
         art["numero"] = i
         art["formatada"] = _vancouver(art)
 
+    _cache_set(key, pool)
     return pool

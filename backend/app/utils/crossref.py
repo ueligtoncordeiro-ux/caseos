@@ -13,8 +13,7 @@ _BASE = "https://api.crossref.org"
 _RATE = asyncio.Semaphore(5)
 
 def _headers() -> dict:
-    email = getattr(settings, "polite_email", "") or "rccs@exemplo.com"
-    return {"User-Agent": f"RCCS/1.0 (mailto:{email})"}
+    return {"User-Agent": f"CaseOS/1.0 (mailto:{settings.polite_email})"}
 
 
 async def _get(client: httpx.AsyncClient, url: str, params: dict = {}) -> dict:
@@ -112,8 +111,7 @@ async def buscar(
         "select": "DOI,title,author,container-title,published,volume,issue,page,type",
         "filter": "type:journal-article",
     }
-    email = getattr(settings, "polite_email", "") or "rccs@exemplo.com"
-    params["mailto"] = email
+    params["mailto"] = settings.polite_email
 
     if filtros:
         params.update(filtros)

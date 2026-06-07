@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     gemini_fallback_models: str = "gemini-flash-latest,gemini-2.0-flash-lite,gemini-2.0-flash"
     pubmed_api_key: str = ""
     semantic_scholar_api_key: str = ""
-    polite_email: str = "rccs@exemplo.com"
+    polite_email: str = "caseos@rccs.com.br"  # identificação polite para OpenAlex/Crossref/Europe PMC
     resend_api_key: str = ""
     resend_from_email: str = "RCCS <noreply@rccs.com.br>"
     sherpa_romeo_api_key: str = ""  # disponível após julho/2026

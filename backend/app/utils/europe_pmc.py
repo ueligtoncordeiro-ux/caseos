@@ -18,7 +18,7 @@ from app.config import settings
 
 _BASE   = "https://www.ebi.ac.uk/europepmc/webservices/rest"
 _RATE   = asyncio.Semaphore(4)   # generoso, mas respeitoso
-_EMAIL  = getattr(settings, "polite_email", None) or "caseos@exemplo.com"
+_EMAIL  = settings.polite_email
 
 
 async def _get(client: httpx.AsyncClient, url: str, params: dict) -> dict:
