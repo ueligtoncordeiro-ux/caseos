@@ -47,15 +47,20 @@ def _plano_from_price(price_id: str) -> str:
 
 
 def _aplicar_plano(user: Usuario, novo_plano: str) -> None:
-    """Troca o plano e reseta contadores mensais. Chame antes de db.commit()."""
+    """
+    Troca o plano e reseta contadores mensais. Chame antes de db.commit().
+    Reseta os contadores em dois cenários:
+      1. Mudança de plano (upgrade / downgrade)
+      2. Novo mês de cobrança (mes_referencia desatualizado)
+    """
     from datetime import datetime
     mes_atual = datetime.utcnow().strftime("%Y-%m")
     plano_anterior = user.plano
+    mes_anterior   = user.mes_referencia or ""
 
     user.plano = novo_plano
 
-    # Reset de contadores apenas quando o plano MUDA (upgrade/downgrade)
-    if plano_anterior != novo_plano:
+    if plano_anterior != novo_plano or mes_anterior != mes_atual:
         user.artigos_mes    = 0
         user.tokens_mes     = 0
         user.mes_referencia = mes_atual
@@ -183,6 +188,31 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             user.stripe_subscription_id     = None
             user.stripe_subscription_status = "canceled"
             await db.commit()
+
+    # ── invoice.paid → renovação mensal (reset de quota) ─────────────────────
+    elif etype == "invoice.paid":
+        billing_reason = data.get("billing_reason", "")
+        customer       = data.get("customer")
+
+        # "subscription_cycle" = renovação automática periódica.
+        # "subscription_create" = primeira cobrança — quota já resetada pelo
+        # checkout.session.completed, então pulamos para evitar duplo reset.
+        if billing_reason == "subscription_cycle" and customer:
+            result = await db.execute(
+                select(Usuario).where(Usuario.stripe_customer_id == customer)
+            )
+            user = result.scalar_one_or_none()
+            if user and user.plano != PLANO_FREE:
+                from datetime import datetime
+                mes_atual = datetime.utcnow().strftime("%Y-%m")
+                user.artigos_mes    = 0
+                user.tokens_mes     = 0
+                user.mes_referencia = mes_atual
+                await db.commit()
+                logger.info(
+                    "invoice.paid (renewal): quota resetada para customer=%s email=%s plano=%s",
+                    customer, user.email, user.plano,
+                )
 
     # ── invoice.payment_failed → aviso de cobrança falhou ─────────────────────
     elif etype == "invoice.payment_failed":

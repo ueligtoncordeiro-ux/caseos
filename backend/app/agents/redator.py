@@ -4,8 +4,11 @@ Escrita científica longa em PT-BR exige contexto extenso e raciocínio profundo
 Usa duas chamadas LLM para evitar truncamento: Pass 1 gera as seções iniciais,
 Pass 2 gera Discussão, Conclusão e referências usadas com contexto completo.
 """
+import logging
 from app.models.schemas import CKO, ArtigoGerado, Resumo, Referencia
 from app.services.llm_router import chamar, extrair_json, Complexidade
+
+logger = logging.getLogger(__name__)
 
 _SYSTEM = """Você é um redator científico sênior especialista em relatos de caso clínico,
 com domínio do checklist CARE 2013, normas Vancouver/ICMJE e escrita médica em português brasileiro.
@@ -297,17 +300,29 @@ async def executar(cko: CKO, artigos: list[dict]) -> ArtigoGerado:
     conclusao: list[str] = []
     refs_final: set[int] = set()
 
-    try:
-        resp2 = await chamar(_SYSTEM, prompt2, complexidade=Complexidade.ALTA, max_tokens=6000)
-        data2 = extrair_json(resp2)
-        discussao = data2.get("discussao", [])
-        conclusao = data2.get("conclusao", [])
-        refs_final = set(data2.get("referencias_usadas", []))
-    except Exception:
-        # Pass 2 failed: keep empty sections, article is still usable
-        discussao = []
-        conclusao = []
-        refs_final = refs_parcial
+    _pass2_exc: Exception | None = None
+    for _tentativa in range(1, 3):  # até 2 tentativas (1 + 1 retry)
+        try:
+            resp2 = await chamar(_SYSTEM, prompt2, complexidade=Complexidade.ALTA, max_tokens=6000)
+            data2 = extrair_json(resp2)
+            discussao = data2.get("discussao", [])
+            conclusao = data2.get("conclusao", [])
+            refs_final = set(data2.get("referencias_usadas", []))
+            _pass2_exc = None
+            break   # sucesso — sai do loop
+        except Exception as exc:
+            _pass2_exc = exc
+            logger.warning(
+                "Redator Pass 2 falhou (tentativa %d/2): %s", _tentativa, exc
+            )
+
+    if _pass2_exc is not None:
+        # Ambas as tentativas falharam — propaga para o orquestrador marcar status=erro
+        # e devolver o artigo ao saldo do usuário. Silenciar aqui geraria artigos
+        # incompletos (sem Discussão/Conclusão) marcados erroneamente como "concluído".
+        raise RuntimeError(
+            f"Pass 2 (Discussão/Conclusão) falhou após 2 tentativas: {_pass2_exc}"
+        ) from _pass2_exc
 
     # Merge reference sets from both passes
     refs_idx = refs_parcial | refs_final

@@ -13,11 +13,11 @@ from app.routers import artigo, auth, webhooks, chat, imagens, admin, revisoes, 
 
 logger = logging.getLogger(__name__)
 
-# ── Limite global de payload ──────────────────────────────────────────────────
-# 512 KB cobre qualquer JSON válido da plataforma (CKO completo ≈ 30-80 KB).
-# Bloqueia uploads acidentais ou ataques de body-stuffing antes de chegar
-# ao Pydantic ou ao banco de dados.
-_MAX_BODY_BYTES = 512 * 1024  # 512 KB
+# ── Limites de payload ────────────────────────────────────────────────────────
+# JSON API: 512 KB cobre qualquer payload válido (CKO completo ≈ 30-80 KB).
+# Uploads multipart: 15 MB — cobre imagens (≤5 MB) e PDFs do Review Studio (≤12 MB).
+_MAX_BODY_BYTES   = 512 * 1024        # 512 KB — endpoints JSON
+_MAX_UPLOAD_BYTES = 15 * 1024 * 1024  # 15 MB  — multipart/form-data (imagens + PDFs)
 
 
 @asynccontextmanager
@@ -100,20 +100,28 @@ app.add_middleware(
 @app.middleware("http")
 async def limit_body_size(request: Request, call_next):
     """
-    Rejeita requests cujo Content-Length exceda _MAX_BODY_BYTES (512 KB).
-    Cobre uploads acidentais e ataques de body-stuffing contra qualquer endpoint.
-    Nota: Content-Length ausente (chunked) passa pelo middleware mas o Pydantic
-    ainda valida o tamanho do conteúdo via schemas com max_length.
+    Rejeita requests cujo Content-Length exceda o limite da rota:
+      • multipart/form-data (uploads de imagem e PDF) → 15 MB
+      • qualquer outro Content-Type (JSON API)         → 512 KB
+
+    Nota: Content-Length ausente (chunked) passa pelo middleware, mas os
+    endpoints de upload lêem o arquivo em chunks e aplicam seu próprio limite
+    em bytes lidos (imagens.py / revisoes.py).
     """
+    content_type = request.headers.get("content-type", "")
+    is_upload = "multipart/form-data" in content_type
+    limit = _MAX_UPLOAD_BYTES if is_upload else _MAX_BODY_BYTES
+
     content_length = request.headers.get("content-length")
     if content_length:
         try:
             size = int(content_length)
         except ValueError:
             return JSONResponse({"detail": "Content-Length inválido."}, status_code=400)
-        if size > _MAX_BODY_BYTES:
+        if size > limit:
+            limit_str = f"{limit // (1024 * 1024)} MB" if is_upload else f"{limit // 1024} KB"
             return JSONResponse(
-                {"detail": f"Payload excede o limite de {_MAX_BODY_BYTES // 1024} KB."},
+                {"detail": f"Payload excede o limite de {limit_str}."},
                 status_code=413,
             )
     return await call_next(request)

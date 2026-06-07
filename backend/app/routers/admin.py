@@ -19,7 +19,9 @@ from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import (
-    get_db, AuditLog, Usuario, Sessao,
+    get_db, AuditLog, Usuario, Sessao, VersaoDocx,
+    PesquisaSalva, Revisao, RevisaoFonte, RevisaoFonteChunk,
+    RevisaoDecisao, RevisaoMatrizItem, RevisaoDocumento, Notificacao,
     QUOTA_MENSAL, TOKENS_LIMITE,
     PLANO_FREE, PLANO_STARTER, PLANO_PRO, PLANO_INSTITUCIONAL,
 )
@@ -280,13 +282,70 @@ async def deletar_usuario(
         raise HTTPException(400, "Você não pode excluir sua própria conta pelo painel admin.")
 
     user = await _get_usuario_ou_404(user_id, db)
+    email_log = user.email  # captura antes de deletar
 
-    # Exclui sessões primeiro (FK)
+    # ── 1. Coletar external_ids das sessões (necessário para VersaoDocx) ───────
+    ext_ids_res = await db.execute(
+        select(Sessao.external_id).where(Sessao.user_id == user_id)
+    )
+    ext_ids = [r for (r,) in ext_ids_res]
+
+    # ── 2. Excluir na ordem: filhos → pais (respeita FK do Postgres) ───────────
+    # 2a. VersaoDocx → sessoes (FK: sessao_external_id)
+    if ext_ids:
+        await db.execute(
+            delete(VersaoDocx).where(VersaoDocx.sessao_external_id.in_(ext_ids))
+        )
+
+    # 2b. Sessoes → usuarios
     await db.execute(delete(Sessao).where(Sessao.user_id == user_id))
+
+    # 2c. Revisão e sua cadeia filha
+    revisoes_res = await db.execute(
+        select(Revisao.id).where(Revisao.user_id == user_id)
+    )
+    revisao_ids = [r for (r,) in revisoes_res]
+
+    if revisao_ids:
+        # Coletar fontes para excluir chunks
+        fontes_res = await db.execute(
+            select(RevisaoFonte.id).where(RevisaoFonte.revisao_id.in_(revisao_ids))
+        )
+        fonte_ids = [r for (r,) in fontes_res]
+
+        if fonte_ids:
+            await db.execute(
+                delete(RevisaoFonteChunk).where(RevisaoFonteChunk.fonte_id.in_(fonte_ids))
+            )
+            await db.execute(
+                delete(RevisaoDecisao).where(RevisaoDecisao.fonte_id.in_(fonte_ids))
+            )
+
+        await db.execute(
+            delete(RevisaoMatrizItem).where(RevisaoMatrizItem.revisao_id.in_(revisao_ids))
+        )
+        await db.execute(
+            delete(RevisaoDocumento).where(RevisaoDocumento.revisao_id.in_(revisao_ids))
+        )
+        await db.execute(
+            delete(RevisaoFonte).where(RevisaoFonte.revisao_id.in_(revisao_ids))
+        )
+        await db.execute(
+            delete(Revisao).where(Revisao.user_id == user_id)
+        )
+
+    # 2d. Demais filhos diretos de Usuario
+    await db.execute(delete(PesquisaSalva).where(PesquisaSalva.user_id == user_id))
+    await db.execute(delete(Notificacao).where(Notificacao.user_id == user_id))
+
+    # 2e. Por último, o próprio usuário
     await db.delete(user)
     await db.commit()
 
-    logger.warning("ADMIN DELETE user=%s (%s) by admin=%s", user_id, user.email, admin.id)
+    logger.warning(
+        "ADMIN DELETE user=%s (%s) by admin=%s | sessoes=%d revisoes=%d",
+        user_id, email_log, admin.id, len(ext_ids), len(revisao_ids),
+    )
     return {"ok": True, "excluido": user_id}
 
 
@@ -331,6 +390,10 @@ async def deletar_sessao(
     if not sessao:
         raise HTTPException(404, "Sessão não encontrada.")
 
+    # Excluir VersaoDocx filhas antes da sessão (FK: sessao_external_id)
+    await db.execute(
+        delete(VersaoDocx).where(VersaoDocx.sessao_external_id == sessao.external_id)
+    )
     await db.delete(sessao)
     await db.commit()
     logger.warning("ADMIN DELETE session=%s by admin=%s", sessao_id, admin.id)
