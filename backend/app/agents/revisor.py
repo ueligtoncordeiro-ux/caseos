@@ -94,7 +94,7 @@ Avalie cada item CARE e identifique flags para revisão humana.
 
 JSON:
 {{
-  "care_score": 0,
+  "care_score": <inteiro: quantidade de itens CARE satisfeitos, de 0 a {n_total}>,
   "care_itens_atendidos": ["care_1","care_2"],
   "care_itens_faltantes": ["care_12"],
   "flags": ["Descrição do que o autor precisa verificar ou completar"],
@@ -121,6 +121,7 @@ async def _avaliar_care(artigo: ArtigoGerado, cko: CKO) -> RelatorioGerado:
         conc=_resumo(artigo.conclusao),
         nrefs=len(artigo.referencias),
         care=care_txt,
+        n_total=len(_CARE_ITENS),
         consentimento="Sim" if cko.editorial.consentimento else "Não declarado",
         perspectiva="Sim" if cko.perspectiva_paciente else "Não",
     )

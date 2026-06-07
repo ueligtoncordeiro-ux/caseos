@@ -31,7 +31,7 @@ from app.models.schemas import (
     RevisaoRascunhoRequest,
     RevisaoUpdateRequest,
 )
-from app.services.auth import get_verified_user
+from app.services.auth import get_verified_user, check_token_quota, debitar_tokens
 from app.services.llm_router import (
     Complexidade,
     chamar,
@@ -805,7 +805,7 @@ async def perguntar_ao_corpus(
     revisao_id: str,
     body: RevisaoCorpusPerguntaRequest,
     db: AsyncSession = Depends(get_db),
-    user: Usuario = Depends(get_verified_user),
+    user: Usuario = Depends(check_token_quota),   # verifica limite de tokens antes da chamada LLM
 ):
     revisao = await _get_revisao_ou_404(revisao_id, user.id, db)
     chunks = await _selecionar_chunks_corpus(revisao_id, body.pergunta, body.max_chunks, db)
@@ -831,8 +831,14 @@ async def perguntar_ao_corpus(
     except Exception as exc:
         raise HTTPException(status_code=503, detail=mensagem_usuario_erro(exc))
 
-    revisao.tokens_usados = (revisao.tokens_usados or 0) + obter_tokens_usados()
+    tokens_gastos = obter_tokens_usados()
+    revisao.tokens_usados = (revisao.tokens_usados or 0) + tokens_gastos
     await db.commit()
+
+    # Debitar do saldo mensal do usuário (não bloqueia — falha silenciosa)
+    if tokens_gastos > 0:
+        import asyncio as _asyncio
+        _asyncio.create_task(debitar_tokens(str(user.id), tokens_gastos))
 
     return {
         "revisao_id": revisao_id,
@@ -848,7 +854,7 @@ async def gerar_rascunho_revisao(
     revisao_id: str,
     body: RevisaoRascunhoRequest,
     db: AsyncSession = Depends(get_db),
-    user: Usuario = Depends(get_verified_user),
+    user: Usuario = Depends(check_token_quota),   # verifica limite de tokens antes da chamada LLM
 ):
     revisao = await _get_revisao_ou_404(revisao_id, user.id, db)
     consulta = " ".join(
@@ -879,8 +885,14 @@ async def gerar_rascunho_revisao(
     except Exception as exc:
         raise HTTPException(status_code=503, detail=mensagem_usuario_erro(exc))
 
-    revisao.tokens_usados = (revisao.tokens_usados or 0) + obter_tokens_usados()
+    tokens_gastos = obter_tokens_usados()
+    revisao.tokens_usados = (revisao.tokens_usados or 0) + tokens_gastos
     await db.commit()
+
+    # Debitar do saldo mensal do usuário (não bloqueia — falha silenciosa)
+    if tokens_gastos > 0:
+        import asyncio as _asyncio
+        _asyncio.create_task(debitar_tokens(str(user.id), tokens_gastos))
 
     return {
         "revisao_id": revisao_id,

@@ -3,6 +3,7 @@ Serviço de autenticação.
 JWT (access + refresh + verify + reset), bcrypt, dependências FastAPI.
 """
 import asyncio
+import weakref
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -20,20 +21,24 @@ from app.models.database import get_db, Usuario, QUOTA_MENSAL, TOKENS_LIMITE, PL
 # Serializa verificações do MESMO usuário. Single-instance (Render) → asyncio.Lock
 # é suficiente. Em multi-instância trocar por distributed lock (Redis Redlock).
 #
-# Por que não SELECT FOR UPDATE?
-#   • SQLite (dev) não suporta FOR UPDATE.
-#   • asyncio é single-threaded: dict e Lock são seguros sem mutex adicional,
-#     pois nenhuma outra coroutine pode interromper código sem `await`.
-#   • O lock fica preso apenas por 1 query + 1 commit (~5-20 ms) → sem impacto de performance.
-#   • Impossível deadlock: cada operação adquire no máximo 1 lock.
-_quota_locks: dict[str, asyncio.Lock] = {}
+# WeakValueDictionary em vez de dict normal:
+#   • O Lock é GC'd automaticamente quando nenhuma coroutine o está segurando.
+#   • Elimina o vazamento de memória proporcional ao número de usuários cadastrados.
+#   • Seguro com asyncio (single-threaded): a linha `lock = _quota_locks.get()`
+#     seguida de `_quota_locks[user_id] = lock` é atômica (sem await entre elas),
+#     então dois requests concorrentes do mesmo usuário sempre obtêm o MESMO lock.
+_quota_locks: weakref.WeakValueDictionary[str, asyncio.Lock] = (
+    weakref.WeakValueDictionary()
+)
 
 
 def _get_quota_lock(user_id: str) -> asyncio.Lock:
     """Retorna (criando se necessário) o Lock desta conta. Thread-safe por design do asyncio."""
-    if user_id not in _quota_locks:
-        _quota_locks[user_id] = asyncio.Lock()
-    return _quota_locks[user_id]
+    lock = _quota_locks.get(user_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _quota_locks[user_id] = lock
+    return lock
 
 # ── Hashing ───────────────────────────────────────────────────────────────────
 
@@ -226,6 +231,35 @@ async def debitar_tokens(user_id: str, tokens: int) -> None:
                 user.mes_referencia = mes_atual
             user.tokens_mes += tokens
             await db.commit()
+
+
+async def check_token_quota(
+    user: Usuario = Depends(get_verified_user),
+    db: AsyncSession = Depends(get_db),
+) -> Usuario:
+    """
+    Verifica apenas o limite mensal de tokens — sem consumir quota de artigos.
+    Usar em endpoints do Review Studio (perguntar_ao_corpus, gerar_rascunho) que
+    fazem chamadas LLM mas NÃO devem decrementar artigos_mes.
+    """
+    await db.refresh(user)
+    mes_atual = datetime.utcnow().strftime("%Y-%m")
+    if user.mes_referencia != mes_atual:
+        user.tokens_mes = 0
+        user.mes_referencia = mes_atual
+        await db.commit()
+
+    limit_tokens = TOKENS_LIMITE.get(user.plano, 50_000)
+    if user.tokens_mes >= limit_tokens:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                f"Limite de tokens do plano {user.plano.upper()} atingido "
+                f"({limit_tokens:,} tokens/mês). "
+                "Acesse /precos para fazer upgrade."
+            ),
+        )
+    return user
 
 
 async def get_user_from_refresh(

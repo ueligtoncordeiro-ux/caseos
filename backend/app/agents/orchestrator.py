@@ -219,9 +219,12 @@ async def executar_pipeline(
                       "Tente novamente ou entre em contato com o suporte.",
                 link="dashboard.html",
             ))
-        raise
-    finally:
+
+        # Limpa a fila APENAS no caminho de erro para descartar mensagens parciais/obsoletas.
+        # No caminho de sucesso a fila é mantida viva para que clientes que conectem
+        # APÓS o pipeline terminar ainda recebam o evento "concluido" (race condition fix).
         manager.clear_queue(sessao_id)
+        raise
 
 
 async def executar_pipeline_demo(sessao_id: str, cko: CKO):
@@ -278,5 +281,4 @@ async def executar_pipeline_demo(sessao_id: str, cko: CKO):
             "mensagem": f"Erro no pipeline de demonstração: {str(exc)[:300]}",
         })
         logger.exception("Erro no pipeline demo sessao=%s", sessao_id)
-    finally:
-        manager.clear_queue(sessao_id)
+        manager.clear_queue(sessao_id)   # limpa fila apenas no erro (race condition fix)
