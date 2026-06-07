@@ -1,12 +1,13 @@
 """
-Agente Bibliográfico — pipeline 6 fontes:
+Agente Bibliográfico — pipeline 7 fontes:
 
   1. LLM constrói 5 queries otimizadas
   2. PubMed      → base primária (35M artigos biomédicos)
   3. Semantic S2 → enriquece PMIDs + busca complementar (200M artigos)
   4. OpenAlex    → busca complementar (250M artigos, melhor cobertura BR)
   5. Crossref    → busca direta + valida DOIs (anti-alucinação, só remove 404)
-  6. Unpaywall   → adiciona PDF open access ao pool
+  6. Europe PMC  → cobertura adicional OA + enriquece PMCIDs sem URL
+  7. Unpaywall   → adiciona PDF open access ao pool
 
 Pool final: deduplicado por DOI/PMID, ordenado por citações, máx 40 artigos.
 """
@@ -15,6 +16,7 @@ from app.utils.pubmed import pesquisar_pubmed
 from app.utils.semantic_scholar import executar_busca as s2_busca
 from app.utils.openalex import executar_busca as oa_busca
 from app.utils.crossref import validar_lote as crossref_validar, buscar as crossref_buscar
+from app.utils.europe_pmc import executar_busca as epmc_busca, enriquecer_com_pmc
 from app.utils.unpaywall import enriquecer_pool as unpaywall_enriquecer
 from app.services.llm_router import chamar, extrair_json, Complexidade
 
@@ -130,10 +132,16 @@ async def executar(cko: CKO) -> list[dict]:
     except Exception:
         artigos_crossref = []
 
-    # ── Mesclar todas as fontes ───────────────────────────────────────────────
-    pool = _deduplicar(artigos_pubmed + artigos_s2 + artigos_oa + artigos_crossref)
+    # ── 5. Europe PMC — cobertura OA adicional ───────────────────────────────
+    try:
+        artigos_epmc = await epmc_busca(query_principal, diag, ano_min=2010)
+    except Exception:
+        artigos_epmc = []
 
-    # ── 5. Crossref — validar DOIs (anti-alucinação): remove APENAS 404 ──────
+    # ── Mesclar todas as fontes ───────────────────────────────────────────────
+    pool = _deduplicar(artigos_pubmed + artigos_s2 + artigos_oa + artigos_crossref + artigos_epmc)
+
+    # ── 6. Crossref — validar DOIs (anti-alucinação): remove APENAS 404 ──────
     dois = [a["doi"] for a in pool if a.get("doi")]
     if dois:
         validacoes = await crossref_validar(dois)
@@ -143,7 +151,10 @@ async def executar(cko: CKO) -> list[dict]:
             if not art.get("doi") or validacoes.get(art["doi"], {}).get("valido", True)
         ]
 
-    # ── 6. Unpaywall — adicionar PDF open access ──────────────────────────────
+    # ── 7a. Europe PMC — enriquecer PMCIDs sem open_access_url ───────────────
+    pool = await enriquecer_com_pmc(pool)
+
+    # ── 7b. Unpaywall — adicionar PDF open access ─────────────────────────────
     pool = await unpaywall_enriquecer(pool)
 
     # ── Ordenar e numerar (máx 40 para dar margem ao redator escolher ≥15) ────

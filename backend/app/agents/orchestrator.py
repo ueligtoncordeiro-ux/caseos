@@ -54,19 +54,18 @@ async def executar_pipeline(
         await manager.send(sessao_id, {"tipo": "etapa", "etapa": 2, "nome": "Anti-duplicação", "agente": "Agente de originalidade", "detalhe": "Verificando originalidade do caso..."})
         await asyncio.sleep(1.0)
 
-        # ── Etapa 3: Pesquisa bibliográfica (5 fontes) ──────────────────────
+        # ── Etapa 3: Pesquisa bibliográfica (7 fontes) ──────────────────────
         _etapa_atual = "bibliografico"
-        await manager.send(sessao_id, {"tipo": "etapa", "etapa": 3, "nome": "Pesquisa bibliográfica", "agente": "PubMed · OpenAlex · Crossref", "detalhe": "Buscando literatura relevante..."})
+        await manager.send(sessao_id, {"tipo": "etapa", "etapa": 3, "nome": "Pesquisa bibliográfica", "agente": "PubMed · OpenAlex · Crossref · Europe PMC", "detalhe": "Buscando literatura relevante..."})
         await _atualizar_sessao(sessao_id, status="buscando_referencias")
 
-        # Timeout de 120 s — 5 fontes externas com até 30 s por request cada.
-        # Se todas travarem, o pipeline falha com erro explícito em vez de esperar indefinidamente.
-        artigos = await asyncio.wait_for(bibliografico.executar(cko), timeout=120.0)
+        # Timeout de 150 s — 7 fontes externas (+ Europe PMC) com até 30 s por request.
+        artigos = await asyncio.wait_for(bibliografico.executar(cko), timeout=150.0)
 
         await manager.send(sessao_id, {
             "tipo": "progresso",
             "etapa": 3,
-            "detalhe": f"{len(artigos)} referências encontradas (PubMed · S2 · OpenAlex · Crossref · Unpaywall)",
+            "detalhe": f"{len(artigos)} referências encontradas (PubMed · S2 · OpenAlex · Crossref · Europe PMC · Unpaywall)",
         })
 
         # ── Etapa 4: Redação ────────────────────────────────────────────────

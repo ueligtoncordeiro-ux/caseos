@@ -13,6 +13,7 @@ _PRIORIDADE_FONTE = {
     "Semantic Scholar": 1,
     "OpenAlex": 2,
     "Crossref": 3,
+    "Europe PMC": 4,
 }
 
 
@@ -110,6 +111,7 @@ async def buscar_literatura(
     from app.utils.semantic_scholar import buscar as buscar_s2
     from app.utils.openalex import buscar as buscar_openalex
     from app.utils.crossref import buscar as buscar_crossref
+    from app.utils.europe_pmc import buscar as buscar_epmc
 
     fontes_norm = {f.lower() for f in (fontes or ["pubmed", "semantic", "openalex"])}
     query_busca = query.strip()
@@ -125,6 +127,8 @@ async def buscar_literatura(
         tarefas.append(buscar_openalex(query_busca, max_results=max_results))
     if "crossref" in fontes_norm:
         tarefas.append(buscar_crossref(query_busca, max_results=max_results))
+    if "europepmc" in fontes_norm or "europe_pmc" in fontes_norm or "europe pmc" in fontes_norm:
+        tarefas.append(buscar_epmc(query_busca, max_results=max_results))
 
     if not tarefas:
         raise ValueError("Selecione pelo menos uma base de busca.")

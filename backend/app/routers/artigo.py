@@ -951,10 +951,11 @@ async def buscar_biblioteca(
     request: Request,
     q: str = Query(..., min_length=3, max_length=300),
     max: int = Query(default=12, ge=1, le=30),
-    fontes: list[str] = Query(default=["pubmed", "semantic", "openalex", "crossref"]),
+    fontes: list[str] = Query(default=["pubmed", "semantic", "openalex", "crossref", "europepmc"]),
     user: Usuario = Depends(get_verified_user),
 ):
-    """Busca literatura em múltiplas bases e retorna resultados deduplicados."""
+    """Busca literatura em múltiplas bases e retorna resultados deduplicados.
+    Fontes válidas: pubmed, semantic, openalex, crossref, europepmc."""
     _check_busca_rate_limit(request)
     try:
         return await buscar_literatura(q, max_results=max, fontes=fontes)
