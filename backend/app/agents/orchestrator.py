@@ -83,8 +83,12 @@ async def executar_pipeline(
         artigo_revisado, relatorio = await revisor.executar(cko, artigo)
 
         # Validação MeSH das palavras-chave (não bloqueia o pipeline se falhar)
+        # Timeout de 30 s — MeSH API pode ser lenta; não deve paralisar o pipeline.
         try:
-            mesh_resultado = await validar_e_corrigir_palavras_chave(artigo_revisado.palavras_chave)
+            mesh_resultado = await asyncio.wait_for(
+                validar_e_corrigir_palavras_chave(artigo_revisado.palavras_chave),
+                timeout=30.0,
+            )
             # Substituir palavras-chave pelas versões MeSH validadas
             if mesh_resultado["validadas"]:
                 artigo_revisado.palavras_chave = (

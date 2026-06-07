@@ -345,13 +345,22 @@ def _add_imagens(doc: Document, cko: CKO, sessao_id: str):
             )
 
 
+_MAX_DOCX_BYTES = 25 * 1024 * 1024  # 25 MB — artigos médicos típicos ficam < 2 MB
+
+
 async def gerar_docx_bytes(artigo: ArtigoGerado, cko: CKO, sessao_id: str) -> bytes:
     """Gera o DOCX em memória e retorna os bytes. Não depende de filesystem."""
     import io
     loop = asyncio.get_event_loop()
     buf = io.BytesIO()
     await loop.run_in_executor(None, _build_docx_to_buffer, buf, artigo, cko, sessao_id)
-    return buf.getvalue()
+    data = buf.getvalue()
+    if len(data) > _MAX_DOCX_BYTES:
+        raise ValueError(
+            f"DOCX gerado excede o limite de {_MAX_DOCX_BYTES // (1024 * 1024)} MB "
+            f"({len(data) // (1024 * 1024)} MB). Verifique o tamanho das imagens anexadas."
+        )
+    return data
 
 
 # Mantido por compatibilidade — internamente usa gerar_docx_bytes
