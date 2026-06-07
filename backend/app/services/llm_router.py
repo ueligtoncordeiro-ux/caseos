@@ -238,7 +238,11 @@ async def chamar(
     """
     Executa a chamada LLM seguindo a hierarquia de complexidade.
     Providers sem chave configurada são ignorados automaticamente.
-    Gemini é o fallback universal — sempre incluído se tiver chave.
+
+    Hierarquia atual (sem Gemini ativo):
+      ALTA  → Claude Sonnet 4.6 › GPT-4o › Gemini
+      MÉDIA → GPT-4o mini › Claude Haiku › Gemini
+      BAIXA → GPT-4o mini › Claude Haiku › Gemini
     """
     # Cada item: (nome_display, provider_key, callable)
     if complexidade == Complexidade.ALTA:
@@ -252,19 +256,21 @@ async def chamar(
         ]
     elif complexidade == Complexidade.MEDIA:
         candidatos = [
-            ("GPT-4o mini",       "openai",
+            ("GPT-4o mini",      "openai",
              lambda: _chamar_openai(system, user, max_tokens, json_mode, "gpt-4o-mini")),
-            ("Gemini",            "gemini",
-             lambda: _chamar_gemini(system, user, max_tokens)),
-            ("Claude Haiku 4.5",  "claude",
+            ("Claude Haiku 4.5", "claude",
              lambda: _chamar_claude(system, user, min(max_tokens, 4096))),
-        ]
-    else:  # BAIXA — chatbox e assist: Gemini primeiro (barato), Claude Haiku como fallback.
-        candidatos = [
             ("Gemini",           "gemini",
              lambda: _chamar_gemini(system, user, max_tokens)),
+        ]
+    else:  # BAIXA — chatbox: GPT-4o mini primário, Claude Haiku fallback, Gemini se disponível.
+        candidatos = [
+            ("GPT-4o mini",      "openai",
+             lambda: _chamar_openai(system, user, max_tokens, json_mode, "gpt-4o-mini")),
             ("Claude Haiku 3.5", "claude",
              lambda: _chamar_claude(system, user, min(max_tokens, 2048))),
+            ("Gemini",           "gemini",
+             lambda: _chamar_gemini(system, user, max_tokens)),
         ]
 
     # Filtra apenas providers com chave disponível
@@ -274,7 +280,7 @@ async def chamar(
     if not cadeia:
         raise RuntimeError(
             "Nenhum provider LLM disponível. "
-            "Configure pelo menos GEMINI_API_KEY no .env."
+            "Configure ANTHROPIC_API_KEY ou OPENAI_API_KEY no .env / Render."
         )
 
     # Timeout por complexidade: artigo completo pode levar 3-4 min no Claude
