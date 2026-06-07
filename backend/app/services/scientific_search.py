@@ -129,7 +129,16 @@ async def buscar_literatura(
     if not tarefas:
         raise ValueError("Selecione pelo menos uma base de busca.")
 
-    resultados = await asyncio.gather(*tarefas, return_exceptions=True)
+    # Timeout global de 45 s — cada fonte tem seu próprio timeout por request
+    # (15-30 s), mas múltiplas tentativas sequenciais dentro de uma fonte
+    # poderiam exceder isso sem um cap global.
+    try:
+        resultados = await asyncio.wait_for(
+            asyncio.gather(*tarefas, return_exceptions=True),
+            timeout=45.0,
+        )
+    except asyncio.TimeoutError:
+        resultados = [TimeoutError(f"Busca em {len(tarefas)} fonte(s) excedeu 45 s.")]
     artigos: list[dict[str, Any]] = []
     erros: list[str] = []
     for item in resultados:

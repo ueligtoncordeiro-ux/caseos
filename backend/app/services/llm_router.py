@@ -117,18 +117,30 @@ def _tem_chave(provider: str) -> bool:
     )
 
 
-# ── Clientes ──────────────────────────────────────────────────────────────────
+# ── Clientes (singletons lazy — reutilizam connection pool entre chamadas) ─────
+# Criados uma única vez por processo: evita overhead de handshake TLS e
+# overhead de criação de httpx.AsyncClient a cada chamada LLM.
+
+_claude_client: anthropic.AsyncAnthropic | None = None
+_openai_client: openai.AsyncOpenAI | None = None
+
 
 def _claude() -> anthropic.AsyncAnthropic:
+    global _claude_client
     if not _tem_chave("claude"):
         raise RuntimeError("ANTHROPIC_API_KEY não configurada.")
-    return anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    if _claude_client is None:
+        _claude_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    return _claude_client
 
 
 def _openai_async() -> openai.AsyncOpenAI:
+    global _openai_client
     if not _tem_chave("openai"):
         raise RuntimeError("OPENAI_API_KEY não configurada.")
-    return openai.AsyncOpenAI(api_key=settings.openai_api_key)
+    if _openai_client is None:
+        _openai_client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
+    return _openai_client
 
 
 def _gemini_model(model: str = "gemini-2.5-flash") -> genai.GenerativeModel:

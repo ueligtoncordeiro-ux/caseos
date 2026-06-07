@@ -59,7 +59,9 @@ async def executar_pipeline(
         await manager.send(sessao_id, {"tipo": "etapa", "etapa": 3, "nome": "Pesquisa bibliográfica", "agente": "PubMed · OpenAlex · Crossref", "detalhe": "Buscando literatura relevante..."})
         await _atualizar_sessao(sessao_id, status="buscando_referencias")
 
-        artigos = await bibliografico.executar(cko)
+        # Timeout de 120 s — 5 fontes externas com até 30 s por request cada.
+        # Se todas travarem, o pipeline falha com erro explícito em vez de esperar indefinidamente.
+        artigos = await asyncio.wait_for(bibliografico.executar(cko), timeout=120.0)
 
         await manager.send(sessao_id, {
             "tipo": "progresso",
