@@ -393,6 +393,31 @@ async def stats(
     }
 
 
+# ── Importar do Prontuário ────────────────────────────────────────────────────
+
+class ImportarProntuarioRequest(BaseModel):
+    texto: str = Field(..., min_length=50, max_length=8000)
+
+
+@router.post("/importar-prontuario")
+async def importar_prontuario(
+    body: ImportarProntuarioRequest,
+    user: Usuario = Depends(get_verified_user),
+):
+    """
+    Extrai campos CKO de texto clínico livre (notas de prontuário, resumo de alta).
+    Retorna dict parcial pronto para pré-preencher o formulário.
+    GPT-4o mini (MEDIA) — ~$0.001 por chamada.
+    """
+    from app.services.prontuario_parser import extrair
+    from app.services.llm_router import mensagem_usuario_erro
+    try:
+        dados = await extrair(body.texto)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=mensagem_usuario_erro(exc)) from exc
+    return {"dados": dados, "campos_extraidos": len([k for k in dados if not k.startswith("_")])}
+
+
 # ── Peer Review Mode ─────────────────────────────────────────────────────────
 
 @router.post("/{sessao_id}/peer-review")

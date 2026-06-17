@@ -922,6 +922,70 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 /* ── Pixel icon system ── */
 .p-step-icon svg { image-rendering: pixelated; image-rendering: crisp-edges; }
 
+/* ══ Importar do Prontuário ════════════════════════════════════════════════ */
+.import-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin: 16px 20px 0; padding: 14px 18px;
+  background: linear-gradient(135deg, rgba(200,255,0,0.12), rgba(200,255,0,0.04));
+  border: 1.5px solid rgba(200,255,0,0.4); border-radius: 12px;
+}
+.import-banner-text { font-size: 13px; color: var(--t2); line-height: 1.5; }
+.import-banner-text strong { color: var(--t1); display: block; margin-bottom: 2px; }
+.import-banner-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px; background: var(--obsidian); color: #fff;
+  border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  transition: opacity .15s;
+}
+.import-banner-btn:hover { opacity: .88; }
+/* Modal prontuário */
+.import-modal-overlay {
+  position: fixed; inset: 0; z-index: 1200;
+  background: rgba(10,10,11,0.6); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+}
+.import-modal-overlay.open { display: flex; }
+.import-modal {
+  width: 580px; max-width: 95vw; max-height: 88vh;
+  background: var(--card-bg); border-radius: 16px;
+  box-shadow: 0 16px 60px rgba(0,0,0,0.2);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.import-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px 14px; border-bottom: 1px solid var(--border);
+}
+.import-modal-title { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: var(--t1); }
+.import-modal-close { background: none; border: none; color: var(--t3); font-size: 18px; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+.import-modal-close:hover { color: var(--t1); }
+.import-modal-body { padding: 20px 22px; flex: 1; overflow-y: auto; }
+.import-modal-body label { display: block; font-size: 13px; font-weight: 600; color: var(--t2); margin-bottom: 8px; }
+.import-modal-body small { display: block; font-size: 11.5px; color: var(--t3); margin-bottom: 10px; line-height: 1.5; }
+#importTexto {
+  width: 100%; min-height: 200px; padding: 12px; resize: vertical;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 13px; color: var(--t1); background: var(--surface);
+  line-height: 1.6; font-family: 'Inter', sans-serif;
+}
+#importTexto:focus { outline: none; border-color: var(--obsidian); }
+.import-modal-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 14px 22px; border-top: 1px solid var(--border);
+}
+.import-result-tag {
+  font-size: 12px; color: var(--success); font-weight: 600;
+  display: none; align-items: center; gap: 5px;
+}
+.import-result-tag.visible { display: flex; }
+.import-confirm-btn {
+  padding: 10px 24px; background: var(--obsidian); color: #fff;
+  border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: opacity .15s;
+}
+.import-confirm-btn:hover { opacity: .88; }
+.import-confirm-btn:disabled { opacity: .5; cursor: default; }
+
 /* ══ CARE Live Score Panel ══════════════════════════════════════════════════ */
 .care-panel {
   position: fixed; right: 20px; bottom: 24px; z-index: 1100;
@@ -1194,6 +1258,15 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 
     <!-- scrollable content -->
     <div class="content-scroll" id="contentScroll">
+
+      <!-- ══ Banner: Importar do Prontuário ══ -->
+      <div class="import-banner" id="importBanner">
+        <div class="import-banner-text">
+          <strong>📋 Tem um prontuário ou resumo de alta?</strong>
+          Cole o texto e a IA preenche o formulário automaticamente.
+        </div>
+        <button class="import-banner-btn" onclick="abrirImportModal()">✦ Importar do Prontuário</button>
+      </div>
 
       <!-- ══ STEP 1 — Identificação do Paciente ══ -->
       <div class="step-panel active" id="step-1">
@@ -2271,6 +2344,28 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
     <!-- Botão IA -->
     <button class="care-ia-btn" id="careIaBtn" onclick="solicitarSugestaoIA()">🔍 Analisar com IA</button>
     <div class="care-ia-result" id="careIaResult" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ══ Modal: Importar do Prontuário ══ -->
+<div class="import-modal-overlay" id="importModalOverlay" onclick="if(event.target===this)fecharImportModal()">
+  <div class="import-modal" onclick="event.stopPropagation()">
+    <div class="import-modal-header">
+      <span class="import-modal-title">📋 Importar do Prontuário</span>
+      <button class="import-modal-close" onclick="fecharImportModal()" aria-label="Fechar">✕</button>
+    </div>
+    <div class="import-modal-body">
+      <label for="importTexto">Cole o texto clínico abaixo</label>
+      <small>Notas de evolução, resumo de alta, relato cirúrgico, história clínica — qualquer formato. A IA extrai apenas o que estiver no texto. Dados identificadores (nome, CPF) serão automaticamente anonimizados.</small>
+      <textarea id="importTexto" placeholder="Ex: Paciente do sexo masculino, 58 anos, hipertenso, com queixa de dor torácica há 3 dias. Admitido em 12/03/2025 com PA 180/100, FC 92bpm..."></textarea>
+    </div>
+    <div class="import-modal-footer">
+      <span class="import-result-tag" id="importResultTag">✓ <span id="importCamposCount">0</span> campos extraídos</span>
+      <div style="display:flex;gap:8px">
+        <button onclick="fecharImportModal()" style="padding:10px 16px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;">Cancelar</button>
+        <button class="import-confirm-btn" id="importBtn" onclick="executarImport()">✦ Extrair e preencher</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -3354,6 +3449,153 @@ function showToast(msg, type) {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') document.querySelectorAll('.assist-menu.open').forEach(function(m) { m.classList.remove('open'); });
 });
+
+/* ══ IMPORTAR DO PRONTUÁRIO ═════════════════════════════════════════════════ */
+
+function abrirImportModal() {
+  document.getElementById('importModalOverlay').classList.add('open');
+  document.getElementById('importTexto').focus();
+}
+
+function fecharImportModal() {
+  document.getElementById('importModalOverlay').classList.remove('open');
+}
+
+function _setVal(id, valor) {
+  var el = document.getElementById(id);
+  if (!el || valor === undefined || valor === null || valor === '') return false;
+  if (el.type === 'checkbox') { el.checked = Boolean(valor); }
+  else { el.value = String(valor); }
+  // Dispara evento para o CARE score detectar a mudança
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+  return true;
+}
+
+function _preencherFormulario(dados) {
+  var count = 0;
+  function s(id, campo) { if (_setVal(id, dados[campo])) count++; }
+
+  // Etapa 1 — Identificação
+  if (dados.idade) {
+    var idadeNum = parseInt(dados.idade);
+    if (!isNaN(idadeNum)) { _setVal('idade', idadeNum); count++; }
+  }
+  s('idadeUnidade',    'idade_unidade');
+  if (dados.sexo) {
+    var sexoEl = document.getElementById('sexo');
+    if (sexoEl) { sexoEl.value = dados.sexo; count++; }
+  }
+  s('procedencia',    'procedencia');
+  s('outrasInfoPaciente', 'outras_infos');
+
+  // Etapa 2 — História
+  s('queixaPrincipal', 'queixa_principal');
+  s('duracaoSintomas',  'duracao_sintomas');
+  s('hda',              'hda');
+  s('historicoPrevio',  'historico_previo');
+  s('historiaFamiliar', 'historia_familiar');
+
+  // Etapa 3 — Intervenções anteriores
+  s('tratamentosAnteriores', 'tratamentos');
+  s('medicamentos',           'medicamentos');
+  s('alergias',               'alergias');
+
+  // Etapa 4 — Achados
+  s('sinaisVitais',       'sinais_vitais');
+  s('exameFisicoGeral',   'exame_geral');
+  s('achadosEspecificos', 'achados_especificos');
+
+  // Etapa 5 — Timeline
+  if (Array.isArray(dados.eventos_timeline) && dados.eventos_timeline.length > 0) {
+    timeline = dados.eventos_timeline.map(function(ev, i) {
+      return { id: Date.now() + i, data: ev.data || '', evento: ev.evento || '', tipo: ev.tipo || '' };
+    });
+    renderTimeline();
+    document.dispatchEvent(new Event('timelineChanged'));
+    count++;
+  }
+
+  // Etapa 6 — Diagnóstico
+  s('examesLab',              'exames_lab');
+  s('examesImagem',           'exames_imagem');
+  s('diagnosticoDefinitivo',  'diagnostico_definitivo');
+  s('diferenciais',           'diferenciais');
+  s('desafiosDiagnosticos',   'desafios');
+  s('prognostico',            'prognostico');
+
+  // Etapa 7 — Intervenção
+  s('tipoIntervencao',  'intervencao_tipo');
+  s('descIntervencao',  'intervencao_descricao');
+  if (dados.houve_mudanca !== undefined) {
+    _setVal('houveMudanca', dados.houve_mudanca); count++;
+  }
+  s('descMudanca', 'desc_mudanca');
+
+  // Etapa 8 — Desfechos
+  s('desfechoClinco',    'desfecho_clinico');
+  s('examesSeguimento',  'exames_seguimento');
+  s('adesao',            'adesao');
+  s('eventosAdversos',   'eventos_adversos');
+
+  // Etapa 9 — Perspectiva
+  s('perspectivaPaciente', 'perspectiva_paciente');
+
+  return count;
+}
+
+async function executarImport() {
+  var token = getToken();
+  if (!token) { showToast('Faça login para usar esta função.', 'error'); return; }
+
+  var texto = document.getElementById('importTexto').value.trim();
+  if (texto.length < 50) {
+    showToast('Cole pelo menos 50 caracteres de texto clínico.', 'error');
+    return;
+  }
+
+  var btn = document.getElementById('importBtn');
+  var tag = document.getElementById('importResultTag');
+  btn.disabled = true;
+  btn.textContent = '⏳ Extraindo…';
+  tag.classList.remove('visible');
+
+  try {
+    var res = await fetch(API + '/artigo/importar-prontuario', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ texto: texto }),
+    });
+    if (!res.ok) {
+      var err = await res.json().catch(function() { return { detail: 'Erro ' + res.status }; });
+      throw new Error(err.detail || 'Erro ' + res.status);
+    }
+    var data = await res.json();
+    if (data.dados && data.dados._erro) throw new Error(data.dados._erro);
+
+    var preenchidos = _preencherFormulario(data.dados || {});
+    document.getElementById('importCamposCount').textContent = preenchidos;
+    tag.classList.add('visible');
+
+    // Atualiza CARE score imediatamente
+    atualizarCareScore();
+
+    showToast('✦ ' + preenchidos + ' campos preenchidos! Revise e ajuste conforme necessário.', 'success');
+
+    // Fecha modal após 1.5s para o usuário ver o feedback
+    setTimeout(fecharImportModal, 1500);
+
+    // Oculta o banner após importação bem-sucedida
+    var banner = document.getElementById('importBanner');
+    if (banner) banner.style.display = 'none';
+
+  } catch (e) {
+    showToast('Erro na extração: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✦ Extrair e preencher';
+  }
+}
 
 /* ══ CARE LIVE SCORE ════════════════════════════════════════════════════════ */
 
