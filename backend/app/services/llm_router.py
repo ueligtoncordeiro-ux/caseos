@@ -2,19 +2,19 @@
 LLM Router — roteamento por complexidade com fallback em cascata.
 
 Hierarquia definida (aplicada apenas se a chave estiver configurada):
-  ALTA complexidade  → Claude Sonnet 4.6  → GPT-4o         → Gemini 2.5 Flash
-  MÉDIA complexidade → GPT-4o mini        → Gemini 2.5 Flash → Claude Haiku
-  BAIXA complexidade → Gemini 2.5 Flash   → Claude Haiku    (chatbox / assist)
+  ALTA complexidade  → Claude Sonnet 4.6  → GPT-4o       → Gemini (fallback)
+  MÉDIA complexidade → GPT-4o mini        → Claude Haiku → Gemini (fallback)
+  BAIXA complexidade → GPT-4o mini        → Claude Haiku → Gemini (fallback)
 
 Regra de disponibilidade:
   • Providers sem chave configurada são automaticamente ignorados.
-  • Gemini é o fallback universal — se for o único com chave, é sempre usado.
+  • OpenAI e Claude são os provedores primários; Gemini é fallback opcional.
   • Basta adicionar/remover chaves no .env para ativar/desativar providers.
 
-Custo estimado por artigo (com todos os providers ativos):
+Custo estimado por artigo (com OpenAI + Claude ativos):
   Claude Sonnet 4.6  ~$0.35   ← geração de artigos (ALTA)
-  GPT-4o mini        ~$0.02   ← revisão e assist (MEDIA)
-  Gemini 2.5 Flash   baixo    ← chatbox + fallback universal
+  GPT-4o mini        ~$0.02   ← revisão, chatbox, assist (MEDIA / BAIXA)
+  Gemini 2.5 Flash   opcional ← fallback se ANTHROPIC + OPENAI indisponíveis
 """
 import json
 import logging
@@ -66,13 +66,13 @@ def mensagem_usuario_erro(exc: Exception) -> str:
     texto = str(exc)
     if "429" in texto or "quota" in texto.lower() or "rate" in texto.lower():
         return (
-            "A IA está configurada, mas a cota do provedor foi atingida ou não está liberada "
-            "para a chave atual. Verifique billing/quota do Gemini no Render e tente novamente."
+            "A IA está configurada, mas a cota do provedor foi atingida. "
+            "Verifique billing/quota da OpenAI ou Anthropic no Render e tente novamente."
         )
-    if "GEMINI_API_KEY" in texto:
-        return "A chave do Gemini não está configurada no ambiente de produção."
+    if "OPENAI_API_KEY" in texto or "ANTHROPIC_API_KEY" in texto:
+        return "Chave da OpenAI ou Anthropic não configurada no ambiente de produção."
     if "Nenhum provider" in texto:
-        return "Nenhum provedor de IA está configurado no ambiente de produção."
+        return "Nenhum provedor de IA está configurado. Configure OPENAI_API_KEY ou ANTHROPIC_API_KEY no Render."
     return "Assistente indisponível no momento. Tente novamente em instantes."
 
 
@@ -251,10 +251,10 @@ async def chamar(
     Executa a chamada LLM seguindo a hierarquia de complexidade.
     Providers sem chave configurada são ignorados automaticamente.
 
-    Hierarquia atual (sem Gemini ativo):
-      ALTA  → Claude Sonnet 4.6 › GPT-4o › Gemini
-      MÉDIA → GPT-4o mini › Claude Haiku › Gemini
-      BAIXA → GPT-4o mini › Claude Haiku › Gemini
+    Hierarquia de prioridade:
+      ALTA  → Claude Sonnet 4.6 › GPT-4o      › Gemini (opt.)
+      MÉDIA → GPT-4o mini       › Claude Haiku › Gemini (opt.)
+      BAIXA → GPT-4o mini       › Claude Haiku › Gemini (opt.)
     """
     # Cada item: (nome_display, provider_key, callable)
     if complexidade == Complexidade.ALTA:
@@ -275,7 +275,7 @@ async def chamar(
             ("Gemini",           "gemini",
              lambda: _chamar_gemini(system, user, max_tokens)),
         ]
-    else:  # BAIXA — chatbox: GPT-4o mini primário, Claude Haiku fallback, Gemini se disponível.
+    else:  # BAIXA — chatbox / assist / CARE: GPT-4o mini primário, Claude Haiku fallback, Gemini opcional.
         candidatos = [
             ("GPT-4o mini",      "openai",
              lambda: _chamar_openai(system, user, max_tokens, json_mode, "gpt-4o-mini")),
