@@ -393,6 +393,42 @@ async def stats(
     }
 
 
+# ── CARE Live Score ───────────────────────────────────────────────────────────
+
+class CarePreviewRequest(BaseModel):
+    dados: dict = Field(default_factory=dict)
+
+
+class CareSugestaoRequest(BaseModel):
+    dados: dict = Field(default_factory=dict)
+    score_atual: int = Field(default=0, ge=0, le=100)
+    faltantes: list[str] = Field(default_factory=list, max_length=30)
+
+
+@router.post("/care-preview")
+async def care_preview(
+    body: CarePreviewRequest,
+    user: Usuario = Depends(get_verified_user),
+):
+    """Score CARE 2013 algorítmico em tempo real — sem LLM, < 50 ms."""
+    from app.services.care_preview import calcular
+    return calcular(body.dados)
+
+
+@router.post("/care-sugestao")
+async def care_sugestao(
+    body: CareSugestaoRequest,
+    user: Usuario = Depends(get_verified_user),
+):
+    """Sugestão de próximo passo via IA (Gemini Flash) para melhorar o score CARE."""
+    from app.services.care_preview import sugestao_ia
+    try:
+        return await sugestao_ia(body.dados, body.score_atual, body.faltantes)
+    except Exception as exc:
+        from app.services.llm_router import mensagem_usuario_erro
+        raise HTTPException(status_code=502, detail=mensagem_usuario_erro(exc)) from exc
+
+
 @router.patch("/{sessao_id}")
 async def atualizar_sessao(
     sessao_id: str,

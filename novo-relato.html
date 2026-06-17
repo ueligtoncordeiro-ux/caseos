@@ -921,6 +921,100 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
 .input-unit-row select { width: 110px; flex-shrink: 0; }
 /* ── Pixel icon system ── */
 .p-step-icon svg { image-rendering: pixelated; image-rendering: crisp-edges; }
+
+/* ══ CARE Live Score Panel ══════════════════════════════════════════════════ */
+.care-panel {
+  position: fixed; right: 20px; bottom: 24px; z-index: 1100;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+}
+.care-toggle-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 14px 9px 12px;
+  background: var(--obsidian); color: #fff;
+  border: none; border-radius: 50px; font-size: 13px; font-weight: 600;
+  cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  transition: transform .15s, box-shadow .15s;
+}
+.care-toggle-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(0,0,0,0.32); }
+.care-toggle-score {
+  font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700;
+  color: var(--acid); min-width: 32px; text-align: center;
+}
+.care-toggle-label { color: rgba(255,255,255,0.5); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
+.care-panel-body {
+  width: 284px; background: var(--card-bg);
+  border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.14); overflow: hidden; display: none;
+}
+.care-panel-body.open { display: block; }
+.care-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 16px 11px; border-bottom: 1px solid var(--border);
+}
+.care-panel-title { font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700; color: var(--t1); }
+.care-panel-close {
+  background: none; border: none; color: var(--t3); cursor: pointer;
+  font-size: 14px; padding: 2px 4px; border-radius: 4px; line-height: 1;
+}
+.care-panel-close:hover { color: var(--t1); }
+.care-gauge-wrap {
+  position: relative; display: flex; flex-direction: column;
+  align-items: center; padding: 16px 0 2px;
+}
+.care-gauge-svg { width: 130px; height: 72px; }
+.care-gauge-text {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  text-align: center; pointer-events: none;
+}
+.care-gauge-pct {
+  display: block; font-family: 'Space Grotesk', sans-serif;
+  font-size: 22px; font-weight: 700; color: var(--t1); line-height: 1;
+  transition: color .4s;
+}
+.care-gauge-label {
+  display: block; font-size: 9px; color: var(--t3);
+  letter-spacing: 0.07em; text-transform: uppercase; margin-top: 2px;
+}
+.care-score-frac {
+  text-align: center; font-size: 12px; color: var(--t2); margin-bottom: 12px;
+}
+.care-score-frac span:first-child {
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; color: var(--t1);
+}
+.care-score-total { color: var(--t3); }
+.care-steps { padding: 0 16px 12px; display: flex; flex-direction: column; gap: 5px; }
+.care-step-row { display: flex; align-items: center; gap: 8px; }
+.care-step-label {
+  font-size: 10px; color: var(--t3); width: 88px; flex-shrink: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.care-step-track {
+  flex: 1; height: 5px; background: var(--light2); border-radius: 99px; overflow: hidden;
+}
+.care-step-fill { height: 100%; border-radius: 99px; transition: width .45s ease, background .4s; }
+.care-step-count { font-size: 9px; color: var(--t3); width: 22px; text-align: right; flex-shrink: 0; }
+.care-tip {
+  margin: 0 16px 12px; padding: 10px 12px;
+  background: rgba(200,255,0,0.10); border-left: 3px solid var(--acid);
+  border-radius: 0 6px 6px 0; font-size: 12px; color: var(--t2); line-height: 1.5;
+}
+.care-ia-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: calc(100% - 32px); margin: 0 16px 14px; padding: 9px;
+  background: var(--obsidian); color: #fff; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s;
+}
+.care-ia-btn:hover { opacity: .88; }
+.care-ia-btn:disabled { opacity: .5; cursor: default; }
+.care-ia-result {
+  margin: 0 16px 14px; padding: 10px 12px;
+  background: var(--light); border-radius: 8px;
+  font-size: 12px; color: var(--t1); line-height: 1.5;
+}
+.care-ia-result strong {
+  display: block; font-size: 10px; color: var(--t3);
+  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;
+}
 </style>
 </head>
 <body>
@@ -2138,6 +2232,48 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
   </div>
 </div>
 
+<!-- ══ CARE Live Score Panel ══ -->
+<div id="careLivePanel" class="care-panel">
+  <button id="carePanelToggle" class="care-toggle-btn" onclick="toggleCarePanel()" aria-label="CARE Live Score">
+    <span style="font-size:15px">📊</span>
+    <span class="care-toggle-score" id="careTogglePct">—</span>
+    <span class="care-toggle-label">CARE</span>
+  </button>
+  <div class="care-panel-body" id="carePanelBody">
+    <div class="care-panel-header">
+      <span class="care-panel-title">📊 CARE Live Score</span>
+      <button class="care-panel-close" onclick="toggleCarePanel()" aria-label="Fechar">✕</button>
+    </div>
+    <!-- Gauge semicircular -->
+    <div class="care-gauge-wrap">
+      <svg viewBox="0 0 100 60" class="care-gauge-svg" aria-hidden="true">
+        <!-- trilha cinza -->
+        <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="#E9E9E7" stroke-width="8" stroke-linecap="round"/>
+        <!-- arco colorido — stroke-dasharray=comprimento arco (π×40≈125.66) -->
+        <path id="careGaugeArc"
+              d="M 10 55 A 40 40 0 0 1 90 55"
+              fill="none" stroke="#E9E9E7" stroke-width="8" stroke-linecap="round"
+              stroke-dasharray="125.66" stroke-dashoffset="125.66"
+              style="transition:stroke-dashoffset .55s ease,stroke .4s;"/>
+      </svg>
+      <div class="care-gauge-text">
+        <span class="care-gauge-pct" id="careGaugePct">0%</span>
+        <span class="care-gauge-label">CARE 2013</span>
+      </div>
+    </div>
+    <div class="care-score-frac">
+      <span id="careScoreNum">0</span><span class="care-score-total">/26 itens atendidos</span>
+    </div>
+    <!-- Mini barras por etapa -->
+    <div class="care-steps" id="careStepBars"></div>
+    <!-- Dica rápida -->
+    <div class="care-tip" id="careTip">Preencha os campos para ver o CARE score em tempo real.</div>
+    <!-- Botão IA -->
+    <button class="care-ia-btn" id="careIaBtn" onclick="solicitarSugestaoIA()">🔍 Analisar com IA</button>
+    <div class="care-ia-result" id="careIaResult" style="display:none"></div>
+  </div>
+</div>
+
 <!-- ── Toast container ── -->
 <div class="toast-wrap" id="toastWrap"></div>
 <!-- ── Session expired banner (fallback when showToast not yet available) ── -->
@@ -3183,6 +3319,213 @@ function showToast(msg, type) {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') document.querySelectorAll('.assist-menu.open').forEach(function(m) { m.classList.remove('open'); });
 });
+
+/* ══ CARE LIVE SCORE ════════════════════════════════════════════════════════ */
+
+var _CARE_ETAPA_LABELS = {
+  '1':'Identificação','2':'História','3':'Intervenções',
+  '4':'Achados','5':'Timeline','6':'Diagnóstico',
+  '7':'Intervenção','8':'Desfechos','9':'Perspectiva','10':'Editorial'
+};
+
+var _careDebounce    = null;
+var _careLastPct     = 0;
+var _careFaltantes   = [];
+var _carePanelOpen   = false;
+
+function toggleCarePanel() {
+  _carePanelOpen = !_carePanelOpen;
+  document.getElementById('carePanelBody').classList.toggle('open', _carePanelOpen);
+  if (_carePanelOpen) atualizarCareScore(); // força refresh ao abrir
+}
+
+function _careColor(pct) {
+  if (pct >= 75) return '#38A169';
+  if (pct >= 50) return '#D69E2E';
+  return '#E53E3E';
+}
+
+function _atualizarCareUI(data) {
+  var pct   = data.pct   || 0;
+  var score = data.score || 0;
+  var color = _careColor(pct);
+  var arcLen = 125.66;
+
+  _careLastPct   = pct;
+  _careFaltantes = data.faltantes || [];
+
+  // Botão toggle badge
+  var badge = document.getElementById('careTogglePct');
+  if (badge) {
+    badge.textContent = pct + '%';
+    badge.style.color = pct >= 75 ? 'var(--acid)' : color;
+  }
+
+  // Arco SVG
+  var arc = document.getElementById('careGaugeArc');
+  if (arc) {
+    arc.setAttribute('stroke-dashoffset', (arcLen * (1 - pct / 100)).toFixed(2));
+    arc.setAttribute('stroke', color);
+  }
+  var gPct = document.getElementById('careGaugePct');
+  if (gPct) { gPct.textContent = pct + '%'; gPct.style.color = color; }
+  var sNum = document.getElementById('careScoreNum');
+  if (sNum) sNum.textContent = score;
+
+  // Mini barras por etapa
+  var barsWrap = document.getElementById('careStepBars');
+  if (barsWrap && data.por_etapa) {
+    barsWrap.innerHTML = '';
+    for (var e = 1; e <= 10; e++) {
+      var et  = data.por_etapa[String(e)] || { score: 0, max: 0 };
+      var ep  = et.max > 0 ? Math.round(et.score / et.max * 100) : 0;
+      var ec  = _careColor(ep);
+      var row = document.createElement('div');
+      row.className = 'care-step-row';
+      row.innerHTML =
+        '<span class="care-step-label" title="' + _CARE_ETAPA_LABELS[String(e)] + '">' + _CARE_ETAPA_LABELS[String(e)] + '</span>' +
+        '<div class="care-step-track"><div class="care-step-fill" style="width:' + ep + '%;background:' + ec + '"></div></div>' +
+        '<span class="care-step-count">' + et.score + '/' + et.max + '</span>';
+      barsWrap.appendChild(row);
+    }
+  }
+
+  // Dica rápida
+  var tip = document.getElementById('careTip');
+  if (tip && data.sugestao_rapida) tip.textContent = data.sugestao_rapida;
+}
+
+function _coletarDadosFlat() {
+  /* Retorna dict flat com os campos que /artigo/care-preview espera */
+  function gv(id) {
+    var el = document.getElementById(id);
+    if (!el) return '';
+    if (el.type === 'checkbox') return el.checked;
+    return el.value || '';
+  }
+  function gc(id) { var el = document.getElementById(id); return el ? el.checked : false; }
+  return {
+    // Etapa 1
+    idade:               gv('idade'),
+    sexo:                gv('sexo'),
+    decl_responsavel:    gc('declResponsavel'),
+    // Etapa 2
+    queixa_principal:    gv('queixaPrincipal'),
+    duracao_sintomas:    gv('duracaoSintomas'),
+    hda:                 gv('hda'),
+    historico_previo:    gv('historicoPrevio'),
+    // Etapa 3
+    tratamentos:         gv('tratamentosAnteriores'),
+    medicamentos:        gv('medicamentos'),
+    alergias:            gv('alergias'),
+    // Etapa 4
+    exame_geral:         gv('exameFisicoGeral'),
+    achados_especificos: gv('achadosEspecificos'),
+    sinais_vitais:       gv('sinaisVitais'),
+    // Etapa 5
+    eventos_timeline:    (typeof timeline !== 'undefined' ? timeline : []),
+    // Etapa 6
+    exames_lab:          gv('examesLab'),
+    exames_imagem:       gv('examesImagem'),
+    desafios:            gv('desafiosDiagnosticos'),
+    diagnostico_definitivo: gv('diagnosticoDefinitivo'),
+    prognostico:         gv('prognostico'),
+    // Etapa 7
+    intervencao_tipo:    gv('tipoIntervencao'),
+    intervencao_descricao: gv('descIntervencao'),
+    houve_mudanca:       gc('houveMudanca'),
+    desc_mudanca:        gv('descMudanca'),
+    // Etapa 8
+    desfecho_clinico:    gv('desfechoClinco'),
+    exames_seguimento:   gv('examesSeguimento'),
+    adesao:              gv('adesao'),
+    eventos_adversos:    gv('eventosAdversos'),
+    // Etapa 9
+    perspectiva_paciente: gv('perspectivaPaciente'),
+    // Etapa 10
+    problemas_clinicos:  gv('problemasClinicos'),
+    diferencial_caso:    gv('diferencialCaso'),
+    consentimento_editorial: gc('consentimentoInformado'),
+  };
+}
+
+async function atualizarCareScore() {
+  var token = getToken();
+  if (!token) return;
+  try {
+    var res = await fetch(API + '/artigo/care-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ dados: _coletarDadosFlat() }),
+    });
+    if (!res.ok) return;
+    _atualizarCareUI(await res.json());
+  } catch (_) { /* silencioso — não interrompe o formulário */ }
+}
+
+function _agendarCareScore() {
+  clearTimeout(_careDebounce);
+  _careDebounce = setTimeout(atualizarCareScore, 800);
+}
+
+async function solicitarSugestaoIA() {
+  var btn    = document.getElementById('careIaBtn');
+  var result = document.getElementById('careIaResult');
+  var token  = getToken();
+  if (!token) { showToast('Faça login para usar análise com IA', 'error'); return; }
+  btn.disabled = true;
+  btn.textContent = '⏳ Analisando…';
+  result.style.display = 'none';
+  try {
+    var dados = _coletarDadosFlat();
+    var res = await fetch(API + '/artigo/care-sugestao', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ dados: dados, score_atual: _careLastPct, faltantes: _careFaltantes }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    result.style.display = 'block';
+    result.innerHTML = '<strong>✦ IA Sugere</strong>' +
+      _escHtmlCare(data.sugestao || 'Sem sugestão disponível.') +
+      (data.campo_foco ? '<div style="margin-top:6px;font-size:10px;color:var(--t3)">Campo: ' + _escHtmlCare(data.campo_foco) + '</div>' : '');
+  } catch (e) {
+    result.style.display = 'block';
+    result.innerHTML = '<strong>Erro</strong>Não foi possível obter sugestão. Tente novamente.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔍 Analisar com IA';
+  }
+}
+
+function _escHtmlCare(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Registra listeners nos campos do formulário
+(function _attachCareListeners() {
+  var IDS = [
+    'idade','sexo','declResponsavel',
+    'queixaPrincipal','duracaoSintomas','hda','historicoPrevio',
+    'tratamentosAnteriores','medicamentos','alergias',
+    'exameFisicoGeral','achadosEspecificos','sinaisVitais',
+    'examesLab','examesImagem','desafiosDiagnosticos','diagnosticoDefinitivo','prognostico',
+    'tipoIntervencao','descIntervencao','houveMudanca','descMudanca',
+    'desfechoClinco','examesSeguimento','adesao','eventosAdversos',
+    'perspectivaPaciente','problemasClinicos','diferencialCaso','consentimentoInformado'
+  ];
+  IDS.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input',  _agendarCareScore);
+      el.addEventListener('change', _agendarCareScore);
+    }
+  });
+  // Mudanças na timeline (disparado pelo código de timeline)
+  document.addEventListener('timelineChanged', _agendarCareScore);
+  // Score inicial após carregamento
+  setTimeout(atualizarCareScore, 1800);
+})();
 </script>
 </body>
 </html>
