@@ -405,6 +405,32 @@ class CareSugestaoRequest(BaseModel):
     faltantes: list[str] = Field(default_factory=list, max_length=30)
 
 
+# ── Semantic Ranking ─────────────────────────────────────────────────────────
+
+class RanquearBiblioRequest(BaseModel):
+    artigos:  list[dict] = Field(default_factory=list, max_length=20)
+    contexto: str        = Field(..., min_length=3, max_length=500)
+
+
+@router.post("/biblioteca/ranquear")
+async def ranquear_biblioteca(
+    body: RanquearBiblioRequest,
+    user: Usuario = Depends(get_verified_user),
+):
+    """Re-rankeia artigos por relevância semântica ao caso (GPT-4o mini).
+    Adiciona campos `relevancia_semantica` (1-10) e `semantico_top` (bool) a cada artigo."""
+    from app.services.semantic_rank import ranquear, ordenar_por_relevancia
+    from app.services.llm_router import mensagem_usuario_erro
+    try:
+        artigos = await ranquear(body.artigos, body.contexto)
+        return {
+            "total": len(artigos),
+            "artigos": ordenar_por_relevancia(artigos),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=mensagem_usuario_erro(exc)) from exc
+
+
 @router.post("/care-preview")
 async def care_preview(
     body: CarePreviewRequest,

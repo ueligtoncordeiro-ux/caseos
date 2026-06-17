@@ -446,6 +446,8 @@ body {
 }
 .pubmed-badge.doi { background: #F0FDF4; color: #16A34A; }
 .pubmed-badge.citations { background: var(--amber-dim); color: var(--amber); }
+.pubmed-badge.semantico { background: #FEFCE8; color: #92400E; border: 1px solid #FCD34D; font-weight: 700; }
+.pubmed-card.semantico-top { border-left: 3px solid #F59E0B; }
 
 /* Usage bar */
 .usage-bar-wrap {
@@ -3298,6 +3300,7 @@ tbody td {
             <label style="display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" class="search-source" value="semantic" checked> Semantic Scholar</label>
             <label style="display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" class="search-source" value="openalex" checked> OpenAlex</label>
             <label style="display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" class="search-source" value="crossref"> Crossref</label>
+            <button class="btn btn-ghost" onclick="ranquearComIA()" id="rankSearchBtn" style="display:none;" title="Re-rankeia os resultados por relevância semântica ao seu caso usando IA">✦ Ranquear com IA</button>
             <button class="btn btn-ghost" onclick="salvarBuscaAtual()" id="saveSearchBtn" style="margin-left:auto;display:none;">Salvar busca</button>
           </div>
           <div style="font-size:12px;color:var(--t3);">
@@ -5687,33 +5690,15 @@ async function buscarPubMed() {
       return;
     }
     if (saveBtn) saveBtn.style.display = 'inline-flex';
+    const rankBtn = document.getElementById('rankSearchBtn');
+    if (rankBtn) rankBtn.style.display = 'inline-flex';
 
     if (list) {
       list.innerHTML = `
         <div style="font-size:12px;color:var(--t3);margin:12px 0 4px;">
           <strong>${data.total}</strong> resultado${data.total !== 1 ? 's' : ''} para "${_esc(q)}" · ${_esc((data.fontes || fontes).join(', '))}
         </div>
-      ` + data.artigos.map((art, idx) => `
-        <div class="pubmed-card">
-          <a class="pubmed-card-title" href="${_esc(art.url || art.url_pubmed || '#')}" target="_blank" rel="noopener noreferrer">
-            ${_esc(art.titulo)}
-          </a>
-          <div class="pubmed-card-meta">
-            ${art.fonte ? `<span>${_esc(art.fonte)}</span>` : ''}
-            <span>${_esc(art.autores)}</span>
-            ${art.periodico ? `<span>· ${_esc(art.periodico)}</span>` : ''}
-            ${art.ano ? `<span>· ${_esc(art.ano)}</span>` : ''}
-          </div>
-          ${art.abstract ? `<div class="pubmed-card-abstract">${_esc(art.abstract)}${art.abstract.length >= 500 ? '…' : ''}</div>` : ''}
-          <div class="pubmed-card-badges">
-            ${art.pmid ? `<a class="pubmed-badge" href="https://pubmed.ncbi.nlm.nih.gov/${_esc(art.pmid)}" target="_blank" rel="noopener">PMID ${_esc(art.pmid)}</a>` : ''}
-            ${art.doi ? `<a class="pubmed-badge doi" href="https://doi.org/${_esc(art.doi)}" target="_blank" rel="noopener">DOI</a>` : ''}
-            ${art.citacoes ? `<span class="pubmed-badge citations">📊 ${art.citacoes} citações</span>` : ''}
-            <button class="pubmed-badge" style="cursor:pointer;" id="btn-salvar-${idx}" onclick="salvarArtigoBusca(${idx})">Salvar</button>
-            <button class="pubmed-badge doi" style="cursor:pointer;" onclick="abrirModalAdicionarRef(${idx})">Adicionar a caso clínico</button>
-          </div>
-        </div>
-      `).join('');
+      ` + _renderizarArtigos(data.artigos);
     }
 
   } catch (err) {
@@ -5723,6 +5708,73 @@ async function buscarPubMed() {
     mostrarToast('Erro na busca científica. Tente novamente.', 'error', '⚠️');
   } finally {
     if (btn) { btn.textContent = 'Buscar'; btn.disabled = false; }
+  }
+}
+
+function _renderizarArtigos(artigos) {
+  return artigos.map((art, idx) => `
+    <div class="pubmed-card${art.semantico_top ? ' semantico-top' : ''}">
+      <a class="pubmed-card-title" href="${_esc(art.url || art.url_pubmed || '#')}" target="_blank" rel="noopener noreferrer">
+        ${_esc(art.titulo)}
+      </a>
+      <div class="pubmed-card-meta">
+        ${art.fonte ? `<span>${_esc(art.fonte)}</span>` : ''}
+        <span>${_esc(art.autores)}</span>
+        ${art.periodico ? `<span>· ${_esc(art.periodico)}</span>` : ''}
+        ${art.ano ? `<span>· ${_esc(art.ano)}</span>` : ''}
+      </div>
+      ${art.abstract ? `<div class="pubmed-card-abstract">${_esc(art.abstract)}${art.abstract.length >= 500 ? '…' : ''}</div>` : ''}
+      <div class="pubmed-card-badges">
+        ${art.semantico_top ? `<span class="pubmed-badge semantico">⭐ Mais relevante</span>` : ''}
+        ${art.relevancia_semantica ? `<span class="pubmed-badge semantico" style="background:#F5F3FF;color:#7C3AED;border-color:#C4B5FD;" title="Relevância semântica ao caso">IA ${art.relevancia_semantica}/10</span>` : ''}
+        ${art.pmid ? `<a class="pubmed-badge" href="https://pubmed.ncbi.nlm.nih.gov/${_esc(art.pmid)}" target="_blank" rel="noopener">PMID ${_esc(art.pmid)}</a>` : ''}
+        ${art.doi ? `<a class="pubmed-badge doi" href="https://doi.org/${_esc(art.doi)}" target="_blank" rel="noopener">DOI</a>` : ''}
+        ${art.citacoes ? `<span class="pubmed-badge citations">📊 ${art.citacoes} citações</span>` : ''}
+        <button class="pubmed-badge" style="cursor:pointer;" id="btn-salvar-${idx}" onclick="salvarArtigoBusca(${idx})">Salvar</button>
+        <button class="pubmed-badge doi" style="cursor:pointer;" onclick="abrirModalAdicionarRef(${idx})">Adicionar a caso clínico</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function ranquearComIA() {
+  if (!_ultimaBuscaCientifica || !_ultimaBuscaCientifica.artigos?.length) {
+    mostrarToast('Faça uma busca antes de ranquear.', 'info', '🔬');
+    return;
+  }
+  const btn = document.getElementById('rankSearchBtn');
+  const list = document.getElementById('pubmedList');
+  if (btn) { btn.textContent = '⏳ Ranqueando…'; btn.disabled = true; }
+
+  try {
+    // Contexto: usa a query de busca como contexto (não temos CKO aqui)
+    const contexto = `Busca científica: ${_ultimaBuscaCientifica.query}. ` +
+      `Artigos de ${_ultimaBuscaCientifica.fontes?.join(', ') || 'múltiplas fontes'}.`;
+
+    const res = await fetch(`${API}/artigo/biblioteca/ranquear`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        artigos: _ultimaBuscaCientifica.artigos.slice(0, 20),
+        contexto,
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    // Atualiza dados em memória e re-renderiza cards
+    _ultimaBuscaCientifica.artigos = data.artigos;
+    if (list) {
+      const header = list.querySelector('div[style]');
+      const headerHtml = header ? header.outerHTML : '';
+      list.innerHTML = headerHtml + _renderizarArtigos(data.artigos);
+    }
+    mostrarToast('✦ Artigos ranqueados por relevância semântica ao seu caso.', 'success', '⭐');
+  } catch (err) {
+    console.error('[CaseOS] Erro ao ranquear:', err);
+    mostrarToast('Erro ao ranquear. Tente novamente.', 'error', '⚠️');
+  } finally {
+    if (btn) { btn.textContent = '✦ Ranquear com IA'; btn.disabled = false; }
   }
 }
 

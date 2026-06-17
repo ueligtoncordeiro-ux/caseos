@@ -196,8 +196,30 @@ async def executar(cko: CKO) -> list[dict]:
     # ── 7b. Unpaywall — adicionar PDF open access ─────────────────────────────
     pool = await unpaywall_enriquecer(pool)
 
+    # ── 8. Semantic Ranking — re-rankeia por relevância semântica ao caso ─────
+    # Não-bloqueante: falha silenciosa mantém ordenação por citações.
+    try:
+        from app.services.semantic_rank import ranquear
+        contexto_rank = (
+            f"Diagnóstico: {cko.diagnostico.diagnostico_definitivo}. "
+            f"Intervenção: {cko.intervencao.tipo} — {cko.intervencao.descricao[:120]}. "
+            f"Problema clínico: {cko.editorial.problemas_clinicos[:200]}."
+        )
+        pool = await ranquear(pool[:20], contexto_rank) + pool[20:]
+    except Exception as _rank_err:
+        import logging as _log
+        _log.getLogger(__name__).warning("Semantic ranking ignorado: %s", _rank_err)
+
     # ── Ordenar e numerar (máx 40 para dar margem ao redator escolher ≥15) ────
-    pool = sorted(pool, key=lambda x: x.get("citation_count", 0), reverse=True)[:40]
+    # Prioriza semantico_top, depois relevancia_semantica, depois citações.
+    pool = sorted(
+        pool,
+        key=lambda x: (
+            -int(x.get("semantico_top") or 0),
+            -(x.get("relevancia_semantica") or 0),
+            -(x.get("citation_count") or 0),
+        ),
+    )[:40]
 
     for i, art in enumerate(pool, start=1):
         art["numero"] = i
