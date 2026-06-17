@@ -2598,11 +2598,46 @@ function navStep(dir) {
   updateProgress();
 }
 
-renderCaseHeader();
-buildSidebar();
-restoreCaseSidebar();
-updateNavUI();
-updateProgress();
+/* ══ AUTH GUARD + INIT ══════════════════════════════════════════════════════ */
+(async function _authInit() {
+  // 1. Token ausente → tenta refresh via httpOnly cookie antes de redirecionar
+  if (!getToken()) {
+    const ok = await tryRefreshToken();
+    if (!ok) {
+      // Salva URL atual para retornar após login
+      try { sessionStorage.setItem('rccs_return_to', location.pathname + location.search); } catch (_) {}
+      location.href = 'login.html?msg=auth_required';
+      return;
+    }
+  }
+
+  // 2. Token presente → inicializa a UI imediatamente
+  renderCaseHeader();
+  buildSidebar();
+  restoreCaseSidebar();
+  updateNavUI();
+  updateProgress();
+
+  // 3. Valida token server-side em background (detecta revogação sem bloquear UI)
+  try {
+    const res = await fetch(API + '/auth/me', {
+      headers: { Authorization: 'Bearer ' + getToken() },
+    });
+    if (res.status === 401) {
+      // Token expirado/revogado — tenta refresh silencioso
+      const ok = await tryRefreshToken();
+      if (!ok) {
+        location.href = 'login.html?msg=session_expired';
+        return;
+      }
+    } else if (res.ok) {
+      // Atualiza perfil do usuário (plano, nome, quota) sem re-login
+      const u = await res.json();
+      sessionStorage.setItem('rccs_user', JSON.stringify(u));
+      renderCaseHeader();   // re-render com dados frescos do banco
+    }
+  } catch (_) { /* offline ou servidor fora — continua com dados de sessão */ }
+})();
 
 /* ══ TIMELINE ══ */
 let timeline = [];

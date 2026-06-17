@@ -625,6 +625,15 @@ function getPostLoginUrl() {
   const p = new URLSearchParams(location.search);
   const next = p.get('next');
   if (next && next.startsWith('/') && !next.startsWith('//')) return next;
+  // Verifica destino salvo pelo auth guard de páginas protegidas (novo-relato, etc.)
+  try {
+    const savedReturn = sessionStorage.getItem('rccs_return_to');
+    if (savedReturn) {
+      sessionStorage.removeItem('rccs_return_to'); // consume uma única vez
+      // Aceita caminhos relativos (/novo-relato.html) e absolutos do mesmo host
+      if (savedReturn.startsWith('/') && !savedReturn.startsWith('//')) return savedReturn;
+    }
+  } catch (_) {}
   if (location.hostname === 'reviewstudio.voandonaia.com') return '/';
   return 'dashboard.html';
 }
@@ -766,6 +775,7 @@ function avaliarSenha(val) {
   if (msg === 'verified')         showAlert('E-mail verificado! Faça login.', 'success');
   if (msg === 'already_verified') showAlert('E-mail já verificado. Faça login.', 'info');
   if (msg === 'session_expired')  showAlert('Sessão expirada. Faça login novamente.', 'info');
+  if (msg === 'auth_required')    showAlert('Faça login para acessar essa página.', 'info');
   if (p.get('upgrade') === 'ok')  showAlert('Plano ativado com sucesso!', 'success');
 })();
 
