@@ -1518,7 +1518,38 @@ tbody td {
 .care-banner { display: flex; align-items: center; gap: 14px; background: var(--row-hover); border: 1px solid var(--card-bdr); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px; }
 .care-banner .score-num { font-size: 22px; font-weight: 700; color: #2563EB; }
 .care-banner-info { font-size: 13px; color: var(--t2); }
-.modal-relato-footer { padding: 14px 28px; border-top: 1px solid var(--card-bdr); display: flex; gap: 10px; justify-content: flex-end; background: var(--bg); border-radius: 0 0 var(--radius) var(--radius); }
+.modal-relato-footer { padding: 14px 28px; border-top: 1px solid var(--card-bdr); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: var(--bg); border-radius: 0 0 var(--radius) var(--radius); }
+/* ── Peer Review Panel ── */
+#peerReviewArea { border-top: 1px solid var(--card-bdr); }
+.pr-panel { padding: 24px 28px; }
+.pr-header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.pr-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 700;
+}
+.pr-badge.accept   { background: #F0FDF4; color: #15803D; border: 1px solid #86EFAC; }
+.pr-badge.minor    { background: #FEFCE8; color: #92400E; border: 1px solid #FCD34D; }
+.pr-badge.major    { background: #FFF7ED; color: #C2410C; border: 1px solid #FCA5A1; }
+.pr-badge.reject   { background: #FEF2F2; color: #B91C1C; border: 1px solid #FCA5A5; }
+.pr-section { margin-bottom: 16px; }
+.pr-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--t3); margin-bottom: 8px; }
+.pr-summary { font-size: 13px; color: var(--t1); line-height: 1.7; font-style: italic; padding: 12px 16px; background: var(--row-hover); border-left: 3px solid var(--blue); border-radius: 0 6px 6px 0; }
+.pr-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 7px; }
+.pr-list li { font-size: 13px; color: var(--t1); line-height: 1.6; padding-left: 16px; position: relative; }
+.pr-list li::before { content: '•'; position: absolute; left: 0; color: var(--t3); }
+.pr-list.major li::before { content: '⚠'; color: #C2410C; }
+.pr-list.strengths li::before { content: '✓'; color: #15803D; }
+.pr-loading { padding: 32px; text-align: center; color: var(--t3); font-size: 13px; }
+.btn-peer-review {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; font-size: 12px; font-weight: 600;
+  background: transparent; border: 1.5px solid var(--card-bdr);
+  border-radius: 7px; cursor: pointer; color: var(--t2);
+  transition: border-color .15s, background .15s, color .15s;
+  white-space: nowrap;
+}
+.btn-peer-review:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-dim); }
+.btn-peer-review:disabled { opacity: .5; cursor: default; }
 .tr-clickable { cursor: pointer; }
 .tr-clickable:hover td { background: var(--row-hover); }
 
@@ -3696,7 +3727,11 @@ tbody td {
     <div class="modal-body" id="modalRelatoBody">
       <div style="text-align:center;padding:40px;color:var(--t3)">Carregando…</div>
     </div>
+    <!-- Peer Review collapsible area -->
+    <div id="peerReviewArea" style="display:none"></div>
     <div class="modal-relato-footer">
+      <button class="btn-peer-review" id="btnPeerReview" onclick="solicitarPeerReview()" title="Gera uma revisão por pares em inglês com Claude Sonnet, no estilo de editor de periódico científico">🔬 Peer Review</button>
+      <div style="flex:1"></div>
       <button class="btn btn-secondary btn-sm" onclick="fecharModalRelato()">Fechar</button>
       <div id="docxVersionBtns" style="display:flex;gap:8px;align-items:center"></div>
     </div>
@@ -4873,6 +4908,121 @@ function fecharModalRelato(e) {
   if (!e || e.target === document.getElementById('modalRelato')) {
     document.getElementById('modalRelato').classList.remove('open');
     cancelarTituloInline(); // reset title edit mode
+    // Reset peer review state
+    const prArea = document.getElementById('peerReviewArea');
+    if (prArea) { prArea.style.display = 'none'; prArea.innerHTML = ''; }
+    const prBtn = document.getElementById('btnPeerReview');
+    if (prBtn) { prBtn.textContent = '🔬 Peer Review'; prBtn.disabled = false; }
+  }
+}
+
+/* ── Peer Review Mode ──────────────────────────────────────────────────────── */
+
+function _prBadgeClass(rec) {
+  const r = (rec || '').toLowerCase();
+  if (r.includes('accept') && !r.includes('revision')) return 'accept';
+  if (r.includes('minor')) return 'minor';
+  if (r.includes('major')) return 'major';
+  return 'reject';
+}
+
+function _prBadgeLabel(rec) {
+  const map = {
+    'Accept': '✅ Accept',
+    'Minor Revision': '🟡 Minor Revision',
+    'Major Revision': '🟠 Major Revision',
+    'Reject': '🔴 Reject',
+  };
+  return map[rec] || rec;
+}
+
+function _renderPeerReview(data) {
+  const cls   = _prBadgeClass(data.recommendation);
+  const label = _prBadgeLabel(data.recommendation);
+
+  const listHtml = (items, cls) => {
+    if (!items || !items.length) return '<p style="font-size:12px;color:var(--t3)">None identified.</p>';
+    return `<ul class="pr-list ${cls}">${items.map(i => `<li>${_escHtml(i)}</li>`).join('')}</ul>`;
+  };
+
+  return `
+    <div class="pr-panel">
+      <div class="pr-header">
+        <span class="pr-badge ${cls}">${label}</span>
+        <span style="font-size:12px;color:var(--t3)">Peer review · Claude Sonnet 4.6 · English</span>
+      </div>
+      ${data.summary ? `
+        <div class="pr-section">
+          <div class="pr-section-title">Overall Assessment</div>
+          <div class="pr-summary">${_escHtml(data.summary)}</div>
+        </div>` : ''}
+      ${data.strengths?.length ? `
+        <div class="pr-section">
+          <div class="pr-section-title">Strengths</div>
+          ${listHtml(data.strengths, 'strengths')}
+        </div>` : ''}
+      ${data.major_issues?.length ? `
+        <div class="pr-section">
+          <div class="pr-section-title">⚠ Major Issues</div>
+          ${listHtml(data.major_issues, 'major')}
+        </div>` : ''}
+      ${data.minor_issues?.length ? `
+        <div class="pr-section">
+          <div class="pr-section-title">Minor Issues</div>
+          ${listHtml(data.minor_issues, '')}
+        </div>` : ''}
+      ${data.care_compliance ? `
+        <div class="pr-section">
+          <div class="pr-section-title">CARE 2013 Compliance</div>
+          <p style="font-size:13px;color:var(--t2);line-height:1.6">${_escHtml(data.care_compliance)}</p>
+        </div>` : ''}
+      <p style="font-size:11px;color:var(--t3);margin-top:12px;border-top:1px solid var(--card-bdr);padding-top:10px">
+        Este peer review é gerado por IA para fins de melhoria do manuscrito e não substitui revisão humana por um periódico real.
+        <button onclick="solicitarPeerReview(true)" style="margin-left:8px;font-size:11px;color:var(--blue);background:none;border:none;cursor:pointer;text-decoration:underline;">↻ Gerar nova revisão</button>
+      </p>
+    </div>`;
+}
+
+async function solicitarPeerReview(forceNew) {
+  const sessaoId = window.__relatoAtualId;
+  if (!sessaoId) return;
+
+  const btn   = document.getElementById('btnPeerReview');
+  const area  = document.getElementById('peerReviewArea');
+  if (!btn || !area) return;
+
+  // Toggle off if already shown and not forcing new
+  if (!forceNew && area.style.display !== 'none' && area.innerHTML) {
+    area.style.display = 'none';
+    btn.textContent = '🔬 Peer Review';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Gerando revisão…';
+  area.style.display = 'block';
+  area.innerHTML = '<div class="pr-loading">⏳ Claude Sonnet está lendo seu artigo e gerando a revisão em inglês…<br><small style="color:var(--t3)">Pode levar 10-20 segundos.</small></div>';
+
+  // Scroll para mostrar a área
+  area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  try {
+    const res = await fetch(`${API}/artigo/${sessaoId}/peer-review`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    area.innerHTML = _renderPeerReview(data);
+    btn.textContent = '🔬 Peer Review ✓';
+  } catch (err) {
+    area.innerHTML = `<div class="pr-panel"><p style="color:var(--red);font-size:13px">❌ ${_escHtml(err.message)}</p><button onclick="solicitarPeerReview(true)" style="margin-top:8px;font-size:12px;color:var(--blue);background:none;border:none;cursor:pointer;text-decoration:underline">Tentar novamente</button></div>`;
+    btn.textContent = '🔬 Peer Review';
+  } finally {
+    btn.disabled = false;
   }
 }
 

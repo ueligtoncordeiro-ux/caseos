@@ -393,6 +393,44 @@ async def stats(
     }
 
 
+# ── Peer Review Mode ─────────────────────────────────────────────────────────
+
+@router.post("/{sessao_id}/peer-review")
+async def peer_review(
+    sessao_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: Usuario = Depends(get_verified_user),
+):
+    """
+    Gera revisão por pares em inglês via Claude Sonnet (ALTA complexidade).
+    Retorna: recommendation, summary, strengths, major_issues, minor_issues, care_compliance.
+    Stateless — pode ser chamado múltiplas vezes; não persiste no banco.
+    """
+    sessao = await _get_sessao_ativa(db, sessao_id)
+    if sessao.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+    if sessao.status != "concluido":
+        raise HTTPException(
+            status_code=425,
+            detail="Peer review disponível apenas para artigos concluídos.",
+        )
+    if not sessao.resultado:
+        raise HTTPException(status_code=400, detail="Artigo sem conteúdo gerado.")
+
+    from app.services.peer_review import gerar
+    from app.services.llm_router import mensagem_usuario_erro
+    try:
+        review = await gerar(
+            resultado  = sessao.resultado,
+            cko        = sessao.cko or {},
+            care_score = sessao.care_score or 0,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=mensagem_usuario_erro(exc)) from exc
+
+    return review
+
+
 # ── CARE Live Score ───────────────────────────────────────────────────────────
 
 class CarePreviewRequest(BaseModel):
