@@ -53,6 +53,14 @@ class UsuarioAdminView(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CriarUsuarioRequest(BaseModel):
+    email: str
+    nome: str
+    senha: str = Field(..., min_length=4, max_length=128)
+    plano: str = PLANO_FREE
+    is_verified: bool = True   # admin cria já verificado por padrão
+
+
 class PatchUsuarioRequest(BaseModel):
     nome: Optional[str] = None
     plano: Optional[str] = None
@@ -188,6 +196,39 @@ async def listar_usuarios(
     stmt = stmt.offset(skip).limit(limit)
     result = await db.execute(stmt)
     return result.scalars().all()
+
+
+@router.post("/users", response_model=UsuarioAdminView, status_code=201)
+async def criar_usuario(
+    body: CriarUsuarioRequest,
+    admin: Usuario = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Cria um novo usuário diretamente, já verificado. Útil para contas de teste."""
+    from sqlalchemy import select as _sel
+    from app.services.auth import hash_password
+
+    # Impede duplicata
+    existing = (await db.execute(_sel(Usuario).where(Usuario.email == body.email.lower().strip()))).scalar_one_or_none()
+    if existing:
+        raise HTTPException(400, f"E-mail '{body.email}' já cadastrado.")
+
+    if body.plano not in _PLANOS_VALIDOS:
+        raise HTTPException(400, f"Plano inválido. Válidos: {_PLANOS_VALIDOS}")
+
+    novo = Usuario(
+        email=body.email.lower().strip(),
+        nome=body.nome.strip(),
+        hashed_pw=hash_password(body.senha),
+        plano=body.plano,
+        is_active=True,
+        is_verified=body.is_verified,
+    )
+    db.add(novo)
+    await db.commit()
+    await db.refresh(novo)
+    logger.warning("ADMIN CREATE user=%s (%s) plano=%s by admin=%s", novo.id, novo.email, novo.plano, admin.id)
+    return novo
 
 
 @router.get("/users/{user_id}", response_model=UsuarioAdminView)
