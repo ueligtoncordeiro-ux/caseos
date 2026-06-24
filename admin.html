@@ -836,6 +836,7 @@ tbody td.mono { font-family: ui-monospace, monospace; font-size: 11px; }
             <option value="institucional">Institucional</option>
           </select>
         </div>
+        <button class="btn btn-primary btn-sm" onclick="openCreateUserModal()">+ Criar Usuário</button>
       </div>
 
       <div class="table-wrap">
@@ -1113,6 +1114,45 @@ tbody td.mono { font-family: ui-monospace, monospace; font-size: 11px; }
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('email-modal')">Cancelar</button>
       <button class="btn btn-primary" id="email-send-btn" onclick="sendEmailManual()">Enviar ✉️</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Criar Usuário ────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="create-user-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>👤 Criar Usuário</h3>
+      <button class="modal-close" onclick="closeModal('create-user-modal')">✕</button>
+    </div>
+
+    <div class="field">
+      <label>Nome completo</label>
+      <input type="text" id="create-nome" placeholder="Ex: João Silva">
+    </div>
+    <div class="field">
+      <label>E-mail</label>
+      <input type="email" id="create-email" placeholder="joao@exemplo.com">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="create-senha" placeholder="Mínimo 4 caracteres">
+    </div>
+    <div class="field">
+      <label>Plano</label>
+      <select id="create-plano">
+        <option value="free">Free</option>
+        <option value="starter">Starter</option>
+        <option value="pro" selected>Pro</option>
+        <option value="institucional">Institucional</option>
+      </select>
+    </div>
+
+    <div id="create-user-error" style="display:none;color:#f87171;font-size:13px;margin-top:8px;"></div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('create-user-modal')">Cancelar</button>
+      <button class="btn btn-primary" id="create-user-btn" onclick="submitCreateUser()">Criar Usuário</button>
     </div>
   </div>
 </div>
@@ -1795,6 +1835,45 @@ async function loadStripeUser(userId) {
   }
 
   content.innerHTML = subHtml + pmHtml + invHtml;
+}
+
+/* ── Criar Usuário ─────────────────────────────────────────────────────────── */
+function openCreateUserModal() {
+  document.getElementById('create-nome').value = '';
+  document.getElementById('create-email').value = '';
+  document.getElementById('create-senha').value = '';
+  document.getElementById('create-plano').value = 'pro';
+  document.getElementById('create-user-error').style.display = 'none';
+  openModal('create-user-modal');
+  setTimeout(() => document.getElementById('create-nome').focus(), 80);
+}
+
+async function submitCreateUser() {
+  const btn = document.getElementById('create-user-btn');
+  const errEl = document.getElementById('create-user-error');
+  const nome  = document.getElementById('create-nome').value.trim();
+  const email = document.getElementById('create-email').value.trim();
+  const senha = document.getElementById('create-senha').value;
+  const plano = document.getElementById('create-plano').value;
+
+  errEl.style.display = 'none';
+  if (!nome || !email || !senha) { errEl.textContent = 'Preencha todos os campos.'; errEl.style.display = 'block'; return; }
+  if (senha.length < 4) { errEl.textContent = 'Senha deve ter pelo menos 4 caracteres.'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Criando…';
+  try {
+    const r = await apiJSON('/admin/users', { method: 'POST', body: JSON.stringify({ nome, email, senha, plano }) });
+    closeModal('create-user-modal');
+    toast(`✅ Usuário ${r.email} criado com sucesso!`, 'success');
+    loadUsers(1);
+  } catch (e) {
+    errEl.textContent = e?.detail || e?.message || 'Erro ao criar usuário.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Criar Usuário';
+  }
 }
 
 /* ── Modal helpers ────────────────────────────────────────────────────────── */
