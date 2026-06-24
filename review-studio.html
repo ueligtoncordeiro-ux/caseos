@@ -336,13 +336,31 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
 .source-search-wrap{position:relative}
 .source-search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--t3)}
 .source-search-wrap input{padding-left:34px}
-.review-source-list{display:grid;gap:8px;max-height:330px;overflow:auto;padding-right:4px}
-.review-source{border:1px solid var(--border);border-radius:8px;padding:10px;background:#fff}
+.review-source-list{display:grid;gap:8px;max-height:400px;overflow:auto;padding-right:4px}
+.review-source{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:#fff;transition:border-color .15s ease}
+.review-source:hover{border-color:rgba(0,0,0,.18)}
+.review-source.approved-card{border-left:3px solid var(--green)}
+.review-source.excluded-card{opacity:.55}
 .review-source-title{font-size:13px;font-weight:800;color:var(--t1);line-height:1.35;margin-bottom:4px}
+.review-source-title a{color:inherit;text-decoration:none}
+.review-source-title a:hover{text-decoration:underline;color:var(--acid)}
 .review-source-meta{display:flex;gap:6px;flex-wrap:wrap;font-size:11.5px;color:var(--t3);line-height:1.45}
+.review-source-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
 .review-badge{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:99px;padding:3px 7px;font-size:10.5px;font-weight:800;color:var(--t2);background:var(--muted)}
 .review-badge.approved{background:rgba(22,163,74,.10);border-color:rgba(22,163,74,.25);color:var(--green)}
 .review-badge.muted{background:#F5F5F5;color:var(--t3)}
+.btn-icon-xs{width:26px;height:26px;border:1px solid var(--border);border-radius:8px;background:#fff;display:grid;place-items:center;cursor:pointer;color:var(--t3);font-size:13px;transition:background .12s,color .12s}
+.btn-icon-xs:hover{background:var(--muted);color:var(--t1)}
+.btn-icon-xs.danger:hover{background:#FEE2E2;color:#DC2626;border-color:#FCA5A5}
+.fonte-manual-form{display:none;margin-top:10px;padding:12px;background:var(--muted);border-radius:10px;border:1px solid var(--border)}
+.fonte-manual-form.open{display:grid;gap:8px}
+.fonte-manual-form input,.fonte-manual-form textarea{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:#fff;outline:none;font-family:var(--sans)}
+.fonte-manual-form input:focus,.fonte-manual-form textarea:focus{border-color:var(--acid);box-shadow:0 0 0 3px var(--acid-dim)}
+.fonte-manual-form textarea{min-height:72px;resize:vertical}
+.fontes-panel-toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.chat-search-bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;background:var(--muted);border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin:4px 0}
+.chat-search-bar input{border:none;background:transparent;font-size:14px;outline:none;font-family:var(--sans);color:var(--t1)}
+.chat-search-bar input::placeholder{color:var(--t3)}
 .review-corpus-preview{display:grid;gap:8px;max-height:210px;overflow:auto;border:1px solid var(--border);border-radius:8px;background:#fff;padding:10px}
 .review-chunk{border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--muted)}
 .review-chunk-title{font-size:12px;font-weight:800;color:var(--t1);margin-bottom:5px}
@@ -570,13 +588,32 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
             </div>
             <button class="btn btn-primary" onclick="buscarFontesReview()" id="reviewSearchBtn">Buscar</button>
           </div>
+          <div class="fontes-panel-toolbar">
+            <button class="btn btn-secondary btn-sm" onclick="iniciarBuscaNoChat()">🔍 Nova busca no chat</button>
+            <button class="btn btn-ghost btn-sm" onclick="toggleManualForm()">➕ Inserir manual</button>
+            <button class="btn btn-ghost btn-sm" onclick="carregarPreviewCorpusReview()" id="reviewCorpusPreviewBtn">Ver base</button>
+          </div>
+          <!-- Formulário de inserção manual -->
+          <div class="fonte-manual-form" id="fonteManualForm">
+            <div style="font-size:12px;font-weight:800;color:var(--t2);margin-bottom:2px">Inserir fonte manualmente</div>
+            <input type="text" id="manualTitulo" placeholder="Título do artigo *">
+            <input type="text" id="manualAutores" placeholder="Autores (opcional)">
+            <input type="text" id="manualUrl" placeholder="URL, DOI ou link de acesso (opcional)">
+            <textarea id="manualAbstract" placeholder="Abstract / resumo — esse texto entra no RAG da pesquisa *"></textarea>
+            <input type="text" id="manualAno" placeholder="Ano de publicação (opcional)" style="max-width:180px">
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary btn-sm" id="manualSaveBtn" onclick="inserirFonteManual()">Adicionar ao RAG</button>
+              <button class="btn btn-ghost btn-sm" onclick="toggleManualForm()">Cancelar</button>
+            </div>
+          </div>
+          <!-- Upload de arquivo -->
           <div class="review-field" style="margin-top:10px">
-            <label for="reviewUploadFile">Adicionar fonte manual</label>
+            <label for="reviewUploadFile">Enviar arquivo (PDF, DOCX, TXT)</label>
             <input id="reviewUploadFile" type="file" accept=".pdf,.docx,.txt,.md">
           </div>
           <div class="review-toolbar">
-            <button class="btn btn-secondary" onclick="uploadFonteReview()" id="reviewUploadBtn">Enviar fonte</button>
-            <button class="btn btn-ghost" onclick="carregarPreviewCorpusReview()" id="reviewCorpusPreviewBtn">Ver base</button>
+            <button class="btn btn-secondary" onclick="uploadFonteReview()" id="reviewUploadBtn">Enviar arquivo</button>
+            <button class="btn btn-secondary" onclick="reconstruirCorpusReview()">Atualizar base</button>
           </div>
           <div style="margin-top:14px">
             <div class="review-card-title" style="font-size:14px">Fontes</div>
@@ -976,7 +1013,7 @@ function selecionarOpcaoReview(campo,value,label){
     const formato=document.getElementById('reviewFormato');if(formato)formato.value=value;
     reviewFlowStage='fontes';
     appendReviewChat('assistant','Agora precisamos montar a Base da revisão. Você pode buscar artigos nas bases científicas ou enviar fontes manualmente.',[],[
-      {label:'Buscar artigos',onclick:"mostrarPaineis('fontes')"},
+      {label:'Buscar artigos',onclick:"iniciarBuscaNoChat()"},
       {label:'Enviar arquivo',onclick:"mostrarPaineis('fontes')"}
     ]);
     mostrarPaineis('fontes');
@@ -1233,6 +1270,58 @@ async function _exigirCorpusFechado(){
     return false;
   }
 }
+/* ── Busca no chat (Perplexity-style) ──────────────────────────────────────── */
+function iniciarBuscaNoChat(){
+  startReviewConversation();
+  appendReviewChat('assistant','Qual termo ou pergunta você quer buscar? (PubMed · OpenAlex · Semantic Scholar)\n\nDigite a query abaixo e pressione Enter.',[]);
+  window._reviewPendingSearch=true;
+  setTimeout(()=>document.getElementById('reviewChatInput')?.focus(),80);
+}
+
+/* ── Formulário de inserção manual ────────────────────────────────────────── */
+function toggleManualForm(){
+  const form=document.getElementById('fonteManualForm');
+  if(!form)return;
+  form.classList.toggle('open');
+  if(form.classList.contains('open'))setTimeout(()=>document.getElementById('manualTitulo')?.focus(),60);
+}
+
+async function inserirFonteManual(){
+  const id=await _garantirRevisaoAtiva();if(!id)return;
+  const titulo=(document.getElementById('manualTitulo')?.value||'').trim();
+  const abstract=(document.getElementById('manualAbstract')?.value||'').trim();
+  if(!titulo||!abstract){mostrarToast('Preencha título e abstract.','info','📝');return}
+  const autores=(document.getElementById('manualAutores')?.value||'').trim();
+  const url=(document.getElementById('manualUrl')?.value||'').trim();
+  const ano=(document.getElementById('manualAno')?.value||'').trim();
+  // Monta texto para indexação
+  const conteudo=[
+    `TÍTULO: ${titulo}`,
+    autores?`AUTORES: ${autores}`:'',
+    ano?`ANO: ${ano}`:'',
+    url?`URL: ${url}`:'',
+    `ABSTRACT:\n${abstract}`,
+  ].filter(Boolean).join('\n\n');
+  const blob=new Blob([conteudo],{type:'text/plain'});
+  const filename=`${titulo.slice(0,60).replace(/[^a-z0-9]/gi,'_')}.txt`;
+  const form=new FormData();form.append('arquivo',blob,filename);form.append('aprovar_para_escrita','true');
+  const btn=document.getElementById('manualSaveBtn');_setReviewBusy(btn,true,'Salvando...');
+  try{
+    const res=await reviewFetch(`/revisoes/${id}/fontes/upload`,{method:'POST',body:form});
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    // Limpa campos
+    ['manualTitulo','manualAutores','manualUrl','manualAbstract','manualAno'].forEach(i=>{const el=document.getElementById(i);if(el)el.value=''});
+    document.getElementById('fonteManualForm')?.classList.remove('open');
+    await carregarReviewSources();await reconstruirCorpusReview({silent:true});mostrarPaineis('fontes');
+    appendReviewChat('assistant',`"${titulo}" adicionada e aprovada na base. Você pode agora buscar mais fontes ou gerar rascunhos das seções.`,[],[
+      {label:'Buscar mais artigos',onclick:'iniciarBuscaNoChat()'},
+      {label:'Ver seções',onclick:"mostrarPaineis('secoes')"}
+    ]);
+    mostrarToast('Fonte adicionada ao RAG.','success','✓');
+  }catch(err){console.error('[CaseOS] Erro ao inserir manual:',err);mostrarToast('Não foi possível salvar a fonte.','error','⚠️')}
+  finally{_setReviewBusy(btn,false)}
+}
+
 async function buscarFontesReview(opts={}){
   const id=await _garantirRevisaoAtiva();if(!id)return;
   const input=document.getElementById('reviewSearchInput');
@@ -1251,10 +1340,17 @@ async function buscarFontesReview(opts={}){
     if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
     await carregarReviewSources();await carregarResumoCorpusReview();
     mostrarPaineis('fontes');
-    const total=data.importadas??data.total??'Fontes';
-    appendReviewChat('assistant',`${total} importadas para "${query}". Revise os resultados na Base da revisão e aprove apenas o que deve entrar na escrita.`,[],[
-      {label:'Abrir base',onclick:"mostrarPaineis('fontes')"},
-      {label:'Ver seções editáveis',onclick:"mostrarPaineis('secoes')"}
+    const total=data.importadas??data.total??0;
+    const fontesList=data.fontes||data.items||[];
+    const preview=fontesList.slice(0,4).map((f,i)=>{
+      const url=f.url||f.link||(f.doi?`https://doi.org/${f.doi}`:'')|(f.pmid?`https://pubmed.ncbi.nlm.nih.gov/${f.pmid}/`:'');
+      return `${i+1}. ${f.titulo||f.nome_arquivo||'Sem título'}${url?' 🔗':''}`;
+    }).join('\n');
+    const previewMsg=preview?`\n\n${preview}${fontesList.length>4?`\n… e mais ${fontesList.length-4} artigos.`:''}`:'' ;
+    appendReviewChat('assistant',`✓ ${total} artigos importados para "${query}".${previewMsg}\n\nRevise no painel lateral e aprove os que devem entrar na escrita.`,[],[
+      {label:'Revisar fontes',onclick:"mostrarPaineis('fontes')"},
+      {label:'Buscar mais',onclick:'iniciarBuscaNoChat()'},
+      {label:'Ver seções',onclick:"mostrarPaineis('secoes')"}
     ]);
     mostrarToast(`${total} importadas para triagem.`,'success','✓');
     reviewFlowStage='fontes';atualizarResumoReview();_saveReviewWorkspace();
@@ -1293,10 +1389,27 @@ async function carregarReviewSources(){
   const data=await res.json();const fontes=data.items||data.itens||data.fontes||[];
   if(!fontes.length){lista.innerHTML='<div class="review-small-note">Nenhuma fonte ainda. Busque artigos ou envie arquivos.</div>';return}
   lista.innerHTML=fontes.map((f,idx)=>{
-    const decisao=f.decisao_humana||f.decisao;const aprovada=Boolean(f.aprovada_para_escrita||decisao==='incluida');const excluida=decisao==='excluida';
-    const badge=aprovada?'<span class="review-badge approved">Aprovada</span>':excluida?'<span class="review-badge muted">Excluída</span>':'<span class="review-badge">Triagem</span>';
-    const meta=[f.fonte_base||f.origem||'Fonte',f.ano,f.periodico,f.pmid?`PMID ${f.pmid}`:'',f.doi?`DOI ${f.doi}`:''].filter(Boolean).join(' · ');
-    return `<article class="review-source"><div><div class="review-source-title">[F${idx+1}] ${_esc(f.titulo||f.nome_arquivo||'Fonte sem título')}</div><div class="review-source-meta">${_esc(meta)}</div>${f.abstract?`<div class="review-source-meta" style="margin-top:6px">${_esc(String(f.abstract).slice(0,220))}${String(f.abstract).length>220?'...':''}</div>`:''}</div><div class="review-toolbar" style="margin:0;justify-content:flex-start">${badge}<button class="btn btn-secondary" onclick="decidirFonteReview('${_esc(f.id)}','incluida')">Aprovar</button><button class="btn btn-ghost" onclick="decidirFonteReview('${_esc(f.id)}','excluida')">Remover</button></div></article>`;
+    const decisao=f.decisao_humana||f.decisao;
+    const aprovada=Boolean(f.aprovada_para_escrita||decisao==='incluida');
+    const excluida=decisao==='excluida';
+    const badge=aprovada?'<span class="review-badge approved">✓ Aprovada</span>':excluida?'<span class="review-badge muted">Excluída</span>':'<span class="review-badge">Triagem</span>';
+    const meta=[f.fonte_base||f.origem||'',f.ano,f.periodico,f.pmid?`PMID ${f.pmid}`:'',f.doi?`DOI: ${f.doi}`:''].filter(Boolean).join(' · ');
+    const url=f.url||f.link||(f.doi?`https://doi.org/${f.doi}`:'')|(f.pmid?`https://pubmed.ncbi.nlm.nih.gov/${f.pmid}/`:'');
+    const linkBtn=url?`<a href="${_esc(url)}" target="_blank" rel="noopener" class="btn-icon-xs" title="Abrir link">🔗</a>`:'';
+    const titulo=f.titulo||f.nome_arquivo||'Fonte sem título';
+    const tituloHtml=url?`<a href="${_esc(url)}" target="_blank" rel="noopener">[F${idx+1}] ${_esc(titulo)}</a>`:`[F${idx+1}] ${_esc(titulo)}`;
+    const cardClass='review-source'+(aprovada?' approved-card':excluida?' excluded-card':'');
+    return `<article class="${cardClass}">
+  <div class="review-source-title">${tituloHtml}</div>
+  ${meta?`<div class="review-source-meta">${_esc(meta)}</div>`:''}
+  ${f.abstract?`<div class="review-source-meta" style="margin-top:5px">${_esc(String(f.abstract).slice(0,200))}${String(f.abstract).length>200?'…':''}</div>`:''}
+  <div class="review-source-actions">
+    ${badge}
+    ${linkBtn}
+    ${!aprovada?`<button class="btn btn-secondary btn-xs" onclick="decidirFonteReview('${_esc(f.id)}','incluida')">✓ Aprovar</button>`:''}
+    <button class="btn-icon-xs danger" onclick="decidirFonteReview('${_esc(f.id)}','excluida')" title="Remover da base">✕</button>
+  </div>
+</article>`;
   }).join('');
 }
 async function decidirFonteReview(fonteId,decisao){
@@ -1394,6 +1507,14 @@ async function enviarMensagemReviewChat(){
   startReviewConversation();
   appendReviewChat('user',pergunta);input.value='';
   showReviewTyping();
+  // Se o usuário clicou em "Buscar artigos" e está aguardando a query
+  if(window._reviewPendingSearch){
+    window._reviewPendingSearch=false;
+    reviewFlowStage='fontes';atualizarResumoReview();
+    await salvarRevisaoAtual({silent:true});
+    await buscarFontesReview({query:pergunta,fromChat:true});
+    hideReviewTyping();return;
+  }
   const consultaBusca=extrairConsultaBuscaReview(pergunta);
   if(consultaBusca){
     reviewFlowStage='fontes';
