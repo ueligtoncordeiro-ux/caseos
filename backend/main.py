@@ -81,12 +81,20 @@ app = FastAPI(
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 _ALLOWED_ORIGINS = [
-    settings.frontend_url,
+    settings.frontend_url,                      # FRONTEND_URL no Render
+    "https://caseos.voandonaia.com",
     "https://reviewstudio.voandonaia.com",
     "http://localhost:5500",
     "http://127.0.0.1:5500",
     # "null" REMOVIDO — abria vetor CSRF via iframes e file://
 ]
+
+# Origens extras via env var (ex: domínios Vercel gerados automaticamente)
+if settings.extra_cors_origins:
+    _ALLOWED_ORIGINS += [
+        o.strip() for o in settings.extra_cors_origins.split(",")
+        if o.strip().startswith("http")
+    ]
 
 app.add_middleware(
     CORSMiddleware,

@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     environment: str = "development"
     frontend_url: str = "http://localhost:5500"
     backend_url: str = "http://localhost:8000"   # URL pública do backend (Render em prod)
+    # Origens extras separadas por vírgula — use para adicionar domínios Vercel/preview
+    # Ex: EXTRA_CORS_ORIGINS=https://caseos.vercel.app,https://caseos-abc123.vercel.app
+    extra_cors_origins: str = ""
     log_level: str = "INFO"
 
     max_pipeline_timeout: int = 900
