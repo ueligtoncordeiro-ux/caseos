@@ -358,6 +358,14 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
 .fonte-manual-form input:focus,.fonte-manual-form textarea:focus{border-color:var(--acid);box-shadow:0 0 0 3px var(--acid-dim)}
 .fonte-manual-form textarea{min-height:72px;resize:vertical}
 .fontes-panel-toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.bases-select{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.base-check{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:var(--t2);cursor:pointer;user-select:none}
+.base-check input{accent-color:var(--acid);width:13px;height:13px;cursor:pointer}
+.excluir-wrap{position:relative;display:inline-flex}
+.motivo-dropdown{position:absolute;bottom:calc(100% + 6px);right:0;z-index:500;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;min-width:220px;display:grid;gap:2px}
+.motivo-dropdown-title{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);padding:4px 8px 6px}
+.motivo-opt{width:100%;text-align:left;background:none;border:0;border-radius:7px;padding:7px 10px;font-size:12.5px;color:var(--t1);cursor:pointer;line-height:1.35}
+.motivo-opt:hover{background:var(--muted);color:var(--red)}
 .chat-search-bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;background:var(--muted);border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin:4px 0}
 .chat-search-bar input{border:none;background:transparent;font-size:14px;outline:none;font-family:var(--sans);color:var(--t1)}
 .chat-search-bar input::placeholder{color:var(--t3)}
@@ -576,10 +584,16 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
             <button class="btn btn-secondary" onclick="reconstruirCorpusReview()">Atualizar</button>
           </div>
           <div class="review-status">
-            <div class="review-status-item"><div class="review-status-value" id="reviewFontesTotal">—</div><div class="review-status-label">Fontes</div></div>
-            <div class="review-status-item"><div class="review-status-value" id="reviewFontesAprovadas">—</div><div class="review-status-label">Aprovadas</div></div>
-            <div class="review-status-item"><div class="review-status-value" id="reviewChunksTotal">—</div><div class="review-status-label">Trechos</div></div>
-            <div class="review-status-item"><div class="review-status-value" id="reviewCharsTotal">—</div><div class="review-status-label">Caracteres</div></div>
+            <div class="review-status-item"><div class="review-status-value" id="reviewFontesTotal">—</div><div class="review-status-label">Total</div></div>
+            <div class="review-status-item"><div class="review-status-value" id="reviewFontesTriagem" style="color:#B45309;">—</div><div class="review-status-label">Triagem</div></div>
+            <div class="review-status-item"><div class="review-status-value" id="reviewFontesAprovadas" style="color:var(--green);">—</div><div class="review-status-label">Aprovadas</div></div>
+            <div class="review-status-item"><div class="review-status-value" id="reviewFontesExcluidas" style="color:var(--red);">—</div><div class="review-status-label">Excluídas</div></div>
+          </div>
+          <div class="bases-select">
+            <label class="base-check"><input type="checkbox" id="basesPubmed" checked> PubMed</label>
+            <label class="base-check"><input type="checkbox" id="basesOpenalex" checked> OpenAlex</label>
+            <label class="base-check"><input type="checkbox" id="basesCrossref"> Crossref</label>
+            <label class="base-check"><input type="checkbox" id="basesSemantic" checked> Semantic Scholar</label>
           </div>
           <div class="source-search-row">
             <div class="review-field source-search-wrap">
@@ -1208,6 +1222,7 @@ async function salvarRevisaoAtual(opts={}){
 async function _garantirRevisaoAtiva(opts={}){return reviewAtivaId||await salvarRevisaoAtual({silent:opts.silent!==false})}
 function _resetReviewCorpusUI(){
   reviewCorpusStats={fontes_total:0,fontes_aprovadas:0,chunks_total:0,caracteres_indexados:0};
+  _atualizarContadoresFontes('—','—','—','—');
   ['reviewFontesTotal','reviewFontesAprovadas','reviewChunksTotal','reviewCharsTotal'].forEach(id=>_setText(id,'—'));
   const lista=document.getElementById('reviewSourcesList');if(lista)lista.innerHTML='<div class="review-small-note">Selecione ou salve uma revisão para ver as fontes.</div>';
   const preview=document.getElementById('reviewCorpusPreview');if(preview)preview.innerHTML='<div class="review-small-note">Atualize e visualize a base antes de pedir sínteses.</div>';
@@ -1335,7 +1350,13 @@ async function buscarFontesReview(opts={}){
   }
   const btn=document.getElementById('reviewSearchBtn');_setReviewBusy(btn,true,'Importando...');
   try{
-    const res=await reviewFetch(`/revisoes/${id}/importar-fontes`,{method:'POST',body:JSON.stringify({query,max:12,fontes:['pubmed','openalex','semantic']})});
+    const _bases=[];
+    if(document.getElementById('basesPubmed')?.checked!==false)_bases.push('pubmed');
+    if(document.getElementById('basesOpenalex')?.checked)_bases.push('openalex');
+    if(document.getElementById('basesCrossref')?.checked)_bases.push('crossref');
+    if(document.getElementById('basesSemantic')?.checked)_bases.push('semantic');
+    const fontesSel=_bases.length?_bases:['pubmed','openalex','semantic'];
+    const res=await reviewFetch(`/revisoes/${id}/importar-fontes`,{method:'POST',body:JSON.stringify({query,max:12,fontes:fontesSel})});
     const data=await _safeJson(res);
     if(!res.ok)throw new Error(_erroApi(data,`HTTP ${res.status}`));
     await carregarReviewSources();await carregarResumoCorpusReview();
@@ -1387,35 +1408,85 @@ async function carregarReviewSources(){
   const res=await reviewFetch(`/revisoes/${reviewAtivaId}/fontes?por_pagina=100`);
   if(!res.ok)throw new Error(`HTTP ${res.status}`);
   const data=await res.json();const fontes=data.items||data.itens||data.fontes||[];
-  if(!fontes.length){lista.innerHTML='<div class="review-small-note">Nenhuma fonte ainda. Busque artigos ou envie arquivos.</div>';return}
+  if(!fontes.length){lista.innerHTML='<div class="review-small-note">Nenhuma fonte ainda. Busque artigos ou envie arquivos.</div>';_atualizarContadoresFontes(0,0,0,0);return}
+  // P3 — contadores por status
+  let _ct=0,_cap=0,_ctri=0,_cex=0;
+  fontes.forEach(f=>{_ct++;const d=f.decisao_humana||f.decisao;if(d==='incluida'||f.aprovada_para_escrita)_cap++;else if(d==='excluida')_cex++;else _ctri++;});
+  _atualizarContadoresFontes(_ct,_ctri,_cap,_cex);
   lista.innerHTML=fontes.map((f,idx)=>{
     const decisao=f.decisao_humana||f.decisao;
     const aprovada=Boolean(f.aprovada_para_escrita||decisao==='incluida');
     const excluida=decisao==='excluida';
-    const badge=aprovada?'<span class="review-badge approved">✓ Aprovada</span>':excluida?'<span class="review-badge muted">Excluída</span>':'<span class="review-badge">Triagem</span>';
+    const motivoExib=f.motivo_decisao?`<span class="review-source-meta" style="font-style:italic;margin-top:3px">Motivo: ${_esc(f.motivo_decisao)}</span>`:'';
+    const badge=aprovada?'<span class="review-badge approved">✓ Aprovada</span>':excluida?`<span class="review-badge muted" title="${_esc(f.motivo_decisao||'')}">Excluída</span>`:'<span class="review-badge">Triagem</span>';
     const meta=[f.fonte_base||f.origem||'',f.ano,f.periodico,f.pmid?`PMID ${f.pmid}`:'',f.doi?`DOI: ${f.doi}`:''].filter(Boolean).join(' · ');
     const url=f.url||f.link||(f.doi?`https://doi.org/${f.doi}`:'')|(f.pmid?`https://pubmed.ncbi.nlm.nih.gov/${f.pmid}/`:'');
     const linkBtn=url?`<a href="${_esc(url)}" target="_blank" rel="noopener" class="btn-icon-xs" title="Abrir link">🔗</a>`:'';
     const titulo=f.titulo||f.nome_arquivo||'Fonte sem título';
     const tituloHtml=url?`<a href="${_esc(url)}" target="_blank" rel="noopener">[F${idx+1}] ${_esc(titulo)}</a>`:`[F${idx+1}] ${_esc(titulo)}`;
     const cardClass='review-source'+(aprovada?' approved-card':excluida?' excluded-card':'');
+    // P1 — botão ✕ chama popup de motivo em vez de excluir direto
+    const btnExcluir=`<div class="excluir-wrap"><button class="btn-icon-xs danger" onclick="confirmarExclusaoReview('${_esc(f.id)}',this.parentElement)" title="Excluir da base">✕</button></div>`;
     return `<article class="${cardClass}">
   <div class="review-source-title">${tituloHtml}</div>
   ${meta?`<div class="review-source-meta">${_esc(meta)}</div>`:''}
   ${f.abstract?`<div class="review-source-meta" style="margin-top:5px">${_esc(String(f.abstract).slice(0,200))}${String(f.abstract).length>200?'…':''}</div>`:''}
+  ${excluida&&f.motivo_decisao?motivoExib:''}
   <div class="review-source-actions">
     ${badge}
     ${linkBtn}
     ${!aprovada?`<button class="btn btn-secondary btn-xs" onclick="decidirFonteReview('${_esc(f.id)}','incluida')">✓ Aprovar</button>`:''}
-    <button class="btn-icon-xs danger" onclick="decidirFonteReview('${_esc(f.id)}','excluida')" title="Remover da base">✕</button>
+    ${btnExcluir}
   </div>
 </article>`;
   }).join('');
 }
-async function decidirFonteReview(fonteId,decisao){
+// P3 — atualiza os 4 contadores de status no painel
+function _atualizarContadoresFontes(total,triagem,aprovadas,excluidas){
+  const _sv=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v??'—'};
+  _sv('reviewFontesTotal',total);
+  _sv('reviewFontesTriagem',triagem);
+  _sv('reviewFontesAprovadas',aprovadas);
+  _sv('reviewFontesExcluidas',excluidas);
+}
+
+// P1 — constantes de motivo de exclusão
+const _MOTIVOS_EXCLUSAO=[
+  'Fora do escopo / não responde à pergunta',
+  'Duplicata de outro estudo',
+  'Baixa qualidade metodológica',
+  'Idioma não elegível',
+  'Tipo de estudo não incluído nos critérios',
+  'Outro'
+];
+
+// P1 — abre dropdown de motivo antes de excluir
+function confirmarExclusaoReview(fonteId,wrapEl){
+  document.querySelectorAll('.motivo-dropdown').forEach(el=>el.remove());
+  const dropdown=document.createElement('div');
+  dropdown.className='motivo-dropdown';
+  dropdown.innerHTML=`<div class="motivo-dropdown-title">Motivo da exclusão</div>`
+    +_MOTIVOS_EXCLUSAO.map(m=>`<button class="motivo-opt" data-motivo="${_esc(m)}">${_esc(m)}</button>`).join('');
+  dropdown.querySelectorAll('.motivo-opt').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const motivo=btn.dataset.motivo;
+      dropdown.remove();
+      decidirFonteReview(fonteId,'excluida',motivo);
+    });
+  });
+  wrapEl.appendChild(dropdown);
+  setTimeout(()=>{
+    const handler=(e)=>{if(!dropdown.contains(e.target)&&!wrapEl.contains(e.target)){dropdown.remove();document.removeEventListener('click',handler,true);}};
+    document.addEventListener('click',handler,true);
+  },80);
+}
+
+async function decidirFonteReview(fonteId,decisao,motivo){
   if(!reviewAtivaId||!fonteId)return;
   try{
-    const res=await reviewFetch(`/revisoes/${reviewAtivaId}/fontes/${fonteId}/decisao`,{method:'PATCH',body:JSON.stringify({decisao})});
+    const body={decisao};
+    if(motivo)body.motivo=motivo;
+    const res=await reviewFetch(`/revisoes/${reviewAtivaId}/fontes/${fonteId}/decisao`,{method:'PATCH',body:JSON.stringify(body)});
     if(!res.ok)throw new Error(`HTTP ${res.status}`);
     await carregarReviewSources();await reconstruirCorpusReview({silent:true});mostrarPaineis('fontes');
     if(decisao==='incluida'){
