@@ -1616,7 +1616,11 @@ function gerarVersaoFinalReview(){
 window.addEventListener('DOMContentLoaded',async()=>{
   if(!getToken()){
     const renewed=await refreshReviewSession();
-    if(!renewed){location.href='login.html';return}
+    if(!renewed){
+      try{sessionStorage.setItem('rccs_return_to','/review-studio')}catch(_){}
+      location.href='login.html';
+      return;
+    }
   }
   renderizarData();
   renderUser();

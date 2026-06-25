@@ -634,7 +634,7 @@ function getPostLoginUrl() {
       if (savedReturn.startsWith('/') && !savedReturn.startsWith('//')) return savedReturn;
     }
   } catch (_) {}
-  if (location.hostname === 'reviewstudio.voandonaia.com') return '/';
+  if (location.hostname === 'reviewstudio.voandonaia.com') return '/review-studio';
   return 'dashboard.html';
 }
 
