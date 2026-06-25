@@ -27,6 +27,13 @@
  * o destino imediato. O dashboard valida o token com o backend.
  */
 (function () {
+  // reviewstudio.voandonaia.com → sempre vai direto para o Review Studio
+  if (window.location.hostname === 'reviewstudio.voandonaia.com') {
+    window.location.replace('/review-studio');
+    return;
+  }
+
+  // caseos.voandonaia.com e localhost → roteador normal
   var token = sessionStorage.getItem('rccs_token');
   if (token && token.length > 10) {
     window.location.replace('dashboard.html');

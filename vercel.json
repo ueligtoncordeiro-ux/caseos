@@ -12,11 +12,6 @@
     }
   ],
   "rewrites": [
-    {
-      "source": "/",
-      "has": [{ "type": "host", "value": "reviewstudio.voandonaia.com" }],
-      "destination": "/review-studio.html"
-    },
     { "source": "/dashboard",      "destination": "/dashboard.html" },
     { "source": "/novo-relato",    "destination": "/novo-relato.html" },
     { "source": "/admin",          "destination": "/admin.html" },
