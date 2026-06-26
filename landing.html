@@ -443,6 +443,197 @@
     /* ─── FADE IN ─── */
     .js-fade { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
     .js-fade.visible { opacity: 1; transform: translateY(0); }
+
+    /* ════════════════════════════════════════════════════════
+       PREMIUM AI REFRESH — Landing
+       Mesma linguagem visual do Dashboard + Review Studio
+       ════════════════════════════════════════════════════════ */
+
+    /* ── Nav: glassmorphism premium ── */
+    .nav {
+      background: rgba(255,255,255,.88) !important;
+      backdrop-filter: blur(14px) !important;
+      -webkit-backdrop-filter: blur(14px) !important;
+      border-bottom: 1px solid rgba(0,0,0,.06) !important;
+      box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04) !important;
+    }
+    .nav.scrolled { box-shadow: 0 1px 0 rgba(0,0,0,.07), 0 8px 32px rgba(0,0,0,.07) !important; }
+    /* Logo wordmark acid */
+    .clr-acid { color: #C8FF00 !important; }
+    /* Nav links */
+    .nav-links a { font-weight: 500; color: #3A3A3A; transition: color .15s; letter-spacing: -.01em; }
+    .nav-links a:hover { color: #0A0A0B; }
+    /* CTA button */
+    .btn-dark {
+      background: #0A0A0B !important;
+      font-weight: 700 !important;
+      border-radius: 10px !important;
+      letter-spacing: -.01em !important;
+    }
+    .btn-dark:hover { background: #222 !important; }
+
+    /* ── Hero: dark background premium ── */
+    .hero {
+      background: #09090B !important;
+      padding-top: 128px !important;
+      padding-bottom: 80px !important;
+    }
+    .hero-badge {
+      background: rgba(200,255,0,.12) !important;
+      color: #C8FF00 !important;
+      border: 1px solid rgba(200,255,0,.22) !important;
+      border-radius: 99px !important;
+      font-weight: 700 !important;
+    }
+    .hero-h1 {
+      color: #FFFFFF !important;
+      font-size: 72px !important;
+      letter-spacing: -.04em !important;
+      line-height: 1.0 !important;
+    }
+    .hero-h1-em {
+      font-style: normal !important;
+      background: linear-gradient(95deg,#C8FF00,#A8E000) !important;
+      -webkit-background-clip: text !important;
+      background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+    }
+    .hero-sub { color: rgba(255,255,255,.62) !important; font-size: 17px !important; }
+    .hero-note { color: rgba(255,255,255,.35) !important; }
+    .hero-note span { color: rgba(255,255,255,.2) !important; }
+    /* Hero CTA buttons */
+    .btn-dark-lg {
+      background: #C8FF00 !important;
+      color: #0A0A0B !important;
+      font-weight: 800 !important;
+      border-radius: 12px !important;
+      font-size: 15px !important;
+      padding: 14px 28px !important;
+      box-shadow: 0 4px 20px rgba(200,255,0,.35) !important;
+    }
+    .btn-dark-lg:hover { background: #d8ff40 !important; transform: translateY(-2px) !important; }
+    .btn-outline {
+      border-color: rgba(255,255,255,.2) !important;
+      color: rgba(255,255,255,.75) !important;
+      border-radius: 12px !important;
+      font-size: 15px !important;
+    }
+    .btn-outline:hover { border-color: rgba(255,255,255,.4) !important; color: #fff !important; background: rgba(255,255,255,.06) !important; }
+    /* Hero mockup: white card pops on dark bg */
+    .hero-mockup {
+      border-radius: 18px !important;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 24px 80px rgba(0,0,0,.6) !important;
+    }
+
+    /* ── Section eyebrows ── */
+    .section-eyebrow {
+      font-weight: 800 !important;
+      letter-spacing: .09em !important;
+      color: #C8FF00 !important;
+      background: rgba(200,255,0,.1) !important;
+      display: inline-block !important;
+      padding: 4px 12px !important;
+      border-radius: 6px !important;
+      margin-bottom: 16px !important;
+    }
+
+    /* ── Feature cards ── */
+    .feature-card {
+      border-radius: 16px !important;
+      border: 1px solid #E9E9E7 !important;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05) !important;
+      transition: box-shadow .2s, transform .2s !important;
+    }
+    .feature-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,.07), 0 12px 40px rgba(0,0,0,.09) !important;
+      transform: translateY(-3px) !important;
+    }
+    .feature-icon { border-radius: 10px !important; }
+
+    /* ── Pricing: PRO destaque premium ── */
+    .pricing-card {
+      border-radius: 16px !important;
+      border: 1px solid #E9E9E7 !important;
+      box-shadow: 0 1px 4px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05) !important;
+    }
+    .pricing-card.popular {
+      background: #09090B !important;
+      border-color: #09090B !important;
+      box-shadow: 0 8px 40px rgba(0,0,0,.32) !important;
+    }
+    .pricing-card.popular .plan-name,
+    .pricing-card.popular .plan-price,
+    .pricing-card.popular .plan-desc,
+    .pricing-card.popular li { color: rgba(255,255,255,.82) !important; }
+    .pricing-card.popular .plan-price { color: #fff !important; }
+    .pricing-card.popular li::before { color: #C8FF00 !important; }
+    .pricing-card.popular .btn-pricing {
+      background: #C8FF00 !important; color: #0A0A0B !important;
+      font-weight: 800 !important;
+      box-shadow: 0 4px 16px rgba(200,255,0,.35) !important;
+    }
+    .popular-badge {
+      background: #C8FF00 !important;
+      color: #0A0A0B !important;
+      font-weight: 800 !important;
+      border-radius: 99px !important;
+    }
+
+    /* ── CTA final box ── */
+    .cta-box {
+      background: #09090B !important;
+      border-radius: 24px !important;
+      border: 1px solid rgba(200,255,0,.12) !important;
+      box-shadow: 0 16px 64px rgba(0,0,0,.24) !important;
+    }
+    .cta-box h2 { color: #fff !important; }
+    .cta-box p { color: rgba(255,255,255,.55) !important; }
+    .cta-box .btn-acid {
+      background: #C8FF00 !important;
+      color: #0A0A0B !important;
+      font-weight: 800 !important;
+      border-radius: 12px !important;
+      box-shadow: 0 4px 20px rgba(200,255,0,.3) !important;
+    }
+
+    /* ── Testimonial cards premium ── */
+    .testimonial-card {
+      border-radius: 16px !important;
+      border: 1px solid #E9E9E7 !important;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04) !important;
+    }
+    .testimonial-card:hover {
+      border-color: rgba(200,255,0,.35) !important;
+      box-shadow: 0 4px 16px rgba(0,0,0,.07) !important;
+    }
+
+    /* ── Kanban / pipeline mockup ── */
+    .pipeline-card {
+      border-radius: 12px !important;
+      border: 1px solid #E8E8E6 !important;
+      box-shadow: 0 1px 4px rgba(0,0,0,.05) !important;
+    }
+    .pipeline-card:nth-child(1) { border-left: 3px solid #16A34A !important; }
+
+    /* ── CARE score ring section ── */
+    .care-section { background: #F5F5F3 !important; }
+
+    /* ── Logos strip ── */
+    .logos-strip { background: #F5F5F3 !important; border-color: #E8E8E6 !important; }
+    .logo-inst {
+      border-color: #E0E0DE !important;
+      font-weight: 600 !important;
+      color: #555 !important;
+    }
+
+    /* ── Hero mobile ── */
+    @media (max-width: 768px) {
+      .hero-h1 { font-size: 44px !important; }
+    }
+    @media (max-width: 480px) {
+      .hero-h1 { font-size: 34px !important; line-height: 1.08 !important; }
+      .btn-dark-lg { font-size: 14px !important; padding: 13px 22px !important; }
+    }
   </style>
 </head>
 <body>
@@ -483,7 +674,7 @@
     <div class="hero-badge">⚡ Relatos de Caso · Review Studio · CARE 2013</div>
 
     <h1 class="hero-h1">
-      Seus 🧬 relatos, 📋 revisões<br>&amp; 📄 artigos. Publicáveis.
+      Seus relatos,<br>revisões &amp; artigos.<br><em class="hero-h1-em">Publicáveis.</em>
     </h1>
 
     <p class="hero-sub">
@@ -650,7 +841,30 @@
             <div style="width:10px;height:10px;border-radius:50%;background:#28C840;"></div>
             <span style="font-size:12px;color:var(--gray400);margin-left:8px;font-weight:500;">neuraxIA CaseOS · IA Generativa</span>
           </div>
-          <img src="assets/img/ui-ai-writing.png" alt="Interface de escrita com IA" style="width:100%;display:block;" />
+          <!-- CaseOS AI Assist mockup — HTML nativo, sem imagem genérica -->
+          <div style="padding:20px 20px 24px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#787774;margin-bottom:12px;">Formulário — Relato de Caso · Seção Discussão</div>
+            <div style="position:relative;">
+              <textarea readonly style="width:100%;height:100px;border:1.5px solid #E9E9E7;border-radius:10px;padding:11px 44px 11px 13px;font-size:13px;font-family:Inter,sans-serif;color:#3A3A3A;line-height:1.6;resize:none;background:#FAFAFA;outline:none;">A Síndrome de Brugada é uma canalopatia hereditária que predispõe à fibrilação ventricular e morte súbita. O padrão de ECG tipo 1 espontâneo é considerado diagnóstico, conforme consenso HRS/EHRA/APHRS 2013.</textarea>
+              <div style="position:absolute;right:10px;top:10px;background:#0A0A0B;border-radius:7px;padding:5px;cursor:pointer;" title="Melhorar com IA">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L9.09 9.09 2 12l7.09 2.91L12 22l2.91-7.09L22 12l-7.09-2.91L12 2z" fill="#C8FF00"/></svg>
+              </div>
+            </div>
+            <!-- Popup AI Assist -->
+            <div style="margin-top:12px;background:#0A0A0B;border-radius:12px;padding:14px 16px;border:1px solid rgba(200,255,0,.18);">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <div style="width:18px;height:18px;border-radius:5px;background:#C8FF00;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M12 2L9.09 9.09 2 12l7.09 2.91L12 22l2.91-7.09L22 12l-7.09-2.91L12 2z" fill="#0A0A0B"/></svg>
+                </div>
+                <span style="font-size:11px;font-weight:700;color:#C8FF00;letter-spacing:.06em;text-transform:uppercase;">IA — Sugestão de melhoria</span>
+              </div>
+              <p style="font-size:12.5px;color:rgba(255,255,255,.82);line-height:1.65;margin-bottom:10px;">Adicionar menção ao caso index e critérios de Brugada (≥2mm de supradesnivelamento em ≥1 derivação direita) fortalece a discussão e melhora o CARE Score em ~8 pontos.</p>
+              <div style="display:flex;gap:8px;">
+                <button style="background:#C8FF00;color:#0A0A0B;border:none;border-radius:7px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;">Aplicar sugestão</button>
+                <button style="background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);border:none;border-radius:7px;padding:5px 13px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">Ignorar</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

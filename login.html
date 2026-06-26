@@ -427,6 +427,90 @@ body {
   .form-panel > * { max-width: 100%; }
   .form-header { margin-bottom: 24px; }
 }
+
+/* ════════════════════════════════════════════════════════
+   PREMIUM AI REFRESH — Login Brand Panel
+   Alinhado com a sidebar escura do Dashboard + Review Studio
+   ════════════════════════════════════════════════════════ */
+
+/* Brand panel: obsidian background */
+.brand-panel {
+  background: #09090B !important;
+  border-right: 1px solid rgba(255,255,255,.06) !important;
+}
+
+/* Form panel: fundo levemente mais quente */
+.form-panel { background: #F5F5F3 !important; }
+
+/* Tagline: branco */
+.brand-tagline { color: #FFFFFF !important; }
+.brand-tagline em {
+  background: #C8FF00 !important;
+  color: #09090B !important;
+  border-radius: 5px !important;
+}
+
+/* Desc: cinza suave sobre dark */
+.brand-desc { color: rgba(255,255,255,.45) !important; }
+
+/* Balão pixel: dark variant */
+.brand-bubble {
+  background: rgba(255,255,255,.06) !important;
+  border-color: rgba(255,255,255,.15) !important;
+  box-shadow:
+    -3px 0 0 0 rgba(255,255,255,.15),
+     3px 0 0 0 rgba(255,255,255,.15),
+     0 -3px 0 0 rgba(255,255,255,.15),
+     0  3px 0 0 rgba(255,255,255,.15) !important;
+}
+.brand-bubble::before { border-left-color: rgba(255,255,255,.15) !important; }
+.brand-bubble::after { border-left-color: rgba(255,255,255,.04) !important; }
+
+.brand-bubble-text { color: rgba(255,255,255,.82) !important; }
+.brand-bubble-cursor { background: #C8FF00 !important; }
+
+/* Footer links: sobre dark */
+.brand-footer {
+  background: transparent !important;
+  border-top-color: rgba(255,255,255,.08) !important;
+}
+.brand-footer a { color: rgba(255,255,255,.35) !important; }
+.brand-footer a:hover { color: rgba(255,255,255,.7) !important; }
+
+/* Form card: elevação suave */
+.form-card, .form-panel .form-header ~ * {
+  /* nothing needed — form sits on light bg */
+}
+
+/* Botão de login: premium */
+.btn-primary {
+  border-radius: 10px !important;
+  font-family: var(--head) !important;
+  font-weight: 700 !important;
+  letter-spacing: -.01em !important;
+}
+
+/* Google button: refinado */
+.btn-google {
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  border: 1.5px solid #E4E4E2 !important;
+}
+.btn-google:hover { background: #F5F5F3 !important; border-color: #D4D4D2 !important; }
+
+/* Inputs: premium */
+.field input, .field select, .field textarea {
+  border-radius: 9px !important;
+  border-color: #E4E4E2 !important;
+}
+.field input:focus, .field textarea:focus {
+  border-color: #09090B !important;
+  box-shadow: 0 0 0 3px rgba(200,255,0,.18) !important;
+}
+
+/* Forgot link */
+.forgot { color: #787774 !important; }
+.forgot:hover { color: #09090B !important; }
 </style>
 </head>
 <body>
@@ -435,7 +519,7 @@ body {
   <!-- ═══════════ BRAND PANEL ═══════════ -->
   <div class="brand-panel">
     <div class="brand-logo">
-      <img src="assets/logo-caseos-light.png" alt="CaseOS" class="brand-logo-img">
+      <img src="assets/logo-caseos-white.png" alt="CaseOS" class="brand-logo-img">
     </div>
 
 
