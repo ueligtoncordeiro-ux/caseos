@@ -437,7 +437,110 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
   z-index:288;display:none;flex-direction:column;overflow:hidden;
 }
 body.review-chat-active .right-col{display:flex}
-@media(max-width:720px){body.review-chat-active .right-col{display:none}}
+/* ── Mobile bottom nav (hidden on desktop) ─────── */
+.mobile-bottom-nav{
+  display:none;position:fixed;left:0;right:0;bottom:0;height:56px;
+  background:#fff;border-top:1px solid var(--border);z-index:310;
+  align-items:stretch;justify-content:space-around;
+  padding:0;padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.mbn-btn{
+  flex:1;border:0;background:transparent;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:3px;cursor:pointer;
+  color:var(--t3);font-size:9.5px;font-weight:700;letter-spacing:.04em;
+  text-transform:uppercase;transition:color .15s,background .15s;
+  padding:6px 4px;border-radius:0;
+}
+.mbn-btn svg{width:18px;height:18px}
+.mbn-btn:hover,.mbn-btn:active{color:var(--t1);background:var(--muted)}
+/* Active state driven by body panel classes */
+body.review-panel-fontes #mbnFontes,
+body.review-panel-tipo #mbnTipo,
+body.review-panel-secoes #mbnSecoes{
+  color:var(--t1);background:var(--acid-dim);
+  border-top:2px solid var(--acid);
+}
+.mobile-panel-overlay{display:none}
+
+/* ── MOBILE (≤720px): right-col → bottom sheet; side-rail → hidden ── */
+@media(max-width:720px){
+  /* M5 — Hide left rail; main fills full width */
+  .side-rail{display:none!important}
+  .main{margin-left:0!important}
+  .page{padding:20px 14px 160px!important}
+
+  /* Body bottom padding for bottom nav bar */
+  body{padding-bottom:56px}
+
+  /* M5 — Mobile bottom nav: always visible */
+  .mobile-bottom-nav{display:flex!important}
+
+  /* M6 — Right-col becomes bottom sheet (initially off-screen) */
+  body.review-chat-active .right-col,
+  body.review-panel-fontes .right-col,
+  body.review-panel-tipo .right-col,
+  body.review-panel-secoes .right-col{
+    display:flex!important;
+    position:fixed!important;
+    top:auto!important;left:0!important;right:0!important;
+    bottom:56px!important;    /* above bottom nav */
+    width:100%!important;
+    height:min(72vh,520px);
+    border-radius:18px 18px 0 0!important;
+    border-left:none!important;
+    border-top:1px solid var(--border);
+    box-shadow:0 -8px 32px rgba(0,0,0,.12);
+    transform:translateY(100%);
+    transition:transform .3s ease;
+    z-index:290;
+  }
+  /* Slide up when a panel is active */
+  body.review-panel-fontes .right-col,
+  body.review-panel-tipo .right-col,
+  body.review-panel-secoes .right-col{transform:translateY(0)!important}
+
+  /* Drag handle */
+  .right-col>.context-tabs::before{
+    content:"";display:block;
+    width:36px;height:4px;background:var(--border);
+    border-radius:99px;margin:0 auto 6px;
+  }
+
+  /* Mobile panel overlay (backdrop) */
+  .mobile-panel-overlay{display:none}
+  body.review-panel-fontes .mobile-panel-overlay,
+  body.review-panel-tipo .mobile-panel-overlay,
+  body.review-panel-secoes .mobile-panel-overlay{
+    display:block;position:fixed;
+    inset:0;bottom:56px;
+    background:rgba(0,0,0,.28);z-index:289;
+  }
+
+  /* M7 — Chat input above bottom nav */
+  body.review-chat-active .chat-input-wrap,
+  .command-card.active .chat-input-wrap{
+    left:8px!important;right:8px!important;
+    bottom:calc(56px + 8px)!important;
+    transform:none!important;width:auto!important;
+  }
+  body.review-chat-active .setup-summary{
+    left:8px!important;right:8px!important;
+    bottom:calc(56px + 66px)!important;
+    transform:none!important;width:auto!important;
+    padding:0 4px!important;
+  }
+  .chat-local-notice{
+    left:8px!important;right:8px!important;
+    bottom:calc(56px + 130px)!important;
+    transform:none!important;width:auto!important;
+  }
+
+  /* Sidebar drawer: full width minus nothing (no rail) */
+  .sidebar-drawer{width:min(320px, calc(100vw - 24px))}
+
+  /* Chat thread height adjustment */
+  body.review-chat-active .chat-thread{max-height:calc(100vh - 280px)!important}
+}
 
 /* Tab buttons — horizontal row at top of right-col */
 .right-col>.context-tabs{
@@ -749,6 +852,29 @@ body.review-chat-active .main{margin-right:340px}
       </div>
   </section>
 </div>
+
+<!-- ══ MOBILE PANEL OVERLAY (closes bottom sheet when tapped) ══ -->
+<div class="mobile-panel-overlay" id="mobilePanelOverlay" onclick="fecharPaineisReview()"></div>
+
+<!-- ══ MOBILE BOTTOM NAV (M5) ══════════════════════════════════ -->
+<nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Navegação Review Studio">
+  <button class="mbn-btn" onclick="toggleSidebar(true)" title="Revisões">
+    <svg><use href="assets/pixel-icons.svg#px-list"/></svg>
+    <span>Revisões</span>
+  </button>
+  <button class="mbn-btn" id="mbnFontes" onclick="mostrarPaineis('fontes')" title="Base da revisão">
+    <svg><use href="assets/pixel-icons.svg#px-magnify"/></svg>
+    <span>Fontes</span>
+  </button>
+  <button class="mbn-btn" id="mbnTipo" onclick="mostrarPaineis('tipo')" title="Configuração">
+    <svg><use href="assets/pixel-icons.svg#px-docstar"/></svg>
+    <span>Config</span>
+  </button>
+  <button class="mbn-btn" id="mbnSecoes" onclick="mostrarPaineis('secoes')" title="Rascunhos">
+    <svg><use href="assets/pixel-icons.svg#px-list"/></svg>
+    <span>Seções</span>
+  </button>
+</nav>
 
 <div class="toast-container" id="toastContainer"></div>
 
