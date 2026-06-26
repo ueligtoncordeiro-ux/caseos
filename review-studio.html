@@ -1177,6 +1177,48 @@ body{ background:#F7F7F5; }
 .drawer-group-head.open+.drawer-group-items{display:block}
 .drawer-no-group-label{padding:6px 10px 3px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t3)}
 
+/* ── Custom modal (replaces prompt/confirm) ───────────────── */
+#rccsModalBackdrop{
+  position:fixed;inset:0;z-index:900;
+  background:rgba(9,9,11,.55);
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;
+  padding:20px;
+}
+#rccsModalBackdrop.open{display:flex}
+#rccsModalBox{
+  background:#fff;border-radius:18px;
+  box-shadow:0 24px 60px rgba(0,0,0,.22),0 4px 16px rgba(0,0,0,.1);
+  width:100%;max-width:380px;
+  padding:24px 24px 20px;
+  animation:_modalIn .18s cubic-bezier(.22,1,.36,1);
+}
+@keyframes _modalIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+.rccs-modal-title{font-size:15px;font-weight:800;color:#09090B;margin:0 0 4px;letter-spacing:-.02em}
+.rccs-modal-desc{font-size:13px;color:#6B7280;margin:0 0 16px;line-height:1.5}
+.rccs-modal-input{
+  width:100%;box-sizing:border-box;
+  border:1.5px solid #E4E4E2;border-radius:10px;
+  padding:10px 13px;font-size:14px;font-family:inherit;
+  color:#09090B;background:#FAFAF9;
+  outline:none;transition:border-color .15s,box-shadow .15s;
+  margin-bottom:16px;
+}
+.rccs-modal-input:focus{border-color:#C8FF00;box-shadow:0 0 0 3px rgba(200,255,0,.18)}
+.rccs-modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.rccs-modal-btn{
+  border:0;border-radius:10px;padding:9px 18px;
+  font-size:13px;font-weight:700;font-family:inherit;
+  cursor:pointer;transition:opacity .12s,transform .1s;
+}
+.rccs-modal-btn:active{transform:scale(.97)}
+.rccs-modal-btn.cancel{background:#F4F4F3;color:#6B7280}
+.rccs-modal-btn.cancel:hover{background:#EBEBEA}
+.rccs-modal-btn.confirm{background:#C8FF00;color:#09090B}
+.rccs-modal-btn.confirm:hover{opacity:.88}
+.rccs-modal-btn.danger-confirm{background:#DC2626;color:#fff}
+.rccs-modal-btn.danger-confirm:hover{opacity:.88}
+
 /* ── PRISMA 2020 diagram & panel styles ───────────────────── */
 #reviewPrismaPanel{padding:0}
 .prisma-info-note{font-size:11.5px;color:var(--t3);line-height:1.6;padding:12px 0 6px;margin:0}
@@ -1875,41 +1917,61 @@ function _grpId(){return'grp_'+Math.random().toString(36).slice(2,9)}
 
 function criarGrupo(reviewIdParaMover){
   _closeCtx();
-  const nome=prompt('Nome do grupo:','');
-  if(!nome||!nome.trim())return;
-  const grupos=_loadGroups();
-  const novo={id:_grpId(),nome:nome.trim(),collapsed:false};
-  grupos.push(novo);
-  _saveGroups(grupos);
-  if(reviewIdParaMover){
-    const map=_loadGroupMap();
-    map[reviewIdParaMover]=novo.id;
-    _saveGroupMap(map);
-  }
-  mostrarToast(`Grupo "${novo.nome}" criado.`,'success','📁');
-  renderConversationList();
+  _rccsModal({
+    titulo:'Novo grupo',
+    placeholder:'Ex: Metodologia, Resultados, Triagem…',
+    inputInicial:'',
+    confirmLabel:'Criar grupo',
+    onConfirm(nome){
+      if(!nome||!nome.trim())return;
+      const grupos=_loadGroups();
+      const novo={id:_grpId(),nome:nome.trim(),collapsed:false};
+      grupos.push(novo);
+      _saveGroups(grupos);
+      if(reviewIdParaMover){
+        const map=_loadGroupMap();
+        map[reviewIdParaMover]=novo.id;
+        _saveGroupMap(map);
+      }
+      mostrarToast(`Grupo "${novo.nome}" criado.`,'success','📁');
+      renderConversationList();
+    }
+  });
 }
 function renomearGrupo(gid){
   _closeCtx();
   const grupos=_loadGroups();
   const g=grupos.find(x=>x.id===gid);if(!g)return;
-  const novo=prompt('Novo nome do grupo:',g.nome);
-  if(!novo||!novo.trim())return;
-  g.nome=novo.trim();
-  _saveGroups(grupos);
-  renderConversationList();
+  _rccsModal({
+    titulo:'Renomear grupo',
+    inputInicial:g.nome,
+    confirmLabel:'Salvar',
+    onConfirm(novo){
+      if(!novo||!novo.trim())return;
+      g.nome=novo.trim();
+      _saveGroups(grupos);
+      renderConversationList();
+    }
+  });
 }
 function excluirGrupo(gid){
   _closeCtx();
   const grupos=_loadGroups();
   const g=grupos.find(x=>x.id===gid);if(!g)return;
-  if(!confirm(`Excluir o grupo "${g.nome}"?\nAs revisões do grupo voltam para "Sem grupo".`))return;
-  _saveGroups(grupos.filter(x=>x.id!==gid));
-  const map=_loadGroupMap();
-  Object.keys(map).forEach(rid=>{if(map[rid]===gid)delete map[rid]});
-  _saveGroupMap(map);
-  mostrarToast(`Grupo "${g.nome}" removido.`,'success','✓');
-  renderConversationList();
+  _rccsModal({
+    titulo:`Excluir grupo "${g.nome}"?`,
+    desc:'As revisões deste grupo voltam para "Sem grupo". Esta ação não pode ser desfeita.',
+    confirmLabel:'Excluir grupo',
+    danger:true,
+    onConfirm(){
+      _saveGroups(grupos.filter(x=>x.id!==gid));
+      const map=_loadGroupMap();
+      Object.keys(map).forEach(rid=>{if(map[rid]===gid)delete map[rid]});
+      _saveGroupMap(map);
+      mostrarToast(`Grupo "${g.nome}" removido.`,'success','✓');
+      renderConversationList();
+    }
+  });
 }
 function moverParaGrupo(reviewId,groupId){
   _closeCtx();
@@ -2112,33 +2174,45 @@ function _posicionarSubDropdown(el,rect){
 async function _renomearRevisao(id){
   _closeCtx();
   const r=reviewCache.find(x=>String(x.id)===String(id));
-  const novoTitulo=prompt('Novo nome para a revisão:',r?.titulo||r?.tema||'');
-  if(!novoTitulo||!novoTitulo.trim())return;
-  try{
-    const res=await reviewFetch(`/revisoes/${id}`,{method:'PATCH',body:JSON.stringify({titulo:novoTitulo.trim()})});
-    if(!res.ok)throw new Error(`HTTP ${res.status}`);
-    mostrarToast('Revisão renomeada.','success','✓');
-    await carregarRevisoes({autoSelect:false,loadActive:false,resetCorpus:false});
-  }catch(err){
-    mostrarToast('Não foi possível renomear agora.','error','⚠️');
-    console.warn('[CaseOS] renomear:',err);
-  }
+  _rccsModal({
+    titulo:'Renomear revisão',
+    inputInicial:r?.titulo||r?.tema||'',
+    confirmLabel:'Salvar',
+    onConfirm:async(novoTitulo)=>{
+      if(!novoTitulo||!novoTitulo.trim())return;
+      try{
+        const res=await reviewFetch(`/revisoes/${id}`,{method:'PATCH',body:JSON.stringify({titulo:novoTitulo.trim()})});
+        if(!res.ok)throw new Error(`HTTP ${res.status}`);
+        mostrarToast('Revisão renomeada.','success','✓');
+        await carregarRevisoes({autoSelect:false,loadActive:false,resetCorpus:false});
+      }catch(err){
+        mostrarToast('Não foi possível renomear agora.','error','⚠️');
+        console.warn('[CaseOS] renomear:',err);
+      }
+    }
+  });
 }
 async function _excluirRevisao(id,titulo){
   _closeCtx();
-  if(!confirm(`Excluir "${titulo}"? Esta ação não pode ser desfeita.`))return;
-  try{
-    const res=await reviewFetch(`/revisoes/${id}`,{method:'DELETE'});
-    if(!res.ok&&res.status!==404)throw new Error(`HTTP ${res.status}`);
-    // Remove from group map
-    const map=_loadGroupMap();delete map[String(id)];_saveGroupMap(map);
-    mostrarToast('Revisão excluída.','success','✓');
-    if(String(id)===String(reviewAtivaId)){reviewAtivaId=null;_saveReviewWorkspace()}
-    await carregarRevisoes({autoSelect:reviewAtivaId==null,loadActive:false,resetCorpus:false});
-  }catch(err){
-    mostrarToast('Não foi possível excluir agora.','error','⚠️');
-    console.warn('[CaseOS] excluir:',err);
-  }
+  _rccsModal({
+    titulo:`Excluir revisão?`,
+    desc:`"${titulo}" será removida permanentemente. Esta ação não pode ser desfeita.`,
+    confirmLabel:'Excluir',
+    danger:true,
+    onConfirm:async()=>{
+      try{
+        const res=await reviewFetch(`/revisoes/${id}`,{method:'DELETE'});
+        if(!res.ok&&res.status!==404)throw new Error(`HTTP ${res.status}`);
+        const map=_loadGroupMap();delete map[String(id)];_saveGroupMap(map);
+        mostrarToast('Revisão excluída.','success','✓');
+        if(String(id)===String(reviewAtivaId)){reviewAtivaId=null;_saveReviewWorkspace()}
+        await carregarRevisoes({autoSelect:reviewAtivaId==null,loadActive:false,resetCorpus:false});
+      }catch(err){
+        mostrarToast('Não foi possível excluir agora.','error','⚠️');
+        console.warn('[CaseOS] excluir:',err);
+      }
+    }
+  });
 }
 function renderReviewSections(){
   const grid=document.getElementById('reviewSectionGrid');if(!grid)return;
@@ -3012,6 +3086,60 @@ document.addEventListener('click',(ev)=>{
   if(document.body.classList.contains('sidebar-open')&&!ev.target.closest('.side-rail')&&!ev.target.closest('.sidebar-drawer')){
     toggleSidebar(false);
   }
+});
+</script>
+<!-- ── Custom modal overlay (replaces prompt/confirm) ─────── -->
+<div id="rccsModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="rccsModalTitle">
+  <div id="rccsModalBox">
+    <p class="rccs-modal-title" id="rccsModalTitle"></p>
+    <p class="rccs-modal-desc" id="rccsModalDesc" style="display:none"></p>
+    <input class="rccs-modal-input" id="rccsModalInput" type="text" style="display:none" autocomplete="off" spellcheck="false"/>
+    <div class="rccs-modal-actions">
+      <button class="rccs-modal-btn cancel" id="rccsModalCancel" onclick="_rccsModalClose(false)">Cancelar</button>
+      <button class="rccs-modal-btn confirm" id="rccsModalConfirm" onclick="_rccsModalClose(true)">Confirmar</button>
+    </div>
+  </div>
+</div>
+<script>
+// ── Custom modal engine ──────────────────────────────────────
+let _rccsModalCb=null;
+function _rccsModal({titulo,desc,inputInicial,placeholder,confirmLabel='Confirmar',danger=false,onConfirm,onCancel}){
+  const bd=document.getElementById('rccsModalBackdrop');
+  const ttl=document.getElementById('rccsModalTitle');
+  const dsc=document.getElementById('rccsModalDesc');
+  const inp=document.getElementById('rccsModalInput');
+  const btn=document.getElementById('rccsModalConfirm');
+  ttl.textContent=titulo;
+  if(desc){dsc.textContent=desc;dsc.style.display=''}else{dsc.style.display='none'}
+  if(inputInicial!==undefined){
+    inp.value=inputInicial||'';
+    inp.placeholder=placeholder||'';
+    inp.style.display='';
+    setTimeout(()=>{inp.focus();inp.select()},80);
+  }else{
+    inp.style.display='none';
+    document.getElementById('rccsModalConfirm').focus();
+  }
+  btn.textContent=confirmLabel;
+  btn.className='rccs-modal-btn '+(danger?'danger-confirm':'confirm');
+  _rccsModalCb={onConfirm,onCancel};
+  bd.classList.add('open');
+  // close on backdrop click
+  bd.onclick=e=>{if(e.target===bd)_rccsModalClose(false)};
+  inp.onkeydown=e=>{if(e.key==='Enter')_rccsModalClose(true);if(e.key==='Escape')_rccsModalClose(false)};
+}
+function _rccsModalClose(confirmed){
+  const bd=document.getElementById('rccsModalBackdrop');
+  const inp=document.getElementById('rccsModalInput');
+  bd.classList.remove('open');
+  const cb=_rccsModalCb;_rccsModalCb=null;
+  if(!cb)return;
+  if(confirmed&&cb.onConfirm)cb.onConfirm(inp.value);
+  else if(!confirmed&&cb.onCancel)cb.onCancel();
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&document.getElementById('rccsModalBackdrop').classList.contains('open'))
+    _rccsModalClose(false);
 });
 </script>
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{})</script>
