@@ -721,21 +721,24 @@ body.review-chat-active .user-dropdown{
   right:0!important;
 }
 
-/* ── 3. Tabs redesign ─────────────────────────────────── */
+/* ── 3. Tabs redesign — 2×2 grid, all 4 tabs always visible ── */
 .right-col>.context-tabs{
-  padding:10px 12px 12px!important;
-  gap:5px!important;
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  padding:8px!important;
+  gap:4px!important;
   background:#F5F5F3;
   border-bottom:1px solid #E4E4E2;
+  flex:none!important;
 }
 .right-col>.context-tabs .context-tab{
   flex-direction:row!important;
   gap:5px!important;
-  justify-content:center!important;
+  justify-content:flex-start!important;
   align-items:center!important;
-  border-radius:10px!important;
-  padding:8px 8px!important;
-  font-size:10.5px!important;
+  border-radius:9px!important;
+  padding:7px 9px!important;
+  font-size:11px!important;
   font-weight:700!important;
   background:#fff!important;
   border:1px solid #E4E4E2!important;
@@ -744,9 +747,16 @@ body.review-chat-active .user-dropdown{
   transition:background .15s,color .15s,border-color .15s,box-shadow .15s!important;
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  min-height:34px!important;
 }
 .right-col>.context-tabs .context-tab svg{
-  width:12px!important;height:12px!important;
+  width:13px!important;height:13px!important;flex:0 0 13px!important;
+}
+.right-col>.context-tabs .context-tab span:not(.context-tab-dot):not(.context-tab-count){
+  overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;min-width:0!important;
 }
 .right-col>.context-tabs .context-tab .context-tab-dot{
   width:5px!important;height:5px!important;
@@ -1086,6 +1096,53 @@ body{ background:#F7F7F5; }
   border-top:1px solid rgba(0,0,0,.07)!important;
 }
 
+/* ── Sidebar drawer refinements ──────────────────────────── */
+.drawer-brand svg{flex:0 0 22px}
+.drawer-ver-mais{
+  width:100%;border:0;background:transparent;text-align:left;
+  font-size:11.5px;font-weight:700;color:var(--t3);padding:4px 14px 10px;
+  cursor:pointer;transition:color .15s;
+}
+.drawer-ver-mais:hover{color:var(--t1)}
+
+/* conversation-item with context menu */
+.conversation-item{
+  width:100%;border:0;background:transparent;text-align:left;
+  padding:8px 10px;border-radius:9px;font-size:13px;font-weight:500;
+  color:var(--t2);cursor:pointer;transition:background .12s,color .12s;
+  display:flex!important;align-items:center;justify-content:space-between;gap:6px;
+  white-space:normal!important;overflow:visible!important;text-overflow:unset!important;
+}
+.conversation-item:hover{background:var(--muted);color:var(--t1)}
+.conversation-item.active{background:var(--acid-dim);color:var(--t1);font-weight:700}
+.conv-item-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.conv-item-menu{
+  flex:0 0 22px;width:22px;height:22px;border-radius:6px;border:0;
+  background:transparent;color:var(--t3);font-size:14px;cursor:pointer;
+  display:none;align-items:center;justify-content:center;
+  transition:background .12s,color .12s;
+}
+.conversation-item:hover .conv-item-menu,
+.conversation-item.active .conv-item-menu{display:flex}
+.conv-item-menu:hover{background:#E5E5E3;color:var(--t1)}
+
+/* Context dropdown for review items */
+.rev-ctx-dropdown{
+  position:absolute;z-index:600;background:#fff;
+  border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 8px 28px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.08);
+  padding:5px;min-width:180px;
+}
+.rev-ctx-item{
+  width:100%;border:0;background:none;border-radius:8px;
+  padding:8px 12px;font-size:13px;color:var(--t1);text-align:left;cursor:pointer;
+  display:flex;align-items:center;gap:8px;transition:background .1s;
+}
+.rev-ctx-item:hover{background:var(--muted)}
+.rev-ctx-item.danger{color:#DC2626}
+.rev-ctx-item.danger:hover{background:#FEF2F2}
+.rev-ctx-sep{height:1px;background:var(--border);margin:4px 0}
+
 /* ── PRISMA 2020 diagram & panel styles ───────────────────── */
 #reviewPrismaPanel{padding:0}
 .prisma-info-note{font-size:11.5px;color:var(--t3);line-height:1.6;padding:12px 0 6px;margin:0}
@@ -1155,7 +1212,13 @@ body{ background:#F7F7F5; }
 
 <aside class="sidebar-drawer" id="sidebarDrawer">
   <div class="drawer-head">
-    <div class="drawer-brand"><img src="assets/favicon.svg" alt=""> Review Studio</div>
+    <div class="drawer-brand">
+      <svg width="22" height="22" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M9.5 8H26.5C27.88 8 29 9.12 29 10.5V21C29 22.38 27.88 23.5 26.5 23.5H21.5L18 28.5L14.5 23.5H9.5C8.12 23.5 7 22.38 7 21V10.5C7 9.12 8.12 8 9.5 8Z" stroke="#09090B" stroke-width="2" fill="none"/>
+        <text x="18" y="19" text-anchor="middle" font-family="monospace" font-size="7.5" font-weight="900" fill="#09090B">&#8212;&lt;</text>
+      </svg>
+      Review Studio
+    </div>
     <button class="drawer-close" onclick="toggleSidebar(false)" aria-label="Fechar">‹</button>
   </div>
   <button class="btn btn-primary" onclick="novaRevisaoForm();toggleSidebar(false)">Nova revisão</button>
@@ -1171,12 +1234,13 @@ body{ background:#F7F7F5; }
     <a class="drawer-link" href="https://caseos.voandonaia.com/dashboard#ferramentas">Prompts</a>
   </div>
   <div class="drawer-section">Revisões</div>
-  <a class="drawer-link active" href="https://reviewstudio.voandonaia.com"><svg><use href="assets/pixel-icons.svg#px-docstar"/></svg> Nova revisão</a>
-  <a class="drawer-link" href="https://reviewstudio.voandonaia.com"><svg><use href="assets/pixel-icons.svg#px-list"/></svg> Todas as revisões</a>
-  <div class="drawer-section">Recentes</div>
+  <button class="drawer-link" onclick="novaRevisaoForm();toggleSidebar(false)" style="width:100%;border:0;background:transparent;text-align:left"><svg><use href="assets/pixel-icons.svg#px-docstar"/></svg> Nova revisão</button>
+  <button class="drawer-link" onclick="toggleVerTodas()" id="btnVerTodas" style="width:100%;border:0;background:transparent;text-align:left"><svg><use href="assets/pixel-icons.svg#px-list"/></svg> Todas as revisões</button>
+  <div class="drawer-section" id="recentesLabel">Recentes</div>
   <div class="conversation-list" id="reviewConversationList">
     <button class="conversation-item active">Revisão atual</button>
   </div>
+  <button class="drawer-ver-mais" id="btnVerMaisRecentes" onclick="toggleVerTodas()" style="display:none">Ver todas as revisões →</button>
   <div class="sidebar-footer">
     <div class="drawer-section" style="margin:0 0 8px">Conta</div>
     <button class="drawer-link" style="width:100%;border:0;background:transparent;text-align:left" onclick="toggleUserDropdown()"><svg><use href="assets/pixel-icons.svg#px-help"/></svg> Usuário</button>
@@ -1759,10 +1823,99 @@ function atualizarAbasContextuaisReview(){
   box.innerHTML=tabs.map(tab=>`<button class="context-tab ${tab.active?'active':''} ${tab.state||''}" onclick="${tab.action}" aria-pressed="${tab.active?'true':'false'}">${tab.key===nextKey?'<span class="context-tab-dot"></span>':''}<svg><use href="assets/pixel-icons.svg#${tab.icon}"/></svg><span>${_esc(tab.label)}</span>${tab.count?`<span class="context-tab-count">${_esc(tab.count)}</span>`:''}</button>`).join('');
   box.style.opacity=aberta?'.96':'1';
 }
+let _showAllReviews=false;
+function toggleVerTodas(){
+  _showAllReviews=!_showAllReviews;
+  const lbl=document.getElementById('recentesLabel');
+  if(lbl)lbl.textContent=_showAllReviews?'Todas as revisões':'Recentes';
+  const btnTodas=document.getElementById('btnVerTodas');
+  if(btnTodas)btnTodas.style.fontWeight=_showAllReviews?'800':'500';
+  renderConversationList();
+}
+function _renderConvItem(r){
+  const ativo=String(r.id)===String(reviewAtivaId);
+  const titulo=_esc(r.titulo||r.tema||'Revisão sem título');
+  return `<div class="conversation-item ${ativo?'active':''}" style="position:relative">
+    <span class="conv-item-label" onclick="selecionarRevisaoAtiva('${_esc(r.id)}')">${titulo}</span>
+    <button class="conv-item-menu" title="Opções" onclick="_abrirMenuRevisao(event,'${_esc(r.id)}','${titulo}')">⋯</button>
+  </div>`;
+}
 function renderConversationList(){
   const box=document.getElementById('reviewConversationList');if(!box)return;
-  if(!reviewCache.length){box.innerHTML='<button class="conversation-item active">Nova revisão</button>';return}
-  box.innerHTML=reviewCache.map(r=>`<button class="conversation-item ${String(r.id)===String(reviewAtivaId)?'active':''}" onclick="selecionarRevisaoAtiva('${_esc(r.id)}')">${_esc(r.titulo||r.tema||'Revisão sem título')}</button>`).join('');
+  const btnMais=document.getElementById('btnVerMaisRecentes');
+  if(!reviewCache.length){
+    box.innerHTML='<div style="padding:6px 10px;font-size:12px;color:var(--t3)">Nenhuma revisão ainda.</div>';
+    if(btnMais)btnMais.style.display='none';
+    return;
+  }
+  const MAX_RECENT=5;
+  const lista=_showAllReviews?reviewCache:reviewCache.slice(0,MAX_RECENT);
+  box.innerHTML=lista.map(_renderConvItem).join('');
+  if(btnMais){
+    const temMais=!_showAllReviews&&reviewCache.length>MAX_RECENT;
+    btnMais.style.display=temMais?'block':'none';
+    btnMais.textContent=`Ver todas (${reviewCache.length}) →`;
+  }
+}
+// ── Context menu for review items ───────────────────────────
+function _abrirMenuRevisao(evt,id,titulo){
+  evt.stopPropagation();
+  document.querySelectorAll('.rev-ctx-dropdown').forEach(el=>el.remove());
+  const dropdown=document.createElement('div');
+  dropdown.className='rev-ctx-dropdown';
+  dropdown.innerHTML=`
+    <button class="rev-ctx-item" onclick="_renomearRevisao('${_esc(id)}')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Renomear
+    </button>
+    <button class="rev-ctx-item" onclick="_criarGrupoRevisao('${_esc(id)}')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      Criar grupo
+    </button>
+    <div class="rev-ctx-sep"></div>
+    <button class="rev-ctx-item danger" onclick="_excluirRevisao('${_esc(id)}','${_esc(titulo)}')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      Excluir revisão
+    </button>`;
+  const btn=evt.currentTarget;
+  const rect=btn.getBoundingClientRect();
+  dropdown.style.cssText=`position:fixed;top:${rect.bottom+4}px;left:${Math.min(rect.left,window.innerWidth-200)}px`;
+  document.body.appendChild(dropdown);
+  const close=e=>{if(!dropdown.contains(e.target)){dropdown.remove();document.removeEventListener('click',close,true)}};
+  setTimeout(()=>document.addEventListener('click',close,true),10);
+}
+async function _renomearRevisao(id){
+  document.querySelectorAll('.rev-ctx-dropdown').forEach(el=>el.remove());
+  const r=reviewCache.find(x=>String(x.id)===String(id));
+  const novoTitulo=prompt('Novo nome para a revisão:',r?.titulo||r?.tema||'');
+  if(!novoTitulo||!novoTitulo.trim())return;
+  try{
+    const res=await reviewFetch(`/revisoes/${id}`,{method:'PATCH',body:JSON.stringify({titulo:novoTitulo.trim()})});
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    mostrarToast('Revisão renomeada.','success','✓');
+    await carregarRevisoes({autoSelect:false,loadActive:false,resetCorpus:false});
+  }catch(err){
+    mostrarToast('Não foi possível renomear agora.','error','⚠️');
+    console.warn('[CaseOS] renomear:',err);
+  }
+}
+async function _excluirRevisao(id,titulo){
+  document.querySelectorAll('.rev-ctx-dropdown').forEach(el=>el.remove());
+  if(!confirm(`Excluir "${titulo}"? Esta ação não pode ser desfeita.`))return;
+  try{
+    const res=await reviewFetch(`/revisoes/${id}`,{method:'DELETE'});
+    if(!res.ok&&res.status!==404)throw new Error(`HTTP ${res.status}`);
+    mostrarToast('Revisão excluída.','success','✓');
+    if(String(id)===String(reviewAtivaId)){reviewAtivaId=null;_saveReviewWorkspace()}
+    await carregarRevisoes({autoSelect:reviewAtivaId==null,loadActive:false,resetCorpus:false});
+  }catch(err){
+    mostrarToast('Não foi possível excluir agora.','error','⚠️');
+    console.warn('[CaseOS] excluir:',err);
+  }
+}
+function _criarGrupoRevisao(id){
+  document.querySelectorAll('.rev-ctx-dropdown').forEach(el=>el.remove());
+  mostrarToast('Grupos de revisão em breve! 📂','info','📂');
 }
 function renderReviewSections(){
   const grid=document.getElementById('reviewSectionGrid');if(!grid)return;
