@@ -206,6 +206,7 @@ body {
   box-shadow: var(--shadow-xs);
 }
 .sidebar-collapse-btn:hover { border-color: var(--acid); color: var(--obsidian); box-shadow: 0 0 0 3px var(--acid-dim); }
+.sidebar-mobile-close { display: none; }  /* hidden on desktop */
 
 .logo-link {
   display: flex;
@@ -2410,7 +2411,6 @@ tbody td {
     width: 34px;
     height: 34px;
   }
-  .hamburger { display: none; }
   .page-content { padding: 20px 16px; }
   .bento-grid { grid-template-columns: repeat(2, 1fr); }
   .chat-panel {
@@ -2837,6 +2837,149 @@ tbody td {
 }
 .tour-welcome-btn-start:hover { filter: brightness(1.08); }
 
+/* ════════════════════════════════════════════════════════════════
+   MOBILE OVERRIDES — M1-M4  (cascade after existing rules)
+════════════════════════════════════════════════════════════════ */
+
+/* ── M1 · Hamburger & Sidebar Drawer ─────────────────────────── */
+@media (max-width: 768px) {
+  /* Hamburger inside topbar — static, not fixed */
+  .hamburger {
+    display: flex !important;
+    align-items: center; justify-content: center;
+    position: static !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 8px !important;
+    border-radius: 8px !important;
+    font-size: 22px !important;
+    top: auto !important; left: auto !important;
+    z-index: auto !important;
+    width: 40px !important; height: 40px !important;
+    color: var(--t1) !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
+  }
+  .hamburger:hover { background: var(--row-hover) !important; }
+
+  /* Topbar-left: flex row, hamburger comes first */
+  .topbar-left { flex-direction: row; align-items: center; }
+  .topbar-page { display: none; }       /* Hide "Dashboard / date" → saves room */
+
+  /* Sidebar: full height drawer, above topbar */
+  .sidebar {
+    top: 0 !important;
+    z-index: 260 !important;
+    width: min(300px, 85vw) !important;
+    min-width: 0 !important;
+    box-shadow: 6px 0 28px rgba(0,0,0,0.18) !important;
+  }
+  .sidebar-overlay { z-index: 255; }
+
+  /* Sidebar-control: collapse button hidden, show close × instead */
+  .sidebar-collapse-btn { display: none; }
+  .sidebar-mobile-close {
+    display: flex !important;
+    align-items: center; justify-content: center;
+    width: 32px; height: 32px;
+    border-radius: 8px; border: 1px solid var(--card-bdr);
+    background: var(--card-bg); color: var(--t2);
+    cursor: pointer; font-size: 14px; font-weight: 700;
+  }
+  .sidebar-mobile-close:hover { background: var(--row-hover); color: var(--t1); }
+  .sidebar-control { display: flex !important; justify-content: flex-end; }
+
+  /* Sidebar-nav padding */
+  .sidebar-nav { padding-top: 16px; }
+}
+
+/* ── M2 · Topbar compact on very small screens ───────────────── */
+@media (max-width: 480px) {
+  .topbar { padding: 0 8px 0 4px !important; gap: 4px !important; }
+  .topbar-brand img { width: 80px !important; }
+  .btn-topbar-caseos { display: none !important; }
+  .btn-topbar-novo { padding: 7px 10px !important; font-size: 12px !important; }
+}
+
+/* ── M3 · Bento grid & stat cards ───────────────────────────── */
+@media (max-width: 640px) {
+  .bento-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 20px !important;
+  }
+  .stat-card { padding: 14px 14px !important; }
+  .stat-value { font-size: 24px !important; }
+  .stat-icon { margin-bottom: 8px !important; }
+  .stat-sub { font-size: 11px !important; }
+  /* Greeting stacks vertically */
+  .greeting {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    padding: 20px 20px !important;
+  }
+  .greeting-char { display: none !important; }
+  .greeting-title { font-size: 22px !important; }
+  /* Quick actions: horizontal scroll instead of column */
+  .quick-actions {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    padding-bottom: 4px !important;
+    margin-bottom: 16px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .quick-actions .btn { flex-shrink: 0 !important; }
+}
+
+/* ── M4 · Table: hide non-essential columns, fix toolbar ─────── */
+@media (max-width: 600px) {
+  /* Hide CARE Score (col 3) and Date (col 4) */
+  #relatosTable thead th:nth-child(3),
+  #relatosTable thead th:nth-child(4),
+  #relatosTable tbody td:nth-child(3),
+  #relatosTable tbody td:nth-child(4) { display: none !important; }
+
+  /* Table fits screen without horizontal scroll */
+  #relatosTable { min-width: 0 !important; }
+  .table-wrap { overflow-x: visible !important; }
+
+  /* Cell sizing */
+  .td-titulo { max-width: 150px !important; font-size: 13px !important; }
+  #relatosTable tbody td { padding: 10px 10px !important; font-size: 13px !important; }
+  #relatosTable thead th { padding: 9px 10px !important; }
+
+  /* Toolbar: search full width, filters horizontal scroll */
+  .table-toolbar {
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding: 10px 12px !important;
+  }
+  .table-search { max-width: 100% !important; }
+  .table-toolbar > div:last-child {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    gap: 6px !important;
+    padding-bottom: 2px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Page padding */
+  .page-content { padding: 14px 12px !important; }
+}
+
+/* ── General: safe-area insets for notched phones ────────────── */
+@supports (padding: max(0px)) {
+  @media (max-width: 768px) {
+    .topbar {
+      padding-left: max(12px, env(safe-area-inset-left)) !important;
+      padding-right: max(10px, env(safe-area-inset-right)) !important;
+    }
+  }
+}
+
 </style>
 </head>
 <body>
@@ -2964,9 +3107,8 @@ tbody td {
 </svg>
 
 <!-- ══════════════════════════════════════════════════════════
-     HAMBURGER + OVERLAY (mobile)
+     SIDEBAR OVERLAY (mobile)
 ══════════════════════════════════════════════════════════ -->
-<button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
 <!-- ══════════════════════════════════════════════════════════
@@ -2976,6 +3118,8 @@ tbody td {
 
   <div class="sidebar-control">
     <button class="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="Expandir menu" aria-label="Expandir menu" id="sidebarCollapseBtn">›</button>
+    <!-- Close button shown only on mobile -->
+    <button class="sidebar-mobile-close" onclick="toggleSidebar()" aria-label="Fechar menu" title="Fechar">✕</button>
   </div>
 
   <!-- Nav -->
@@ -3054,6 +3198,8 @@ tbody td {
   <!-- Topbar -->
   <header class="topbar">
     <div class="topbar-left">
+      <!-- Hamburger: hidden on desktop, shows on mobile as first item in topbar -->
+      <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu" title="Menu">☰</button>
       <a href="dashboard.html" class="topbar-brand" aria-label="CaseOS Dashboard">
         <img src="assets/logo-caseos-light.png" alt="CaseOS">
       </a>
