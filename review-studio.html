@@ -133,7 +133,7 @@ body.sidebar-open .main{margin-left:320px}
   margin-left:56px;height:100vh;overflow:auto;background:
     radial-gradient(circle at 54% 58%, rgba(200,255,0,.24) 0, rgba(200,255,0,.12) 24%, rgba(255,255,255,0) 50%),
     #fff;
-  transition:margin-left .22s ease;
+  transition:margin-left .22s ease,margin-right .22s ease;
 }
 .page{min-height:100vh;padding:54px 90px 70px 34px;max-width:1320px;margin:0 auto}
 .review-hero{
@@ -427,6 +427,96 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
   .context-tab span:not(.context-tab-dot),.context-tab-count{display:none}
   .context-tab svg{width:16px;height:16px}
 }
+
+/* ══════════════════════════════════════════════════════
+   RIGHT COLUMN — fixed 340px sidebar replacing floating panels
+   ══════════════════════════════════════════════════════ */
+.right-col{
+  position:fixed;right:0;top:0;bottom:0;width:340px;
+  background:#fff;border-left:1px solid var(--border);
+  z-index:288;display:none;flex-direction:column;overflow:hidden;
+}
+body.review-chat-active .right-col{display:flex}
+@media(max-width:720px){body.review-chat-active .right-col{display:none}}
+
+/* Tab buttons — horizontal row at top of right-col */
+.right-col>.context-tabs{
+  position:static!important;display:flex!important;flex-direction:row;
+  gap:4px;padding:10px;border-bottom:1px solid var(--border);
+  width:auto;top:auto;right:auto;flex:0 0 auto;background:#fff;pointer-events:auto;
+}
+.right-col>.context-tabs .context-tab{
+  flex:1;min-height:40px;border-radius:8px;font-size:11.5px;
+  padding:7px 6px;justify-content:center;flex-direction:column;
+  align-items:center;gap:3px;border:1px solid transparent;
+  background:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;
+}
+.right-col>.context-tabs .context-tab .context-tab-count{display:none}
+.right-col>.context-tabs .context-tab:hover,
+.right-col>.context-tabs .context-tab.active{background:var(--acid-dim);border-color:var(--acid);color:var(--t1)}
+
+/* Panel area — fills remaining space, always visible in right-col */
+.right-col>.context-panels{
+  position:static!important;transform:none!important;
+  opacity:1!important;pointer-events:auto!important;
+  flex:1;min-height:0;overflow:hidden;
+  display:flex!important;flex-direction:column;
+  max-height:none;width:auto;
+  border:none;border-radius:0;box-shadow:none;
+  background:#fff;padding:12px;
+}
+.right-col>.context-panels::after{display:none!important}
+.right-col>.context-panels .panel-head{flex:0 0 auto;padding:0 0 10px;margin-bottom:2px}
+.right-col>.context-panels .panel-body{flex:1;overflow-y:auto;min-height:0;padding-right:2px}
+
+/* Placeholder — visible when no panel is selected */
+.right-col .panel-placeholder{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:36px 16px;text-align:center;color:var(--t3);gap:10px;
+}
+.right-col .panel-placeholder svg{opacity:.35}
+body.review-panel-tipo .right-col .panel-placeholder,
+body.review-panel-fontes .right-col .panel-placeholder,
+body.review-panel-secoes .right-col .panel-placeholder{display:none}
+
+/* Sub-panel visibility inside right-col */
+.right-col #reviewConfigPanel{display:none!important}
+.right-col #reviewSourcesPanel{display:none!important}
+.right-col #reviewSectionsPanel{display:none!important}
+body.review-panel-tipo .right-col #reviewConfigPanel{display:grid!important}
+body.review-panel-fontes .right-col #reviewSourcesPanel{display:grid!important}
+body.review-panel-secoes .right-col #reviewSectionsPanel{display:grid!important}
+
+/* Allow sources list to fill right-col height without hard cap */
+.right-col .review-source-list{max-height:none}
+.right-col .review-corpus-preview{max-height:200px}
+.right-col .config-grid{grid-template-columns:1fr!important}
+
+/* Main content: shift right to make room for right-col */
+body.review-chat-active .main{margin-right:340px}
+@media(max-width:720px){body.review-chat-active .main{margin-right:0}}
+
+/* Remove the padding-right that was cutting left side of chat */
+@media(min-width:1121px){
+  body.review-chat-active .review-hero{padding-right:0!important}
+  body.review-chat-active .command-card.active{width:min(920px,calc(100vw - 416px))!important}
+  body.review-chat-active .chat-thread{width:min(920px,calc(100vw - 416px))!important}
+}
+
+/* Chat input + setup summary: center in available space (56px left + 340px right) */
+@media(min-width:1121px){
+  body.review-chat-active .chat-input-wrap,
+  .command-card.active .chat-input-wrap{
+    left:calc(50% - 142px)!important;
+    width:min(920px,calc(100vw - 436px))!important;
+    transform:translateX(-50%);
+  }
+  body.review-chat-active .setup-summary{
+    left:calc(50% - 142px)!important;
+    width:min(920px,calc(100vw - 436px))!important;
+    transform:translateX(-50%);
+  }
+}
 </style>
 </head>
 <body>
@@ -519,11 +609,14 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
         </div>
       </div>
       <div class="setup-summary" id="reviewSetupSummary"></div>
-      <div class="context-tabs" id="reviewContextTabs" aria-label="Ações contextuais"></div>
     </section>
+  </div>
+</main>
 
-    <section class="context-panels" id="reviewContextPanels">
-      <header class="panel-head">
+<div class="right-col" id="rightCol">
+  <div class="context-tabs" id="reviewContextTabs" aria-label="Ações contextuais"></div>
+  <section class="context-panels show" id="reviewContextPanels">
+    <header class="panel-head">
         <div>
           <div class="panel-title" id="reviewPanelTitle">Base da revisão</div>
           <div class="panel-subtitle" id="reviewPanelSubtitle">Fontes aprovadas definem o que a IA pode usar.</div>
@@ -531,6 +624,10 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
         <button class="panel-close" onclick="fecharPaineisReview()" aria-label="Fechar painel">×</button>
       </header>
       <div class="panel-body">
+        <div class="panel-placeholder">
+          <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+          <div style="font-size:13px;line-height:1.5">Selecione uma aba acima<br>para configurar a revisão</div>
+        </div>
         <div class="config-panel" id="reviewConfigPanel">
           <div class="review-field">
             <label for="reviewSelect">Revisão ativa</label>
@@ -650,9 +747,8 @@ body.review-panel-tipo #reviewSourcesPanel,body.review-panel-tipo #reviewSection
         </div>
       </aside>
       </div>
-    </section>
-  </div>
-</main>
+  </section>
+</div>
 
 <div class="toast-container" id="toastContainer"></div>
 
@@ -987,6 +1083,12 @@ function startReviewConversation(seedInitial=true){
   if(!reviewConversationStarted){
     reviewConversationStarted=true;
     if(seedInitial&&!reviewChatHistory.length)renderInitialChat();
+  }
+  // Auto-open fontes panel in right-col if no panel is currently active
+  if(!document.body.classList.contains('review-panel-fontes')&&
+     !document.body.classList.contains('review-panel-tipo')&&
+     !document.body.classList.contains('review-panel-secoes')){
+    mostrarPaineis('fontes');
   }
 }
 function resetReviewConversationView(){
