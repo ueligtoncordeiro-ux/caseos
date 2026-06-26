@@ -2,9 +2,15 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>neuraxIA CaseOS — Relatos Clínicos Publicáveis com IA</title>
   <meta name="description" content="Plataforma de IA para profissionais de saúde — médicos, enfermeiros, fisioterapeutas e pesquisadores. Transforme experiências clínicas em artigos publicáveis com CARE Score, em minutos." />
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0A0A0B">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CaseOS">
+  <link rel="apple-touch-icon" href="/assets/logo-caseos.png">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -412,6 +418,26 @@
       .footer-inner { grid-template-columns: 1fr; }
       .logo-inst { font-size: 12px; padding: 4px 12px; }
       .footer-bottom { flex-direction: column; text-align: center; }
+    }
+
+    /* ─── 375px (iPhone SE / small Androids) ─── */
+    @media (max-width: 375px) {
+      .hero { padding: 100px 16px 48px; }
+      .hero-h1 { font-size: 28px; line-height: 1.2; }
+      .hero-sub { font-size: 15px; }
+      .hero-badge { font-size: 11px; }
+      .nav-cta .btn-ghost { display: none; }  /* keep only "Começar grátis" */
+      .section { padding: 60px 16px; }
+      .pricing-card { padding: 24px 18px; }
+      .cta-box { padding: 32px 16px; }
+    }
+
+    /* ─── Nav CTA compact on mobile ─── */
+    @media (max-width: 480px) {
+      .nav-cta { gap: 8px; }
+      .nav-cta .btn-ghost { padding: 8px 12px; font-size: 13px; }
+      .nav-cta .btn-dark { padding: 8px 12px; font-size: 13px; }
+      .nav-inner { padding: 0 16px; }
     }
 
     /* ─── FADE IN ─── */

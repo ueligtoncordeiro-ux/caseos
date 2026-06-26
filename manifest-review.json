@@ -1,0 +1,43 @@
+{
+  "name": "Review Studio · CaseOS",
+  "short_name": "Review Studio",
+  "description": "Plataforma de revisão sistemática científica com inteligência artificial.",
+  "start_url": "/review-studio",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0A0A0B",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": ["medical", "productivity", "education"],
+  "icons": [
+    {
+      "src": "assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo-caseos.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/logo-caseos.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nova Revisão",
+      "short_name": "Nova",
+      "description": "Iniciar uma nova revisão sistemática",
+      "url": "/review-studio",
+      "icons": [{ "src": "assets/favicon.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+    }
+  ]
+}

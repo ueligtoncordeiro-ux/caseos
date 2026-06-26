@@ -1,0 +1,57 @@
+{
+  "name": "CaseOS — Relatos Clínicos com IA",
+  "short_name": "CaseOS",
+  "description": "Crie e revise relatos clínicos com inteligência artificial, seguindo critérios CARE.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0A0A0B",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": ["medical", "productivity", "education"],
+  "icons": [
+    {
+      "src": "assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo-caseos.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/logo-caseos.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Novo Relato Clínico",
+      "short_name": "Novo Relato",
+      "description": "Iniciar um novo relato clínico com IA",
+      "url": "/novo-relato",
+      "icons": [{ "src": "assets/favicon.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Review Studio",
+      "short_name": "Review",
+      "description": "Revisão sistemática científica com IA",
+      "url": "/review-studio",
+      "icons": [{ "src": "assets/favicon.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Ver todos os relatos",
+      "url": "/dashboard",
+      "icons": [{ "src": "assets/favicon.svg", "sizes": "96x96", "type": "image/svg+xml" }]
+    }
+  ]
+}
