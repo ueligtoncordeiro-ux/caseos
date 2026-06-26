@@ -627,6 +627,416 @@ body.review-chat-active .main{margin-right:340px}
     transform:translateX(-50%);
   }
 }
+
+/* ════════════════════════════════════════════════════════
+   PREMIUM AI REFRESH — Review Studio
+   ════════════════════════════════════════════════════════ */
+
+/* ── 1. Dark side rail ──────────────────────────────────── */
+.side-rail{
+  background:#09090B;
+  border-right:1px solid rgba(255,255,255,.05);
+}
+.side-rail .caseos-symbol,.side-rail .rail-btn{
+  background:transparent!important;
+  color:rgba(255,255,255,.38);
+}
+.side-rail .caseos-symbol img{
+  filter:brightness(0) invert(1);
+  opacity:.7;
+}
+.side-rail .caseos-symbol::after{
+  background:#1C1C21;
+  color:rgba(255,255,255,.9);
+  border:1px solid rgba(255,255,255,.08);
+}
+.side-rail .rail-btn:hover{
+  background:rgba(255,255,255,.07)!important;
+  color:rgba(255,255,255,.88);
+}
+.side-rail .rail-btn.active{
+  background:rgba(200,255,0,.1)!important;
+  color:#C8FF00!important;
+  box-shadow:inset 3px 0 0 #C8FF00;
+}
+.side-rail .rail-btn svg{
+  color:inherit;
+}
+
+/* ── 2. Right column frame ────────────────────────────── */
+.right-col{
+  background:#F5F5F3;
+  border-left:1px solid #E4E4E2;
+}
+
+/* rcol-header */
+.rcol-header{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:13px 14px;
+  border-bottom:1px solid #E4E4E2;
+  background:#F5F5F3;
+}
+.rcol-brand-dot{
+  width:6px;height:6px;
+  border-radius:99px;
+  background:var(--acid);
+  flex-shrink:0;
+}
+.rcol-brand{
+  font-family:var(--head);
+  font-size:10.5px;
+  font-weight:700;
+  color:var(--t3);
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+
+/* Avatar repositioned inside right-col header when active */
+body.review-chat-active .app-actions{
+  right:10px!important;
+  top:9px!important;
+  z-index:400;
+}
+body.review-chat-active .user-avatar{
+  width:30px!important;
+  height:30px!important;
+  border-radius:9px!important;
+  font-size:10px!important;
+  background:#09090B!important;
+  color:#C8FF00!important;
+}
+body.review-chat-active .user-dropdown{
+  top:46px!important;
+  right:0!important;
+}
+
+/* ── 3. Tabs redesign ─────────────────────────────────── */
+.right-col>.context-tabs{
+  padding:10px 12px 12px!important;
+  gap:5px!important;
+  background:#F5F5F3;
+  border-bottom:1px solid #E4E4E2;
+}
+.right-col>.context-tabs .context-tab{
+  flex-direction:row!important;
+  gap:5px!important;
+  justify-content:center!important;
+  align-items:center!important;
+  border-radius:10px!important;
+  padding:8px 8px!important;
+  font-size:10.5px!important;
+  font-weight:700!important;
+  background:#fff!important;
+  border:1px solid #E4E4E2!important;
+  color:var(--t2)!important;
+  box-shadow:0 1px 2px rgba(0,0,0,.04)!important;
+  transition:background .15s,color .15s,border-color .15s,box-shadow .15s!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+.right-col>.context-tabs .context-tab svg{
+  width:12px!important;height:12px!important;
+}
+.right-col>.context-tabs .context-tab .context-tab-dot{
+  width:5px!important;height:5px!important;
+  position:static!important;
+  display:inline-block!important;
+}
+.right-col>.context-tabs .context-tab:hover{
+  background:#111114!important;
+  border-color:#111114!important;
+  color:#fff!important;
+  box-shadow:0 2px 10px rgba(0,0,0,.18)!important;
+}
+.right-col>.context-tabs .context-tab.active{
+  background:#09090B!important;
+  border-color:#09090B!important;
+  color:#fff!important;
+  box-shadow:0 3px 12px rgba(0,0,0,.22)!important;
+}
+.right-col>.context-tabs .context-tab.is-next:not(.active){
+  border-color:rgba(200,255,0,.55)!important;
+  background:rgba(200,255,0,.09)!important;
+  color:#3C4600!important;
+  box-shadow:0 0 0 3px rgba(200,255,0,.12)!important;
+}
+.right-col>.context-tabs .context-tab.is-complete:not(.active){
+  color:var(--t2)!important;
+}
+
+/* ── 4. Panel area ────────────────────────────────────── */
+.right-col>.context-panels{
+  background:#F5F5F3!important;
+  padding:14px 14px 14px!important;
+}
+.right-col .panel-head{
+  border-bottom:1px solid #E4E4E2!important;
+  padding-bottom:12px!important;
+  margin-bottom:12px!important;
+}
+.right-col .panel-title{
+  font-size:13.5px!important;
+  font-weight:700!important;
+  letter-spacing:-.01em!important;
+}
+.right-col .panel-subtitle{
+  font-size:11.5px!important;
+  margin-top:1px!important;
+}
+.right-col .panel-close{
+  width:26px!important;height:26px!important;
+  border-radius:7px!important;
+  border:1px solid #E4E4E2!important;
+  font-size:16px!important;
+  color:var(--t3)!important;
+  background:#fff!important;
+}
+.right-col .panel-close:hover{
+  background:#FEE2E2!important;
+  color:#DC2626!important;
+  border-color:#FCA5A5!important;
+}
+.right-col .panel-placeholder{
+  gap:16px!important;
+  padding:44px 20px!important;
+}
+.right-col .panel-placeholder svg{
+  opacity:.15!important;
+  width:44px!important;height:44px!important;
+}
+.right-col .panel-placeholder>div{
+  font-size:13px!important;
+  color:var(--t3)!important;
+  line-height:1.65!important;
+  font-weight:500!important;
+}
+
+/* ── 5. Main area background ──────────────────────────── */
+body{ background:#F7F7F5; }
+.main{
+  background:
+    radial-gradient(ellipse 62% 52% at 38% 20%,rgba(200,255,0,.15) 0,rgba(200,255,0,.05) 55%,transparent 75%),
+    radial-gradient(ellipse 42% 32% at 76% 88%,rgba(80,180,255,.04) 0,transparent 60%),
+    #F7F7F5!important;
+}
+
+/* ── 6. Hero typography ───────────────────────────────── */
+.review-title{
+  font-size:52px!important;
+  font-weight:700!important;
+  letter-spacing:-.035em!important;
+  line-height:1.04!important;
+  color:#0A0A0B!important;
+}
+.review-hero.conversation .review-title{
+  font-size:34px!important;
+  letter-spacing:-.025em!important;
+}
+
+/* ── 7. Command card ──────────────────────────────────── */
+.command-card{
+  border-radius:24px!important;
+  border:1px solid rgba(0,0,0,.07)!important;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,.03),
+    0 4px 16px rgba(0,0,0,.06),
+    0 12px 40px rgba(0,0,0,.09)!important;
+  background:rgba(255,255,255,.98)!important;
+}
+.command-card.active{
+  box-shadow:none!important;
+  border:none!important;
+  background:transparent!important;
+}
+.prompt-intro{
+  padding:22px 24px 0!important;
+  font-size:14.5px!important;
+  line-height:1.6!important;
+  color:var(--t2)!important;
+}
+
+/* ── 8. Choice chips ──────────────────────────────────── */
+.choice-chip{
+  border-radius:11px!important;
+  padding:10px 18px!important;
+  font-size:13px!important;
+  font-weight:700!important;
+  letter-spacing:-.01em!important;
+  background:rgba(255,255,255,.94)!important;
+  border:1px solid rgba(0,0,0,.1)!important;
+  transition:background .15s,color .15s,border-color .15s,transform .15s,box-shadow .15s!important;
+}
+.choice-chip:hover{
+  background:#09090B!important;
+  color:#C8FF00!important;
+  border-color:#09090B!important;
+  transform:translateY(-2px)!important;
+  box-shadow:0 6px 20px rgba(0,0,0,.18)!important;
+}
+
+/* ── 9. Chat input bar ────────────────────────────────── */
+.chat-input-wrap{
+  border-radius:18px!important;
+  border:none!important;
+  box-shadow:
+    inset 0 0 0 1px rgba(0,0,0,.08),
+    0 4px 16px rgba(0,0,0,.08),
+    0 12px 40px rgba(0,0,0,.12)!important;
+  background:#fff!important;
+}
+.chat-send{
+  background:#09090B!important;
+  border-radius:14px!important;
+  width:44px!important;
+  height:44px!important;
+  transition:background .15s!important;
+}
+.chat-send:hover{
+  background:#2A2A2E!important;
+}
+.chat-plus{
+  border-radius:12px!important;
+  width:38px!important;
+  height:38px!important;
+  background:var(--muted)!important;
+  transition:background .15s!important;
+}
+.chat-plus:hover{
+  background:#E5E5E3!important;
+}
+
+/* ── 10. Setup summary pills ──────────────────────────── */
+.setup-summary{gap:6px!important}
+.summary-pill{
+  border-radius:9px!important;
+  padding:6px 12px!important;
+  font-size:11.5px!important;
+  font-weight:600!important;
+  background:rgba(255,255,255,.92)!important;
+  border:1px solid rgba(0,0,0,.08)!important;
+  box-shadow:0 1px 4px rgba(0,0,0,.07)!important;
+  gap:3px!important;
+}
+.summary-pill strong{
+  font-weight:800!important;
+  color:var(--t1)!important;
+}
+.summary-pill strong::after{content:" "}
+.summary-pill:hover{
+  border-color:rgba(200,255,0,.6)!important;
+  background:#fff!important;
+}
+
+/* ── 11. Chat bubbles ─────────────────────────────────── */
+.chat-message.assistant .chat-bubble{
+  background:#fff!important;
+  border:1px solid #E6E6E4!important;
+  border-left:3px solid var(--acid)!important;
+  border-top-left-radius:6px!important;
+  box-shadow:0 1px 4px rgba(0,0,0,.05)!important;
+}
+.chat-bubble{
+  font-size:14.5px!important;
+  line-height:1.68!important;
+}
+
+/* ── 12. Cards and review elements ───────────────────── */
+.review-card{
+  background:rgba(255,255,255,.8)!important;
+  border-color:#E6E6E4!important;
+  border-radius:14px!important;
+}
+.review-source{
+  border-radius:12px!important;
+  background:#fff!important;
+}
+.review-source:hover{
+  border-color:rgba(0,0,0,.18)!important;
+  box-shadow:0 2px 10px rgba(0,0,0,.08)!important;
+  transform:translateY(-1px);
+  transition:all .15s ease;
+}
+.review-status-item{
+  border-radius:10px!important;
+  background:rgba(255,255,255,.85)!important;
+  border-color:#E6E6E4!important;
+}
+.section-card{
+  border-radius:14px!important;
+  border-color:#E6E6E4!important;
+  box-shadow:0 1px 4px rgba(0,0,0,.04)!important;
+}
+
+/* ── 13. Buttons ──────────────────────────────────────── */
+.btn{ border-radius:10px!important; }
+.btn-primary{
+  background:#09090B!important;
+  border-color:#09090B!important;
+}
+.btn-primary:hover:not(:disabled){
+  background:#222227!important;
+}
+.btn-upgrade{
+  border-radius:10px!important;
+  background:var(--acid)!important;
+}
+.final-docx{
+  border-radius:12px!important;
+  font-size:15px!important;
+}
+
+/* ── 14. User avatar (default state) ─────────────────── */
+.user-avatar{
+  border-radius:11px!important;
+  background:#09090B!important;
+  color:#C8FF00!important;
+  font-size:12px!important;
+  font-weight:900!important;
+}
+
+/* ── 15. User dropdown ────────────────────────────────── */
+.user-dropdown{
+  border-radius:14px!important;
+  box-shadow:0 4px 20px rgba(0,0,0,.1),0 20px 60px rgba(0,0,0,.16)!important;
+}
+
+/* ── 16. Sidebar drawer ───────────────────────────────── */
+.sidebar-drawer{
+  border-radius:0 20px 20px 0;
+  box-shadow:0 0 0 1px rgba(0,0,0,.06),28px 0 70px rgba(0,0,0,.12)!important;
+  border-right:none!important;
+}
+
+/* ── 17. Toast ────────────────────────────────────────── */
+.toast{ border-radius:12px!important; }
+
+/* ── 18. Form elements inside right-col ──────────────── */
+.right-col .review-field input,
+.right-col .review-field textarea,
+.right-col .review-field select{
+  border-radius:9px!important;
+  background:#fff!important;
+  border-color:#E4E4E2!important;
+}
+.right-col .review-source-list{ background:transparent!important; }
+
+/* ── 19. Fonte manual form ────────────────────────────── */
+.fonte-manual-form{
+  border-radius:12px!important;
+  background:rgba(255,255,255,.7)!important;
+  border-color:#E4E4E2!important;
+}
+
+/* ── 20. Mobile tab bar ───────────────────────────────── */
+.mobile-bottom-nav{
+  background:rgba(255,255,255,.97)!important;
+  backdrop-filter:blur(12px)!important;
+  -webkit-backdrop-filter:blur(12px)!important;
+  border-top:1px solid rgba(0,0,0,.07)!important;
+}
 </style>
 </head>
 <body>
@@ -724,6 +1134,10 @@ body.review-chat-active .main{margin-right:340px}
 </main>
 
 <div class="right-col" id="rightCol">
+  <div class="rcol-header">
+    <span class="rcol-brand-dot"></span>
+    <span class="rcol-brand">Review Studio</span>
+  </div>
   <div class="context-tabs" id="reviewContextTabs" aria-label="Ações contextuais"></div>
   <section class="context-panels show" id="reviewContextPanels">
     <header class="panel-head">
@@ -1136,7 +1550,7 @@ function atualizarAbasContextuaisReview(){
       icon:'px-magnify',
       label:fontes?'Base aprovada':'Adicionar fontes',
       count:fontes?`${fontes} fonte${fontes===1?'':'s'} · ${trechos} trecho${trechos===1?'':'s'}`:'pendente',
-      show:stage!=='tipo'||fontes>0,
+      show:true,
       active:activeFontes,
       state:fontes?'is-complete':nextKey==='fontes'?'is-next is-warning':'is-warning',
       action:"mostrarPaineis('fontes')"
@@ -1146,12 +1560,12 @@ function atualizarAbasContextuaisReview(){
       icon:'px-list',
       label:'Seções',
       count:fontes?`${secoesProntas}/${reviewSections.length} preenchidas`:'aguardando fontes',
-      show:fontes>0||stage==='fontes'||stage==='secoes',
+      show:true,
       active:activeSecoes,
       state:fontes&&secoesProntas===reviewSections.length?'is-complete':nextKey==='secoes'?'is-next':'',
       action:"mostrarPaineis('secoes')"
     }
-  ].filter(tab=>tab.show);
+  ];
   box.innerHTML=tabs.map(tab=>`<button class="context-tab ${tab.active?'active':''} ${tab.state||''}" onclick="${tab.action}" aria-pressed="${tab.active?'true':'false'}">${tab.key===nextKey?'<span class="context-tab-dot"></span>':''}<svg><use href="assets/pixel-icons.svg#${tab.icon}"/></svg><span>${_esc(tab.label)}</span>${tab.count?`<span class="context-tab-count">${_esc(tab.count)}</span>`:''}</button>`).join('');
   box.style.opacity=aberta?'.96':'1';
 }
