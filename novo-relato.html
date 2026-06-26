@@ -1079,6 +1079,204 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
   display: block; font-size: 10px; color: var(--t3);
   text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;
 }
+
+/* ════════════════════════════════════════════════════════
+   PREMIUM AI REFRESH — Novo Relato
+   Alinhado com Dashboard + Review Studio
+   ════════════════════════════════════════════════════════ */
+
+/* ── 1. Fundo geral ── */
+body { background: #F5F5F3 !important; }
+.app-shell { background: #F5F5F3 !important; }
+
+/* ── 2. Header (brand-header) dark ── */
+.brand-header {
+  background: #09090B !important;
+  border-bottom: 1px solid rgba(255,255,255,.06) !important;
+  box-shadow: none !important;
+}
+.brand-title { color: rgba(255,255,255,.92) !important; }
+.brand-subtitle { color: rgba(255,255,255,.38) !important; }
+.brand-sep { background: rgba(255,255,255,.12) !important; }
+
+/* Logo no header: invertida para branco */
+.logo-link img {
+  filter: brightness(0) invert(1) !important;
+  opacity: .85 !important;
+}
+
+/* Botão voltar ao dashboard */
+.btn-back-dash {
+  background: rgba(255,255,255,.08) !important;
+  color: rgba(255,255,255,.7) !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  border-radius: 8px !important;
+}
+.btn-back-dash:hover {
+  background: rgba(255,255,255,.14) !important;
+  color: #fff !important;
+}
+
+/* Ícones do header (notif, avatar) */
+.notif-btn {
+  color: rgba(255,255,255,.5) !important;
+  background: transparent !important;
+}
+.notif-btn:hover { color: rgba(255,255,255,.9) !important; }
+.user-avatar {
+  background: rgba(200,255,0,.15) !important;
+  color: #C8FF00 !important;
+  border-radius: 9px !important;
+  font-weight: 900 !important;
+}
+
+/* ── 3. Sidebar de steps: dark ── */
+.sidebar {
+  background: #09090B !important;
+  border-right: 1px solid rgba(255,255,255,.05) !important;
+}
+.sidebar-label {
+  color: rgba(255,255,255,.28) !important;
+  font-weight: 700 !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+}
+.step-item {
+  color: rgba(255,255,255,.48) !important;
+  border-radius: 9px !important;
+}
+.step-item:hover { background: rgba(255,255,255,.06) !important; color: rgba(255,255,255,.85) !important; }
+.step-item.active {
+  background: rgba(255,255,255,.07) !important;
+  color: rgba(255,255,255,.95) !important;
+  font-weight: 700 !important;
+}
+.step-item.active::before,
+.step-item.done::before {
+  background: #C8FF00 !important;
+}
+.step-item.done { color: rgba(255,255,255,.45) !important; }
+.step-num {
+  background: rgba(255,255,255,.08) !important;
+  color: rgba(255,255,255,.4) !important;
+}
+.step-item.active .step-num {
+  background: rgba(200,255,0,.18) !important;
+  color: #C8FF00 !important;
+}
+.step-item.done .step-num {
+  background: rgba(200,255,0,.14) !important;
+  color: #C8FF00 !important;
+}
+
+/* Progress bar na sidebar */
+.prog-label { color: rgba(255,255,255,.35) !important; }
+.prog-bar { background: rgba(255,255,255,.1) !important; }
+.prog-fill { background: #C8FF00 !important; }
+
+/* ── 4. Main area ── */
+.main-area { background: #F5F5F3 !important; }
+
+/* ── 5. Form card ── */
+.form-card {
+  background: #fff !important;
+  border: 1px solid #E8E8E6 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05) !important;
+}
+.form-card-header {
+  border-bottom: 1px solid #F0F0EE !important;
+  padding-bottom: 16px !important;
+  margin-bottom: 20px !important;
+}
+.form-card-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: -.01em !important;
+}
+.form-card-badge {
+  background: rgba(200,255,0,.12) !important;
+  color: #3C4600 !important;
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+}
+
+/* ── 6. Step nav (bottom bar) ── */
+.step-nav {
+  background: rgba(255,255,255,.96) !important;
+  border-top: 1px solid #E8E8E6 !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+.btn-step-next {
+  background: #09090B !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+}
+.btn-step-next:hover { background: #222 !important; }
+.btn-step-prev {
+  background: transparent !important;
+  border: 1px solid #E4E4E2 !important;
+  color: #555 !important;
+  border-radius: 10px !important;
+}
+.btn-step-prev:hover { border-color: #09090B !important; color: #09090B !important; }
+
+/* ── 7. Inputs e fields ── */
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  border-color: #09090B !important;
+  box-shadow: 0 0 0 3px rgba(200,255,0,.18) !important;
+}
+
+/* Labels */
+.form-group label {
+  font-weight: 600 !important;
+  color: #1A1A1A !important;
+}
+
+/* ── 8. CARE panel button ── */
+.care-panel-btn {
+  background: #09090B !important;
+  color: #C8FF00 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 28px rgba(0,0,0,.32) !important;
+}
+.care-panel-btn:hover { background: #222 !important; }
+
+/* ── 9. CARE panel card ── */
+.care-panel-card {
+  border-radius: 18px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,.12), 0 20px 60px rgba(0,0,0,.16) !important;
+}
+.care-panel-header {
+  background: #09090B !important;
+  border-radius: 18px 18px 0 0 !important;
+}
+.care-panel-title { color: #fff !important; }
+
+/* Score badge */
+.care-score-badge {
+  background: #C8FF00 !important;
+  color: #09090B !important;
+  border-radius: 8px !important;
+  font-weight: 900 !important;
+}
+
+/* ── 10. Botões de ação assistida (IA) ── */
+.assist-btn {
+  background: #09090B !important;
+  color: #C8FF00 !important;
+  border-radius: 7px !important;
+}
+.assist-btn:hover { background: #222 !important; }
+
+/* ── 11. Step info ── */
+.step-info { color: rgba(255,255,255,.35) !important; }
+.step-info-label { color: rgba(255,255,255,.55) !important; }
 </style>
 </head>
 <body>

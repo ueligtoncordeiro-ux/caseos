@@ -930,14 +930,54 @@ body{ background:#F7F7F5; }
   background:#fff!important;
 }
 
-/* ── 11. Chat bubbles ─────────────────────────────────── */
-.chat-message.assistant .chat-bubble{
-  background:#fff!important;
-  border:1px solid #E6E6E4!important;
-  border-left:3px solid var(--acid)!important;
-  border-top-left-radius:6px!important;
-  box-shadow:0 1px 4px rgba(0,0,0,.05)!important;
+/* ── 11. Chat bubbles — padrão Claude.ai / ChatGPT ────── */
+
+/* User message: dark pill à direita (já posicionado por margin-left:auto) */
+.chat-message.user .chat-bubble{
+  background:#09090B!important;
+  color:#fff!important;
+  border:none!important;
+  border-radius:18px 4px 18px 18px!important;
+  padding:12px 16px!important;
+  box-shadow:none!important;
 }
+
+/* AI message: sem card, sem borda, texto limpo */
+.chat-message.assistant .chat-bubble{
+  background:transparent!important;
+  border:none!important;
+  border-left:none!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  padding:4px 0!important;
+  color:var(--t1)!important;
+}
+
+/* Avatar do AI: quadrado pequeno obsidian com "RS" acid */
+.chat-message.assistant .chat-avatar{
+  display:grid!important;
+  background:#09090B!important;
+  color:#C8FF00!important;
+  border-radius:7px!important;
+  width:26px!important;
+  height:26px!important;
+  font-size:8px!important;
+  flex:0 0 26px!important;
+  margin-top:2px!important;
+}
+
+/* Avatar do user: iniciais obsidian com acid */
+.chat-message.user .chat-avatar{
+  background:#09090B!important;
+  color:#C8FF00!important;
+  border-radius:9px!important;
+  width:26px!important;
+  height:26px!important;
+  font-size:10px!important;
+  flex:0 0 26px!important;
+}
+
+/* Tamanho de fonte e espaçamento globais do chat */
 .chat-bubble{
   font-size:14.5px!important;
   line-height:1.68!important;

@@ -449,15 +449,47 @@
        Mesma linguagem visual do Dashboard + Review Studio
        ════════════════════════════════════════════════════════ */
 
-    /* ── Nav: glassmorphism premium ── */
-    .nav {
-      background: rgba(255,255,255,.88) !important;
+    /* ── Nav: transparente sobre hero dark, branca ao scrollar ── */
+
+    /* Estado padrão: já tem a base branca herdada; sobrepomos com dark transparent */
+    .nav:not(.scrolled) {
+      background: rgba(9,9,11,.55) !important;
+      backdrop-filter: blur(10px) !important;
+      -webkit-backdrop-filter: blur(10px) !important;
+      border-bottom-color: rgba(255,255,255,.06) !important;
+      box-shadow: none !important;
+    }
+    /* Links sobre fundo dark: brancos */
+    .nav:not(.scrolled) .nav-links a { color: rgba(255,255,255,.72) !important; }
+    .nav:not(.scrolled) .nav-links a:hover { color: #fff !important; }
+    .nav:not(.scrolled) .btn-ghost {
+      color: rgba(255,255,255,.72) !important;
+      border-color: rgba(255,255,255,.18) !important;
+      background: transparent !important;
+    }
+    .nav:not(.scrolled) .btn-dark {
+      background: rgba(255,255,255,.1) !important;
+      color: #fff !important;
+      border: 1px solid rgba(255,255,255,.18) !important;
+      box-shadow: none !important;
+    }
+    .nav:not(.scrolled) .clr-dark { color: #fff !important; }
+    .nav:not(.scrolled) .clr-gray { color: rgba(255,255,255,.5) !important; }
+
+    /* Ao scrollar: glassmorphism branco premium */
+    .nav.scrolled {
+      background: rgba(255,255,255,.92) !important;
       backdrop-filter: blur(14px) !important;
       -webkit-backdrop-filter: blur(14px) !important;
       border-bottom: 1px solid rgba(0,0,0,.06) !important;
       box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04) !important;
     }
-    .nav.scrolled { box-shadow: 0 1px 0 rgba(0,0,0,.07), 0 8px 32px rgba(0,0,0,.07) !important; }
+    .nav.scrolled .nav-links a { color: #3A3A3A !important; }
+    .nav.scrolled .nav-links a:hover { color: #0A0A0B !important; }
+    .nav.scrolled .btn-ghost { color: #555 !important; border-color: #E0E0DE !important; background: transparent !important; }
+    .nav.scrolled .btn-dark { background: #0A0A0B !important; color: #fff !important; border: none !important; }
+    .nav.scrolled .clr-dark { color: #0A0A0B !important; }
+    .nav.scrolled .clr-gray { color: rgba(0,0,0,.45) !important; }
     /* Logo wordmark acid */
     .clr-acid { color: #C8FF00 !important; }
     /* Nav links */
