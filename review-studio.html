@@ -299,6 +299,7 @@ body.review-chat-active .context-tabs{display:flex}
 body.review-panel-tipo .context-panels{width:min(520px,calc(100vw - 430px))}
 body.review-panel-fontes .context-panels{width:min(640px,calc(100vw - 430px))}
 body.review-panel-secoes .context-panels{width:min(760px,calc(100vw - 430px))}
+body.review-panel-prisma .context-panels{width:min(700px,calc(100vw - 430px))}
 .panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding:2px 2px 12px}
 .panel-title{font-family:var(--head);font-size:18px;font-weight:800;color:var(--t1)}
 .panel-subtitle{font-size:12.5px;color:var(--t3);line-height:1.45;margin-top:2px}
@@ -463,7 +464,8 @@ body.review-chat-active .right-col{display:flex}
 /* Active state driven by body panel classes */
 body.review-panel-fontes #mbnFontes,
 body.review-panel-tipo #mbnTipo,
-body.review-panel-secoes #mbnSecoes{
+body.review-panel-secoes #mbnSecoes,
+body.review-panel-prisma #mbnPrisma{
   color:var(--t1);background:var(--acid-dim);
   border-top:2px solid var(--acid);
 }
@@ -486,7 +488,8 @@ body.review-panel-secoes #mbnSecoes{
   body.review-chat-active .right-col,
   body.review-panel-fontes .right-col,
   body.review-panel-tipo .right-col,
-  body.review-panel-secoes .right-col{
+  body.review-panel-secoes .right-col,
+  body.review-panel-prisma .right-col{
     display:flex!important;
     position:fixed!important;
     top:auto!important;left:0!important;right:0!important;
@@ -504,7 +507,8 @@ body.review-panel-secoes #mbnSecoes{
   /* Slide up when a panel is active */
   body.review-panel-fontes .right-col,
   body.review-panel-tipo .right-col,
-  body.review-panel-secoes .right-col{transform:translateY(0)!important}
+  body.review-panel-secoes .right-col,
+  body.review-panel-prisma .right-col{transform:translateY(0)!important}
 
   /* Drag handle */
   .right-col>.context-tabs::before{
@@ -517,7 +521,8 @@ body.review-panel-secoes #mbnSecoes{
   .mobile-panel-overlay{display:none}
   body.review-panel-fontes .mobile-panel-overlay,
   body.review-panel-tipo .mobile-panel-overlay,
-  body.review-panel-secoes .mobile-panel-overlay{
+  body.review-panel-secoes .mobile-panel-overlay,
+  body.review-panel-prisma .mobile-panel-overlay{
     display:block;position:fixed;
     inset:0;bottom:56px;
     background:rgba(0,0,0,.28);z-index:289;
@@ -587,15 +592,18 @@ body.review-panel-secoes #mbnSecoes{
 .right-col .panel-placeholder svg{opacity:.35}
 body.review-panel-tipo .right-col .panel-placeholder,
 body.review-panel-fontes .right-col .panel-placeholder,
-body.review-panel-secoes .right-col .panel-placeholder{display:none}
+body.review-panel-secoes .right-col .panel-placeholder,
+body.review-panel-prisma .right-col .panel-placeholder{display:none}
 
 /* Sub-panel visibility inside right-col */
 .right-col #reviewConfigPanel{display:none!important}
 .right-col #reviewSourcesPanel{display:none!important}
 .right-col #reviewSectionsPanel{display:none!important}
+.right-col #reviewPrismaPanel{display:none!important}
 body.review-panel-tipo .right-col #reviewConfigPanel{display:grid!important}
 body.review-panel-fontes .right-col #reviewSourcesPanel{display:grid!important}
 body.review-panel-secoes .right-col #reviewSectionsPanel{display:grid!important}
+body.review-panel-prisma .right-col #reviewPrismaPanel{display:block!important}
 
 /* Allow sources list to fill right-col height without hard cap */
 .right-col .review-source-list{max-height:none}
@@ -1078,6 +1086,40 @@ body{ background:#F7F7F5; }
   border-top:1px solid rgba(0,0,0,.07)!important;
 }
 
+/* ── PRISMA 2020 diagram & panel styles ───────────────────── */
+#reviewPrismaPanel{padding:0}
+.prisma-info-note{font-size:11.5px;color:var(--t3);line-height:1.6;padding:12px 0 6px;margin:0}
+.prisma-phase-wrap{display:flex;align-items:stretch;gap:8px;margin-bottom:0}
+.prisma-phase-label{writing-mode:vertical-rl;transform:rotate(180deg);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:#fff;background:#09090B;padding:8px 5px;min-width:22px;text-align:center;border-radius:7px;flex:0 0 22px}
+.prisma-phase-label.lbl-id{background:#09090B}
+.prisma-phase-label.lbl-tri{background:#7C3AED}
+.prisma-phase-label.lbl-eleg{background:#D97706}
+.prisma-phase-label.lbl-incl{background:#16A34A}
+.prisma-phase-content{flex:1;display:flex;flex-direction:column;gap:6px}
+.prisma-row{display:flex;gap:8px;align-items:stretch}
+.prisma-box{flex:1;border:1.5px solid #E4E4E2;border-radius:10px;padding:10px 12px;background:#fff;font-size:11.5px;line-height:1.4;color:var(--t2)}
+.prisma-box strong{display:block;margin-top:5px;font-size:16px;font-weight:800;color:var(--t1);letter-spacing:-.02em}
+.prisma-box.excl{border-color:#FCA5A5;background:#FEF2F2}
+.prisma-box.excl strong{color:#DC2626}
+.prisma-box.incl{border-color:rgba(200,255,0,.7);background:rgba(200,255,0,.07)}
+.prisma-box.incl strong{color:#3C4600;font-size:20px}
+.prisma-arrow-row{display:flex;align-items:center;padding:4px 0 4px 30px;gap:0}
+.prisma-arrow-row svg{flex:0 0 20px;color:#C0C0BC}
+.prisma-divider{height:1px;background:#E4E4E2;flex:1;margin-left:6px}
+.prisma-sep{height:10px}
+/* Exclusion table */
+.prisma-excl-section{margin-top:18px;padding-top:14px;border-top:1px solid #E4E4E2}
+.prisma-excl-section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:10px}
+.prisma-excl-table{width:100%;border-collapse:collapse;font-size:12px}
+.prisma-excl-table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:4px 8px 6px;border-bottom:2px solid #E4E4E2}
+.prisma-excl-table th:last-child{text-align:right}
+.prisma-excl-table td{padding:7px 8px;border-bottom:1px solid #F0F0EE;color:var(--t2);font-size:12px}
+.prisma-excl-table td:last-child{text-align:right;font-weight:700;color:var(--t1);min-width:36px}
+.prisma-excl-table tr:last-child td{border-bottom:0}
+.prisma-empty-note{color:var(--t3);font-size:12px;padding:10px 0;font-style:italic}
+/* Actions */
+.prisma-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+
 /* ── Mobile restore: corrige premium !important sem media query ── */
 @media (max-width: 720px) {
   /* review-title: 52px premium → 30px mobile */
@@ -1157,6 +1199,9 @@ body{ background:#F7F7F5; }
   </button>
   <button class="studio-btn" id="studioSecoesBtn" title="Rascunhos por seção" data-label="Rascunhos por seção" onclick="mostrarPaineis('secoes')">
     <svg><use href="assets/pixel-icons.svg#px-list"/></svg>
+  </button>
+  <button class="studio-btn" id="studioPrismaBtn" title="PRISMA 2020" data-label="PRISMA 2020" onclick="mostrarPaineis('prisma')">
+    <svg><use href="assets/pixel-icons.svg#px-chart"/></svg>
   </button>
 </aside>
 
@@ -1241,6 +1286,85 @@ body{ background:#F7F7F5; }
           </div>
           <div class="section-grid" id="reviewSectionGrid"></div>
           <button class="final-docx" onclick="gerarVersaoFinalReview()">Gerar versão final da revisão em DOCX</button>
+        </div>
+
+        <!-- ══ PRISMA 2020 PANEL ══════════════════════════════════ -->
+        <div id="reviewPrismaPanel">
+          <p class="prisma-info-note">Diagrama de fluxo <strong>PRISMA 2020</strong> gerado com base nas fontes desta revisão. Atualize as fontes para refletir os dados corretos.</p>
+
+          <!-- Identification -->
+          <div class="prisma-phase-wrap">
+            <div class="prisma-phase-label lbl-id">Identif.</div>
+            <div class="prisma-phase-content">
+              <div class="prisma-row">
+                <div class="prisma-box">Registros identificados nas bases de dados<strong id="prismaIdBases">N = —</strong></div>
+                <div class="prisma-box">Registros de outras fontes<strong>N = 0</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="prisma-arrow-row">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+            <div class="prisma-divider"></div>
+          </div>
+
+          <!-- Screening -->
+          <div class="prisma-phase-wrap">
+            <div class="prisma-phase-label lbl-tri">Triagem</div>
+            <div class="prisma-phase-content">
+              <div class="prisma-row">
+                <div class="prisma-box">Registros após remoção de duplicatas e triados<strong id="prismaTriagem">N = —</strong></div>
+                <div class="prisma-box excl">Excluídos na triagem<strong id="prismaExclTriagem">N = —</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="prisma-arrow-row">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+            <div class="prisma-divider"></div>
+          </div>
+
+          <!-- Eligibility -->
+          <div class="prisma-phase-wrap">
+            <div class="prisma-phase-label lbl-eleg">Elegib.</div>
+            <div class="prisma-phase-content">
+              <div class="prisma-row">
+                <div class="prisma-box">Textos completos avaliados para elegibilidade<strong id="prismaElegib">N = —</strong></div>
+                <div class="prisma-box excl">Excluídos com motivo<strong id="prismaExclMotivo">N = —</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="prisma-arrow-row">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+            <div class="prisma-divider"></div>
+          </div>
+
+          <!-- Included -->
+          <div class="prisma-phase-wrap">
+            <div class="prisma-phase-label lbl-incl">Inclus.</div>
+            <div class="prisma-phase-content">
+              <div class="prisma-row">
+                <div class="prisma-box incl">Estudos incluídos na síntese<strong id="prismaIncluidos">N = —</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- P6 — Exclusion reasons table -->
+          <div class="prisma-excl-section" id="prismaExclSection">
+            <div class="prisma-excl-section-title">Motivos de exclusão</div>
+            <table class="prisma-excl-table">
+              <thead><tr><th>Motivo</th><th>n</th></tr></thead>
+              <tbody id="prismaExclTableBody">
+                <tr><td colspan="2" class="prisma-empty-note">Nenhuma exclusão registrada ainda.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="prisma-actions">
+            <button class="btn btn-secondary" onclick="carregarPrismaPanel()">Atualizar diagrama</button>
+            <button class="btn btn-ghost" onclick="copiarPrismaTexto()">Copiar como texto</button>
+          </div>
         </div>
 
       <aside class="sources-panel" id="reviewSourcesPanel">
@@ -1343,6 +1467,10 @@ body{ background:#F7F7F5; }
     <svg><use href="assets/pixel-icons.svg#px-list"/></svg>
     <span>Seções</span>
   </button>
+  <button class="mbn-btn" id="mbnPrisma" onclick="mostrarPaineis('prisma')" title="PRISMA">
+    <svg><use href="assets/pixel-icons.svg#px-chart"/></svg>
+    <span>PRISMA</span>
+  </button>
 </nav>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -1438,28 +1566,31 @@ function toggleSidebar(force){
 function mostrarPaineis(alvo){
   const panel=document.getElementById('reviewContextPanels');
   const sameOpen=panel?.classList.contains('show')&&document.body.classList.contains(`review-panel-${alvo}`);
-  document.body.classList.remove('review-panel-tipo','review-panel-fontes','review-panel-secoes');
+  document.body.classList.remove('review-panel-tipo','review-panel-fontes','review-panel-secoes','review-panel-prisma');
   document.querySelectorAll('.studio-btn').forEach(btn=>btn.classList.remove('active'));
   if(sameOpen){panel?.classList.remove('show');atualizarAbasContextuaisReview();return}
-  const painel=alvo==='tipo'?'tipo':alvo==='secoes'?'secoes':'fontes';
+  const painel=alvo==='tipo'?'tipo':alvo==='secoes'?'secoes':alvo==='prisma'?'prisma':'fontes';
   document.body.classList.add(`review-panel-${painel}`);
   panel?.classList.add('show');
   if(panel)panel.dataset.panel=painel;
-  document.getElementById(painel==='tipo'?'studioTipoBtn':painel==='secoes'?'studioSecoesBtn':'studioFontesBtn')?.classList.add('active');
+  const btnMap={tipo:'studioTipoBtn',secoes:'studioSecoesBtn',prisma:'studioPrismaBtn',fontes:'studioFontesBtn'};
+  document.getElementById(btnMap[painel]||'studioFontesBtn')?.classList.add('active');
   const labels={
     tipo:['Tipo de revisão','Ajuste estrutura, formato e pergunta da revisão.'],
     fontes:['Base da revisão','Fontes aprovadas definem o que a IA pode usar.'],
-    secoes:['Rascunhos por seção','Gere e edite cada parte antes do DOCX final.']
+    secoes:['Rascunhos por seção','Gere e edite cada parte antes do DOCX final.'],
+    prisma:['PRISMA 2020','Diagrama de fluxo e motivos de exclusão.']
   };
   _setText('reviewPanelTitle',labels[painel][0]);
   _setText('reviewPanelSubtitle',labels[painel][1]);
+  if(painel==='prisma')carregarPrismaPanel();
   atualizarAbasContextuaisReview();
 }
 function fecharPaineisReview(){
   const panel=document.getElementById('reviewContextPanels');
   panel?.classList.remove('show');
   if(panel)panel.dataset.panel='';
-  document.body.classList.remove('review-panel-tipo','review-panel-fontes','review-panel-secoes');
+  document.body.classList.remove('review-panel-tipo','review-panel-fontes','review-panel-secoes','review-panel-prisma');
   document.querySelectorAll('.studio-btn').forEach(btn=>btn.classList.remove('active'));
   atualizarAbasContextuaisReview();
 }
@@ -1582,6 +1713,7 @@ function atualizarAbasContextuaisReview(){
   const activeTipo=document.body.classList.contains('review-panel-tipo');
   const activeFontes=document.body.classList.contains('review-panel-fontes');
   const activeSecoes=document.body.classList.contains('review-panel-secoes');
+  const activePrisma=document.body.classList.contains('review-panel-prisma');
   const tabs=[
     {
       key:'tipo',
@@ -1612,6 +1744,16 @@ function atualizarAbasContextuaisReview(){
       active:activeSecoes,
       state:fontes&&secoesProntas===reviewSections.length?'is-complete':nextKey==='secoes'?'is-next':'',
       action:"mostrarPaineis('secoes')"
+    },
+    {
+      key:'prisma',
+      icon:'px-chart',
+      label:'PRISMA',
+      count:fontes?`${Number(reviewCorpusStats.fontes_total||0)} identificadas`:'',
+      show:true,
+      active:activePrisma,
+      state:fontes?'is-complete':'',
+      action:"mostrarPaineis('prisma')"
     }
   ];
   box.innerHTML=tabs.map(tab=>`<button class="context-tab ${tab.active?'active':''} ${tab.state||''}" onclick="${tab.action}" aria-pressed="${tab.active?'true':'false'}">${tab.key===nextKey?'<span class="context-tab-dot"></span>':''}<svg><use href="assets/pixel-icons.svg#${tab.icon}"/></svg><span>${_esc(tab.label)}</span>${tab.count?`<span class="context-tab-count">${_esc(tab.count)}</span>`:''}</button>`).join('');
@@ -2145,6 +2287,91 @@ function _atualizarContadoresFontes(total,triagem,aprovadas,excluidas){
   _sv('reviewFontesTriagem',triagem);
   _sv('reviewFontesAprovadas',aprovadas);
   _sv('reviewFontesExcluidas',excluidas);
+}
+
+// ── PRISMA 2020 — P4/P5/P6 ────────────────────────────────────
+function _sv(id,v){const el=document.getElementById(id);if(el)el.textContent=v??'—'}
+async function carregarPrismaPanel(){
+  if(!reviewAtivaId){
+    _renderPrismaEmpty('Selecione ou crie uma revisão para ver o diagrama PRISMA.');
+    return;
+  }
+  try{
+    // Fetch sources
+    const res=await reviewFetch(`/revisoes/${reviewAtivaId}/fontes?por_pagina=200`);
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const data=await res.json();
+    const fontes=data.items||data.itens||data.fontes||[];
+    // Compute counts
+    let total=fontes.length,aprovadas=0,triagem=0,excluidas=0;
+    const motivosMap={};
+    fontes.forEach(f=>{
+      const d=f.decisao_humana||f.decisao;
+      if(d==='incluida'||f.aprovada_para_escrita){aprovadas++;}
+      else if(d==='excluida'){
+        excluidas++;
+        const m=f.motivo_decisao||'Sem motivo registrado';
+        motivosMap[m]=(motivosMap[m]||0)+1;
+      }else{triagem++;}
+    });
+    // Update PRISMA boxes
+    _sv('prismaIdBases',`N = ${total}`);
+    _sv('prismaTriagem',`N = ${total}`);
+    _sv('prismaExclTriagem',`N = ${triagem}`);
+    // elegib = aprovadas + excluidas (passed screening)
+    const elegib=aprovadas+excluidas;
+    _sv('prismaElegib',`N = ${elegib}`);
+    _sv('prismaExclMotivo',`N = ${excluidas}`);
+    _sv('prismaIncluidos',`N = ${aprovadas}`);
+    // P6 — exclusion reasons table
+    const tbody=document.getElementById('prismaExclTableBody');
+    if(tbody){
+      if(!excluidas){
+        tbody.innerHTML='<tr><td colspan="2" class="prisma-empty-note">Nenhuma exclusão registrada ainda.</td></tr>';
+      }else{
+        const rows=Object.entries(motivosMap).sort((a,b)=>b[1]-a[1]);
+        tbody.innerHTML=rows.map(([m,n])=>`<tr><td>${_esc(m)}</td><td>${n}</td></tr>`).join('');
+      }
+    }
+  }catch(err){
+    _renderPrismaEmpty('Não foi possível carregar os dados. Tente novamente.');
+    console.warn('[PRISMA]',err);
+  }
+}
+function _renderPrismaEmpty(msg){
+  ['prismaIdBases','prismaTriagem','prismaExclTriagem','prismaElegib','prismaExclMotivo','prismaIncluidos'].forEach(id=>_sv(id,'N = —'));
+  const tbody=document.getElementById('prismaExclTableBody');
+  if(tbody)tbody.innerHTML=`<tr><td colspan="2" class="prisma-empty-note">${_esc(msg)}</td></tr>`;
+}
+function copiarPrismaTexto(){
+  const total=document.getElementById('prismaIdBases')?.textContent||'N = —';
+  const triagem=document.getElementById('prismaTriagem')?.textContent||'N = —';
+  const exclTri=document.getElementById('prismaExclTriagem')?.textContent||'N = —';
+  const elegib=document.getElementById('prismaElegib')?.textContent||'N = —';
+  const exclMot=document.getElementById('prismaExclMotivo')?.textContent||'N = —';
+  const incl=document.getElementById('prismaIncluidos')?.textContent||'N = —';
+  // Build exclusion reasons
+  const rows=[...document.querySelectorAll('#prismaExclTableBody tr')];
+  const motivos=rows.map(tr=>{const cells=tr.querySelectorAll('td');return cells.length===2?`  - ${cells[0].textContent}: ${cells[1].textContent}`:''}).filter(Boolean).join('\n');
+  const txt=[
+    'PRISMA 2020 — Diagrama de fluxo',
+    '================================',
+    `IDENTIFICAÇÃO`,
+    `  Registros identificados nas bases: ${total}`,
+    '',
+    `TRIAGEM`,
+    `  Registros triados: ${triagem}`,
+    `  Excluídos na triagem: ${exclTri}`,
+    '',
+    `ELEGIBILIDADE`,
+    `  Textos avaliados: ${elegib}`,
+    `  Excluídos com motivo: ${exclMot}`,
+    motivos?`  Motivos:\n${motivos}`:'',
+    '',
+    `INCLUÍDOS`,
+    `  Estudos incluídos na síntese: ${incl}`,
+  ].filter(l=>l!==undefined).join('\n');
+  navigator.clipboard?.writeText(txt).then(()=>mostrarToast('Texto PRISMA copiado!','success','✓')).catch(()=>mostrarToast('Não foi possível copiar.','error','✗'));
 }
 
 // P1 — constantes de motivo de exclusão
