@@ -3421,6 +3421,16 @@ tbody tr:hover td { background: #F5F5F3 !important; }
   }
 }
 
+/* ── Mobile restore: corrige premium !important sem media query ── */
+@media (max-width: 640px) {
+  /* stat-value: 34px premium → 24px mobile */
+  .stat-value { font-size: 24px !important; letter-spacing: -.03em !important; }
+  /* greeting padding: 26px 28px premium → 20px mobile */
+  .greeting { padding: 20px !important; }
+  /* greeting-title: 26px premium → 22px mobile */
+  .greeting-title { font-size: 22px !important; }
+}
+
 </style>
 </head>
 <body>
