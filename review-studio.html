@@ -1128,20 +1128,54 @@ body{ background:#F7F7F5; }
 
 /* Context dropdown for review items */
 .rev-ctx-dropdown{
-  position:absolute;z-index:600;background:#fff;
+  position:fixed;z-index:600;background:#fff;
   border:1px solid var(--border);border-radius:12px;
   box-shadow:0 8px 28px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.08);
-  padding:5px;min-width:180px;
+  padding:5px;min-width:190px;
 }
 .rev-ctx-item{
   width:100%;border:0;background:none;border-radius:8px;
   padding:8px 12px;font-size:13px;color:var(--t1);text-align:left;cursor:pointer;
-  display:flex;align-items:center;gap:8px;transition:background .1s;
+  display:flex;align-items:center;gap:8px;transition:background .1s;line-height:1.35;
 }
 .rev-ctx-item:hover{background:var(--muted)}
 .rev-ctx-item.danger{color:#DC2626}
 .rev-ctx-item.danger:hover{background:#FEF2F2}
+.rev-ctx-item.has-sub{justify-content:space-between}
+.rev-ctx-item.has-sub::after{content:"›";font-size:14px;color:var(--t3);margin-left:auto}
+.rev-ctx-sub{
+  position:fixed;z-index:601;background:#fff;
+  border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 8px 28px rgba(0,0,0,.14);
+  padding:5px;min-width:170px;
+}
 .rev-ctx-sep{height:1px;background:var(--border);margin:4px 0}
+.rev-ctx-label{padding:5px 12px 3px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t3)}
+
+/* Group headers in sidebar */
+.drawer-group{margin-bottom:2px}
+.drawer-group-head{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 8px 4px;border-radius:9px;cursor:pointer;
+  transition:background .12s;
+}
+.drawer-group-head:hover{background:var(--muted)}
+.drawer-group-arrow{font-size:10px;color:var(--t3);transition:transform .2s;flex:0 0 10px}
+.drawer-group-head.open .drawer-group-arrow{transform:rotate(90deg)}
+.drawer-group-icon{font-size:13px;flex:0 0 16px;text-align:center}
+.drawer-group-name{flex:1;font-size:12.5px;font-weight:700;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.drawer-group-count{font-size:10px;font-weight:700;color:var(--t3);background:var(--muted);border-radius:5px;padding:1px 5px}
+.drawer-group-menu{
+  flex:0 0 20px;width:20px;height:20px;border-radius:5px;border:0;
+  background:transparent;color:var(--t3);font-size:13px;cursor:pointer;
+  display:none;align-items:center;justify-content:center;
+  transition:background .12s,color .12s;
+}
+.drawer-group-head:hover .drawer-group-menu{display:flex}
+.drawer-group-menu:hover{background:#E5E5E3;color:var(--t1)}
+.drawer-group-items{padding-left:12px;display:none}
+.drawer-group-head.open+.drawer-group-items{display:block}
+.drawer-no-group-label{padding:6px 10px 3px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t3)}
 
 /* ── PRISMA 2020 diagram & panel styles ───────────────────── */
 #reviewPrismaPanel{padding:0}
@@ -1233,10 +1267,15 @@ body{ background:#F7F7F5; }
     <a class="drawer-link" href="https://caseos.voandonaia.com/dashboard">CaseOS</a>
     <a class="drawer-link" href="https://caseos.voandonaia.com/dashboard#ferramentas">Prompts</a>
   </div>
-  <div class="drawer-section">Revisões</div>
+  <div class="drawer-section" style="display:flex;align-items:center;justify-content:space-between;margin-right:10px">
+    Revisões
+    <button onclick="criarGrupo()" title="Novo grupo" style="border:0;background:var(--muted);border-radius:6px;width:20px;height:20px;font-size:14px;cursor:pointer;color:var(--t2);display:flex;align-items:center;justify-content:center;line-height:1" aria-label="Novo grupo">+</button>
+  </div>
   <button class="drawer-link" onclick="novaRevisaoForm();toggleSidebar(false)" style="width:100%;border:0;background:transparent;text-align:left"><svg><use href="assets/pixel-icons.svg#px-docstar"/></svg> Nova revisão</button>
   <button class="drawer-link" onclick="toggleVerTodas()" id="btnVerTodas" style="width:100%;border:0;background:transparent;text-align:left"><svg><use href="assets/pixel-icons.svg#px-list"/></svg> Todas as revisões</button>
-  <div class="drawer-section" id="recentesLabel">Recentes</div>
+  <div class="drawer-section" id="recentesLabel" style="display:flex;align-items:center;justify-content:space-between;margin-right:10px">
+    Recentes
+  </div>
   <div class="conversation-list" id="reviewConversationList">
     <button class="conversation-item active">Revisão atual</button>
   </div>
@@ -1823,69 +1862,255 @@ function atualizarAbasContextuaisReview(){
   box.innerHTML=tabs.map(tab=>`<button class="context-tab ${tab.active?'active':''} ${tab.state||''}" onclick="${tab.action}" aria-pressed="${tab.active?'true':'false'}">${tab.key===nextKey?'<span class="context-tab-dot"></span>':''}<svg><use href="assets/pixel-icons.svg#${tab.icon}"/></svg><span>${_esc(tab.label)}</span>${tab.count?`<span class="context-tab-count">${_esc(tab.count)}</span>`:''}</button>`).join('');
   box.style.opacity=aberta?'.96':'1';
 }
+// ══════════════════════════════════════════════════════════════
+//  GRUPOS DE REVISÃO — localStorage-only, sem alteração de backend
+// ══════════════════════════════════════════════════════════════
+const _GRP_KEY='rccs_review_groups';       // [{id,nome,collapsed}]
+const _GRP_MAP_KEY='rccs_review_group_map'; // {reviewId:groupId}
+function _loadGroups(){try{return JSON.parse(localStorage.getItem(_GRP_KEY)||'[]')}catch{return[]}}
+function _saveGroups(g){localStorage.setItem(_GRP_KEY,JSON.stringify(g))}
+function _loadGroupMap(){try{return JSON.parse(localStorage.getItem(_GRP_MAP_KEY)||'{}')}catch{return{}}}
+function _saveGroupMap(m){localStorage.setItem(_GRP_MAP_KEY,JSON.stringify(m))}
+function _grpId(){return'grp_'+Math.random().toString(36).slice(2,9)}
+
+function criarGrupo(reviewIdParaMover){
+  _closeCtx();
+  const nome=prompt('Nome do grupo:','');
+  if(!nome||!nome.trim())return;
+  const grupos=_loadGroups();
+  const novo={id:_grpId(),nome:nome.trim(),collapsed:false};
+  grupos.push(novo);
+  _saveGroups(grupos);
+  if(reviewIdParaMover){
+    const map=_loadGroupMap();
+    map[reviewIdParaMover]=novo.id;
+    _saveGroupMap(map);
+  }
+  mostrarToast(`Grupo "${novo.nome}" criado.`,'success','📁');
+  renderConversationList();
+}
+function renomearGrupo(gid){
+  _closeCtx();
+  const grupos=_loadGroups();
+  const g=grupos.find(x=>x.id===gid);if(!g)return;
+  const novo=prompt('Novo nome do grupo:',g.nome);
+  if(!novo||!novo.trim())return;
+  g.nome=novo.trim();
+  _saveGroups(grupos);
+  renderConversationList();
+}
+function excluirGrupo(gid){
+  _closeCtx();
+  const grupos=_loadGroups();
+  const g=grupos.find(x=>x.id===gid);if(!g)return;
+  if(!confirm(`Excluir o grupo "${g.nome}"?\nAs revisões do grupo voltam para "Sem grupo".`))return;
+  _saveGroups(grupos.filter(x=>x.id!==gid));
+  const map=_loadGroupMap();
+  Object.keys(map).forEach(rid=>{if(map[rid]===gid)delete map[rid]});
+  _saveGroupMap(map);
+  mostrarToast(`Grupo "${g.nome}" removido.`,'success','✓');
+  renderConversationList();
+}
+function moverParaGrupo(reviewId,groupId){
+  _closeCtx();
+  const map=_loadGroupMap();
+  if(groupId===null){delete map[reviewId]}else{map[reviewId]=groupId}
+  _saveGroupMap(map);
+  renderConversationList();
+}
+function toggleGrupo(gid){
+  const grupos=_loadGroups();
+  const g=grupos.find(x=>x.id===gid);if(g)g.collapsed=!g.collapsed;
+  _saveGroups(grupos);
+  renderConversationList();
+}
+
+// ── View toggle ───────────────────────────────────────────────
 let _showAllReviews=false;
 function toggleVerTodas(){
   _showAllReviews=!_showAllReviews;
   const lbl=document.getElementById('recentesLabel');
-  if(lbl)lbl.textContent=_showAllReviews?'Todas as revisões':'Recentes';
+  if(lbl)lbl.firstChild.textContent=_showAllReviews?'Todas as revisões':'Recentes';
   const btnTodas=document.getElementById('btnVerTodas');
   if(btnTodas)btnTodas.style.fontWeight=_showAllReviews?'800':'500';
   renderConversationList();
 }
-function _renderConvItem(r){
+
+// ── Render helpers ────────────────────────────────────────────
+const _SVG_PENCIL=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+const _SVG_FOLDER=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+const _SVG_TRASH=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+const _SVG_MOVE=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>`;
+
+function _renderConvItem(r,inGroup=false){
   const ativo=String(r.id)===String(reviewAtivaId);
   const titulo=_esc(r.titulo||r.tema||'Revisão sem título');
-  return `<div class="conversation-item ${ativo?'active':''}" style="position:relative">
+  return `<div class="conversation-item${ativo?' active':''}">
     <span class="conv-item-label" onclick="selecionarRevisaoAtiva('${_esc(r.id)}')">${titulo}</span>
     <button class="conv-item-menu" title="Opções" onclick="_abrirMenuRevisao(event,'${_esc(r.id)}','${titulo}')">⋯</button>
   </div>`;
 }
+function _renderGroupSection(g,items){
+  const isOpen=!g.collapsed;
+  const count=items.length;
+  return `<div class="drawer-group" data-gid="${_esc(g.id)}">
+    <div class="drawer-group-head${isOpen?' open':''}" onclick="toggleGrupo('${_esc(g.id)}')">
+      <span class="drawer-group-arrow">›</span>
+      <span class="drawer-group-icon">📁</span>
+      <span class="drawer-group-name">${_esc(g.nome)}</span>
+      <span class="drawer-group-count">${count}</span>
+      <button class="drawer-group-menu" title="Opções do grupo" onclick="_abrirMenuGrupo(event,'${_esc(g.id)}')">⋯</button>
+    </div>
+    <div class="drawer-group-items">
+      ${items.length?items.map(r=>_renderConvItem(r,true)).join(''):'<div style="padding:5px 10px;font-size:11.5px;color:var(--t3)">Vazio</div>'}
+    </div>
+  </div>`;
+}
+
 function renderConversationList(){
   const box=document.getElementById('reviewConversationList');if(!box)return;
   const btnMais=document.getElementById('btnVerMaisRecentes');
+  const MAX_RECENT=5;
+
   if(!reviewCache.length){
     box.innerHTML='<div style="padding:6px 10px;font-size:12px;color:var(--t3)">Nenhuma revisão ainda.</div>';
     if(btnMais)btnMais.style.display='none';
     return;
   }
-  const MAX_RECENT=5;
-  const lista=_showAllReviews?reviewCache:reviewCache.slice(0,MAX_RECENT);
-  box.innerHTML=lista.map(_renderConvItem).join('');
-  if(btnMais){
-    const temMais=!_showAllReviews&&reviewCache.length>MAX_RECENT;
-    btnMais.style.display=temMais?'block':'none';
-    btnMais.textContent=`Ver todas (${reviewCache.length}) →`;
+
+  const grupos=_loadGroups();
+  const map=_loadGroupMap();
+
+  // Flat list mode (Recentes / Todas)
+  if(!grupos.length){
+    const lista=_showAllReviews?reviewCache:reviewCache.slice(0,MAX_RECENT);
+    box.innerHTML=lista.map(r=>_renderConvItem(r)).join('');
+    if(btnMais){
+      const temMais=!_showAllReviews&&reviewCache.length>MAX_RECENT;
+      btnMais.style.display=temMais?'block':'none';
+      btnMais.textContent=`Ver todas (${reviewCache.length}) →`;
+    }
+    return;
   }
+
+  // Grouped mode — always show all when groups exist
+  if(btnMais)btnMais.style.display='none';
+  const html=[];
+
+  // Each group
+  grupos.forEach(g=>{
+    const items=reviewCache.filter(r=>map[String(r.id)]===g.id);
+    html.push(_renderGroupSection(g,items));
+  });
+
+  // "Sem grupo" — reviews not assigned to any group
+  const semGrupo=reviewCache.filter(r=>!map[String(r.id)]);
+  if(semGrupo.length||grupos.length){
+    if(semGrupo.length){
+      html.push(`<div class="drawer-no-group-label">Sem grupo</div>`);
+      html.push(semGrupo.map(r=>_renderConvItem(r)).join(''));
+    }
+  }
+
+  box.innerHTML=html.join('');
 }
-// ── Context menu for review items ───────────────────────────
+
+// ── Close all context menus ───────────────────────────────────
+function _closeCtx(){document.querySelectorAll('.rev-ctx-dropdown,.rev-ctx-sub').forEach(el=>el.remove())}
+
+// ── Review item context menu ──────────────────────────────────
 function _abrirMenuRevisao(evt,id,titulo){
   evt.stopPropagation();
-  document.querySelectorAll('.rev-ctx-dropdown').forEach(el=>el.remove());
+  _closeCtx();
+  const grupos=_loadGroups();
+  const map=_loadGroupMap();
+  const grupoAtual=map[String(id)]||null;
+  const dropdown=document.createElement('div');
+  dropdown.className='rev-ctx-dropdown';
+
+  // Build group submenu reference
+  const temGrupos=grupos.length>0;
+  const hasGrupo=!!grupoAtual;
+
+  dropdown.innerHTML=`
+    <button class="rev-ctx-item" onclick="_renomearRevisao('${_esc(id)}')">
+      ${_SVG_PENCIL} Renomear
+    </button>
+    <button class="rev-ctx-item${temGrupos||true?' has-sub':''}" id="_ctxMoverBtn" onmouseenter="_mostrarSubGrupos(event,'${_esc(id)}')">
+      ${_SVG_MOVE} Mover para grupo
+    </button>
+    <button class="rev-ctx-item" onclick="criarGrupo('${_esc(id)}')">
+      ${_SVG_FOLDER} Criar novo grupo
+    </button>
+    ${hasGrupo?`<button class="rev-ctx-item" onclick="moverParaGrupo('${_esc(id)}',null)">${_SVG_FOLDER} Remover do grupo</button>`:''}
+    <div class="rev-ctx-sep"></div>
+    <button class="rev-ctx-item danger" onclick="_excluirRevisao('${_esc(id)}','${_esc(titulo)}')">
+      ${_SVG_TRASH} Excluir revisão
+    </button>`;
+
+  const btn=evt.currentTarget;
+  const rect=btn.getBoundingClientRect();
+  _posicionarDropdown(dropdown,rect);
+  document.body.appendChild(dropdown);
+  const close=e=>{if(!dropdown.contains(e.target)&&!document.querySelector('.rev-ctx-sub')?.contains(e.target)){_closeCtx();document.removeEventListener('click',close,true)}};
+  setTimeout(()=>document.addEventListener('click',close,true),10);
+}
+
+function _mostrarSubGrupos(evt,reviewId){
+  document.querySelectorAll('.rev-ctx-sub').forEach(el=>el.remove());
+  const grupos=_loadGroups();
+  if(!grupos.length){
+    const sub=document.createElement('div');
+    sub.className='rev-ctx-sub';
+    sub.innerHTML=`<div style="padding:8px 12px;font-size:12px;color:var(--t3)">Nenhum grupo criado ainda.<br>Use "Criar novo grupo".</div>`;
+    _posicionarSubDropdown(sub,evt.currentTarget.getBoundingClientRect());
+    document.body.appendChild(sub);
+    return;
+  }
+  const sub=document.createElement('div');
+  sub.className='rev-ctx-sub';
+  sub.innerHTML=`<div class="rev-ctx-label">Mover para</div>`
+    +grupos.map(g=>`<button class="rev-ctx-item" onclick="moverParaGrupo('${_esc(reviewId)}','${_esc(g.id)}')">📁 ${_esc(g.nome)}</button>`).join('');
+  _posicionarSubDropdown(sub,evt.currentTarget.getBoundingClientRect());
+  document.body.appendChild(sub);
+}
+
+// ── Group context menu ────────────────────────────────────────
+function _abrirMenuGrupo(evt,gid){
+  evt.stopPropagation();
+  _closeCtx();
   const dropdown=document.createElement('div');
   dropdown.className='rev-ctx-dropdown';
   dropdown.innerHTML=`
-    <button class="rev-ctx-item" onclick="_renomearRevisao('${_esc(id)}')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      Renomear
-    </button>
-    <button class="rev-ctx-item" onclick="_criarGrupoRevisao('${_esc(id)}')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-      Criar grupo
-    </button>
+    <button class="rev-ctx-item" onclick="renomearGrupo('${_esc(gid)}')">${_SVG_PENCIL} Renomear grupo</button>
     <div class="rev-ctx-sep"></div>
-    <button class="rev-ctx-item danger" onclick="_excluirRevisao('${_esc(id)}','${_esc(titulo)}')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-      Excluir revisão
-    </button>`;
+    <button class="rev-ctx-item danger" onclick="excluirGrupo('${_esc(gid)}')">${_SVG_TRASH} Excluir grupo</button>`;
   const btn=evt.currentTarget;
   const rect=btn.getBoundingClientRect();
-  dropdown.style.cssText=`position:fixed;top:${rect.bottom+4}px;left:${Math.min(rect.left,window.innerWidth-200)}px`;
+  _posicionarDropdown(dropdown,rect);
   document.body.appendChild(dropdown);
-  const close=e=>{if(!dropdown.contains(e.target)){dropdown.remove();document.removeEventListener('click',close,true)}};
+  const close=e=>{if(!dropdown.contains(e.target)){_closeCtx();document.removeEventListener('click',close,true)}};
   setTimeout(()=>document.addEventListener('click',close,true),10);
 }
+
+// ── Positioning helpers ───────────────────────────────────────
+function _posicionarDropdown(el,rect){
+  el.style.cssText=`top:${rect.bottom+4}px;left:${Math.min(rect.left,window.innerWidth-210)}px`;
+}
+function _posicionarSubDropdown(el,rect){
+  el.style.cssText=`top:${rect.top}px;left:${rect.right+4}px`;
+  document.body.appendChild(el);
+  // If sub goes off-screen to the right, flip left
+  setTimeout(()=>{
+    if(el.getBoundingClientRect().right>window.innerWidth-8){
+      el.style.left=`${rect.left-el.offsetWidth-4}px`;
+    }
+  },0);
+}
+
+// ── API actions ───────────────────────────────────────────────
 async function _renomearRevisao(id){
-  document.querySelectorAll('.rev-ctx-dropdown').forEach(el=>el.remove());
+  _closeCtx();
   const r=reviewCache.find(x=>String(x.id)===String(id));
   const novoTitulo=prompt('Novo nome para a revisão:',r?.titulo||r?.tema||'');
   if(!novoTitulo||!novoTitulo.trim())return;
@@ -1900,11 +2125,13 @@ async function _renomearRevisao(id){
   }
 }
 async function _excluirRevisao(id,titulo){
-  document.querySelectorAll('.rev-ctx-dropdown').forEach(el=>el.remove());
+  _closeCtx();
   if(!confirm(`Excluir "${titulo}"? Esta ação não pode ser desfeita.`))return;
   try{
     const res=await reviewFetch(`/revisoes/${id}`,{method:'DELETE'});
     if(!res.ok&&res.status!==404)throw new Error(`HTTP ${res.status}`);
+    // Remove from group map
+    const map=_loadGroupMap();delete map[String(id)];_saveGroupMap(map);
     mostrarToast('Revisão excluída.','success','✓');
     if(String(id)===String(reviewAtivaId)){reviewAtivaId=null;_saveReviewWorkspace()}
     await carregarRevisoes({autoSelect:reviewAtivaId==null,loadActive:false,resetCorpus:false});
@@ -1912,10 +2139,6 @@ async function _excluirRevisao(id,titulo){
     mostrarToast('Não foi possível excluir agora.','error','⚠️');
     console.warn('[CaseOS] excluir:',err);
   }
-}
-function _criarGrupoRevisao(id){
-  document.querySelectorAll('.rev-ctx-dropdown').forEach(el=>el.remove());
-  mostrarToast('Grupos de revisão em breve! 📂','info','📂');
 }
 function renderReviewSections(){
   const grid=document.getElementById('reviewSectionGrid');if(!grid)return;
