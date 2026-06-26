@@ -18,7 +18,8 @@
     { "source": "/login",          "destination": "/login.html" },
     { "source": "/review-studio",  "destination": "/review-studio.html" },
     { "source": "/termos",         "destination": "/termos.html" },
-    { "source": "/privacidade",    "destination": "/privacidade.html" }
+    { "source": "/privacidade",    "destination": "/privacidade.html" },
+    { "source": "/precos",         "destination": "/precos.html" }
   ],
   "ignoreCommand": "echo skip",
   "buildCommand": "echo 'Static site — no build needed'",

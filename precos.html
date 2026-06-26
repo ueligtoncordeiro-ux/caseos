@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Preços — neuraxIA CaseOS</title>
+  <meta name="description" content="Planos CaseOS para relatos de caso e revisões de literatura. Comece grátis. Escale quando publicar mais." />
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0A0A0B">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --acid:    #C8FF00;
+      --obsidian:#0A0A0B;
+      --slate:   #1C1C1E;
+      --white:   #FFFFFF;
+      --light:   #F7F7F5;
+      --border:  #E9E9E7;
+      --t1:      #0A0A0B;
+      --t2:      #555553;
+      --t3:      #9B9B98;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--white);
+      color: var(--obsidian);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { text-decoration: none; color: inherit; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── NAV ── */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      transition: background .3s, box-shadow .3s, border-color .3s;
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 60px; max-width: 1200px; margin: 0 auto;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-wordmark { line-height: 1.1; }
+    .logo-top { font-family: 'Space Grotesk', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .1em; }
+    .logo-bottom { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 800; letter-spacing: -.01em; }
+    .clr-gray { color: var(--t3); }
+    .clr-acid { color: var(--acid); }
+    .clr-dark { color: var(--obsidian); }
+    .nav-links { display: flex; align-items: center; gap: 28px; }
+    .nav-links a { font-size: 14px; font-weight: 500; color: var(--t2); transition: color .15s; }
+    .nav-links a:hover { color: var(--obsidian); }
+    .nav-cta { display: flex; align-items: center; gap: 10px; }
+    .btn-ghost { font-size: 14px; font-weight: 600; padding: 8px 16px; border-radius: 10px; border: 1.5px solid var(--border); color: var(--t1); background: transparent; transition: all .15s; cursor: pointer; }
+    .btn-ghost:hover { border-color: var(--obsidian); color: var(--obsidian); }
+    .btn-dark { font-size: 14px; font-weight: 700; padding: 8px 18px; border-radius: 10px; background: var(--obsidian); color: var(--white); border: none; cursor: pointer; transition: background .15s; }
+    .btn-dark:hover { background: #2A2A2E; }
+
+    /* NAV transparent over dark hero */
+    .nav:not(.scrolled) {
+      background: rgba(9,9,11,.55) !important;
+      backdrop-filter: blur(10px) !important;
+      border-bottom-color: rgba(255,255,255,.06) !important;
+      box-shadow: none !important;
+    }
+    .nav:not(.scrolled) .nav-links a { color: rgba(255,255,255,.72); }
+    .nav:not(.scrolled) .btn-ghost { color: rgba(255,255,255,.72); border-color: rgba(255,255,255,.18); background: transparent; }
+    .nav:not(.scrolled) .btn-dark { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.18); }
+    .nav:not(.scrolled) .clr-dark { color: #fff; }
+    .nav:not(.scrolled) .clr-gray { color: rgba(255,255,255,.5); }
+    .nav.scrolled {
+      background: rgba(255,255,255,.92) !important;
+      backdrop-filter: blur(14px) !important;
+      border-bottom: 1px solid rgba(0,0,0,.06) !important;
+      box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04) !important;
+    }
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+    }
+
+    /* ── HERO ── */
+    .hero {
+      background: var(--obsidian);
+      padding: 140px 24px 90px;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      display: inline-block;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12px; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--acid);
+      background: rgba(200,255,0,.1);
+      border: 1px solid rgba(200,255,0,.2);
+      border-radius: 99px; padding: 5px 14px; margin-bottom: 24px;
+    }
+    .hero-h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(36px, 6vw, 62px);
+      font-weight: 800; letter-spacing: -.035em; line-height: 1.05;
+      color: var(--white); margin-bottom: 20px;
+    }
+    .hero-h1 em { font-style: normal; color: var(--acid); }
+    .hero-sub {
+      font-size: 17px; color: rgba(255,255,255,.55);
+      max-width: 520px; margin: 0 auto 16px; line-height: 1.65;
+    }
+    .hero-note {
+      font-size: 13px; color: rgba(255,255,255,.3); margin-top: 10px;
+    }
+
+    /* ── BILLING TOGGLE ── */
+    .billing-toggle {
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px; margin: 32px 0 0;
+    }
+    .toggle-label { font-size: 14px; font-weight: 500; color: rgba(255,255,255,.55); }
+    .toggle-wrap {
+      display: flex; align-items: center;
+      background: rgba(255,255,255,.08); border-radius: 99px; padding: 4px;
+      gap: 2px;
+    }
+    .toggle-opt {
+      font-size: 13px; font-weight: 600; padding: 6px 16px; border-radius: 99px;
+      cursor: pointer; color: rgba(255,255,255,.5); border: none; background: transparent;
+      transition: all .2s;
+    }
+    .toggle-opt.active {
+      background: var(--acid); color: var(--obsidian);
+    }
+    .badge-save {
+      font-size: 11px; font-weight: 700; background: rgba(200,255,0,.15);
+      color: var(--acid); border: 1px solid rgba(200,255,0,.25);
+      border-radius: 99px; padding: 2px 8px; margin-left: 4px;
+    }
+
+    /* ── PLANS ── */
+    .plans-section {
+      padding: 0 24px 80px;
+      background: var(--light);
+    }
+    .plans-grid {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 16px; padding-top: 56px;
+    }
+    @media (max-width: 960px) { .plans-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 580px) { .plans-grid { grid-template-columns: 1fr; } }
+
+    .plan-card {
+      background: #fff; border: 1.5px solid var(--border);
+      border-radius: 18px; padding: 28px 24px;
+      display: flex; flex-direction: column; gap: 0;
+      transition: transform .2s, box-shadow .2s;
+      position: relative;
+    }
+    .plan-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,.1); }
+    .plan-card.popular {
+      background: var(--obsidian);
+      border-color: var(--obsidian);
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    }
+    .popular-label {
+      position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
+      background: var(--acid); color: var(--obsidian);
+      font-size: 10.5px; font-weight: 800; letter-spacing: .06em;
+      text-transform: uppercase; padding: 4px 14px;
+      border-radius: 0 0 10px 10px;
+    }
+    .plan-tier {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--t3); margin-bottom: 10px;
+    }
+    .plan-card.popular .plan-tier { color: rgba(255,255,255,.45); }
+    .plan-price-row {
+      display: flex; align-items: baseline; gap: 3px; margin-bottom: 6px;
+    }
+    .plan-price-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 42px; font-weight: 800; letter-spacing: -.04em;
+      color: var(--obsidian);
+    }
+    .plan-card.popular .plan-price-num { color: var(--white); }
+    .plan-price-period { font-size: 14px; color: var(--t3); }
+    .plan-card.popular .plan-price-period { color: rgba(255,255,255,.4); }
+    .plan-desc {
+      font-size: 13px; color: var(--t2); line-height: 1.55; margin-bottom: 22px;
+      flex: 1;
+    }
+    .plan-card.popular .plan-desc { color: rgba(255,255,255,.55); }
+    .plan-sep { height: 1px; background: var(--border); margin-bottom: 20px; }
+    .plan-card.popular .plan-sep { background: rgba(255,255,255,.08); }
+    .plan-feats { display: flex; flex-direction: column; gap: 9px; margin-bottom: 28px; }
+    .plan-feat { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--t2); line-height: 1.45; }
+    .plan-card.popular .plan-feat { color: rgba(255,255,255,.75); }
+    .feat-ok { color: var(--acid); font-weight: 700; flex: 0 0 14px; margin-top: 1px; }
+    .feat-no { color: var(--t3); flex: 0 0 14px; margin-top: 1px; }
+    .plan-card.popular .feat-no { color: rgba(255,255,255,.2); }
+    .plan-cta {
+      display: block; text-align: center; font-size: 15px; font-weight: 700;
+      padding: 12px; border-radius: 12px; border: 2px solid var(--border);
+      color: var(--obsidian); background: var(--light);
+      transition: all .15s; cursor: pointer; margin-top: auto;
+    }
+    .plan-cta:hover { background: var(--obsidian); color: var(--white); border-color: var(--obsidian); }
+    .plan-cta.cta-primary {
+      background: var(--acid); color: var(--obsidian); border-color: var(--acid);
+    }
+    .plan-cta.cta-primary:hover { background: #b8ef00; border-color: #b8ef00; }
+    .plan-cta.cta-ghost {
+      background: rgba(255,255,255,.06); color: rgba(255,255,255,.82); border-color: rgba(255,255,255,.12);
+    }
+    .plan-cta.cta-ghost:hover { background: rgba(255,255,255,.12); }
+
+    /* ── COMPARISON TABLE ── */
+    .compare-section {
+      padding: 80px 24px;
+      background: var(--white);
+    }
+    .compare-section .container { max-width: 1000px; }
+    .section-eyebrow {
+      font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--t3); margin-bottom: 10px;
+    }
+    .section-h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(26px, 4vw, 38px); font-weight: 800;
+      letter-spacing: -.025em; line-height: 1.12; margin-bottom: 12px;
+    }
+    .section-sub { font-size: 16px; color: var(--t2); max-width: 480px; line-height: 1.6; }
+
+    .compare-table { width: 100%; border-collapse: collapse; margin-top: 48px; }
+    .compare-table th {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+      color: var(--t3); padding: 12px 16px; text-align: left; border-bottom: 2px solid var(--border);
+    }
+    .compare-table th:not(:first-child) { text-align: center; }
+    .compare-table th.th-popular { color: var(--obsidian); }
+    .compare-table td {
+      font-size: 13.5px; color: var(--t2); padding: 13px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .compare-table td:not(:first-child) { text-align: center; font-weight: 600; color: var(--t1); }
+    .compare-table td.td-pop { color: var(--obsidian); font-weight: 700; }
+    .compare-table tr:last-child td { border-bottom: 0; }
+    .compare-table .group-row td {
+      font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--t3); background: var(--light); padding: 10px 16px;
+    }
+    .check-y { color: #16A34A; font-size: 15px; }
+    .check-n { color: var(--border); font-size: 15px; }
+    .check-p { color: var(--acid); font-size: 13px; font-weight: 700; background: rgba(200,255,0,.12); padding: 2px 7px; border-radius: 5px; }
+    @media (max-width: 700px) {
+      .compare-table th:nth-child(2),
+      .compare-table td:nth-child(2) { display: none; }
+      .compare-table th:nth-child(4),
+      .compare-table td:nth-child(4) { display: none; }
+    }
+
+    /* ── FAQ ── */
+    .faq-section {
+      padding: 80px 24px;
+      background: var(--light);
+    }
+    .faq-section .container { max-width: 720px; }
+    .faq-list { margin-top: 44px; display: flex; flex-direction: column; gap: 0; }
+    .faq-item {
+      border-bottom: 1px solid var(--border); padding: 18px 0;
+    }
+    .faq-q {
+      font-size: 15px; font-weight: 600; color: var(--obsidian); cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    }
+    .faq-q .faq-icon { flex: 0 0 20px; font-size: 18px; color: var(--t3); transition: transform .2s; }
+    .faq-item.open .faq-icon { transform: rotate(45deg); color: var(--obsidian); }
+    .faq-a {
+      font-size: 14px; color: var(--t2); line-height: 1.7; max-height: 0; overflow: hidden;
+      transition: max-height .3s ease, padding .2s;
+    }
+    .faq-item.open .faq-a { max-height: 400px; padding-top: 10px; }
+
+    /* ── CTA BOTTOM ── */
+    .cta-section {
+      padding: 80px 24px;
+      background: var(--obsidian); text-align: center;
+    }
+    .cta-h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(28px, 4.5vw, 44px); font-weight: 800; letter-spacing: -.03em;
+      color: var(--white); line-height: 1.1; margin-bottom: 16px;
+    }
+    .cta-h2 em { font-style: normal; color: var(--acid); }
+    .cta-sub { font-size: 16px; color: rgba(255,255,255,.45); margin-bottom: 36px; max-width: 440px; margin-left: auto; margin-right: auto; }
+    .cta-btns { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .btn-acid { font-size: 15px; font-weight: 700; padding: 13px 28px; border-radius: 12px; background: var(--acid); color: var(--obsidian); border: none; cursor: pointer; transition: background .15s; }
+    .btn-acid:hover { background: #b8ef00; }
+    .btn-ghost-light { font-size: 15px; font-weight: 600; padding: 13px 22px; border-radius: 12px; background: rgba(255,255,255,.06); color: rgba(255,255,255,.75); border: 1px solid rgba(255,255,255,.12); cursor: pointer; transition: all .15s; }
+    .btn-ghost-light:hover { background: rgba(255,255,255,.12); }
+    .cta-note { margin-top: 20px; font-size: 13px; color: rgba(255,255,255,.25); }
+
+    /* ── FOOTER ── */
+    .footer {
+      background: var(--obsidian); border-top: 1px solid rgba(255,255,255,.06);
+      padding: 40px 24px;
+    }
+    .footer-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between; gap: 20px;
+      flex-wrap: wrap;
+    }
+    .footer-logo { display: flex; align-items: center; gap: 10px; }
+    .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+    .footer-links a { font-size: 13px; color: rgba(255,255,255,.3); transition: color .15s; }
+    .footer-links a:hover { color: rgba(255,255,255,.7); }
+    .footer-copy { font-size: 12px; color: rgba(255,255,255,.2); }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" id="mainNav">
+  <div class="nav-inner">
+    <a href="landing.html" class="logo">
+      <svg width="30" height="30" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="36" height="36" rx="10" fill="#1C1C1E"/>
+        <path d="M7 10.5C7 9.12 8.12 8 9.5 8H26.5C27.88 8 29 9.12 29 10.5V21C29 22.38 27.88 23.5 26.5 23.5H21.5L18 28.5L14.5 23.5H9.5C8.12 23.5 7 22.38 7 21V10.5Z" stroke="#C8FF00" stroke-width="1.5" fill="none"/>
+        <text x="18" y="19" text-anchor="middle" font-family="monospace" font-size="7.5" font-weight="900" fill="#C8FF00">&#8212;&lt;</text>
+      </svg>
+      <div class="logo-wordmark">
+        <div class="logo-top"><span class="clr-gray">NEURA</span><span class="clr-acid">XIA</span></div>
+        <div class="logo-bottom"><span class="clr-dark">Case</span><span class="clr-acid">OS</span></div>
+      </div>
+    </a>
+    <nav class="nav-links">
+      <a href="landing.html#features">Relatos</a>
+      <a href="https://reviewstudio.voandonaia.com" target="_blank">Review Studio</a>
+      <a href="landing.html#care">CARE</a>
+      <a href="precos.html" style="font-weight:700;">Preços</a>
+    </nav>
+    <div class="nav-cta">
+      <a href="login.html" class="btn-ghost">Entrar</a>
+      <a href="login.html" class="btn-dark">Começar grátis →</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-eyebrow">Planos &amp; Preços</div>
+    <h1 class="hero-h1">Preço justo para cada<br>fase da sua <em>carreira</em></h1>
+    <p class="hero-sub">Comece grátis. Escale quando publicar mais. Cancele quando quiser — sem surpresas na fatura.</p>
+    <p class="hero-note">✓ Sem cartão de crédito para começar &nbsp;·&nbsp; ✓ Cancele a qualquer momento &nbsp;·&nbsp; ✓ Migração de dados inclusa</p>
+
+    <div class="billing-toggle">
+      <div class="toggle-wrap">
+        <button class="toggle-opt active" id="toggleMensal" onclick="setBilling('mensal')">Mensal</button>
+        <button class="toggle-opt" id="toggleAnual" onclick="setBilling('anual')">Anual <span class="badge-save">−20%</span></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PLANS -->
+<section class="plans-section">
+  <div class="plans-grid">
+
+    <!-- Gratuito -->
+    <div class="plan-card">
+      <div class="plan-tier">Gratuito</div>
+      <div class="plan-price-row">
+        <span class="plan-price-num">R$0</span>
+        <span class="plan-price-period">/mês</span>
+      </div>
+      <p class="plan-desc">Para conhecer a plataforma e publicar o seu primeiro relato.</p>
+      <div class="plan-sep"></div>
+      <div class="plan-feats">
+        <div class="plan-feat"><span class="feat-ok">✓</span> 1 artigo completo/mês</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> 50 mil tokens de IA</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> CARE Score automático</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Busca PubMed (10 refs.)</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Exportar DOCX</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> 1 revisão no Review Studio</div>
+        <div class="plan-feat"><span class="feat-no">–</span> Agentes multi-IA</div>
+        <div class="plan-feat"><span class="feat-no">–</span> Peer review por IA</div>
+        <div class="plan-feat"><span class="feat-no">–</span> Suporte prioritário</div>
+      </div>
+      <a href="login.html" class="plan-cta">Começar grátis</a>
+    </div>
+
+    <!-- Starter -->
+    <div class="plan-card">
+      <div class="plan-tier">Starter</div>
+      <div class="plan-price-row">
+        <span class="plan-price-num" data-mensal="49" data-anual="39">R$49</span>
+        <span class="plan-price-period">/mês</span>
+      </div>
+      <p class="plan-desc">Para quem publica com regularidade e quer qualidade sem complicação.</p>
+      <div class="plan-sep"></div>
+      <div class="plan-feats">
+        <div class="plan-feat"><span class="feat-ok">✓</span> ~6 artigos completos/mês</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> 150 mil tokens de IA</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> CARE Score + auditoria</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Busca em 4 bases científicas</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Upload de imagens clínicas</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Review Studio (3 revisões)</div>
+        <div class="plan-feat"><span class="feat-no">–</span> Peer review por IA</div>
+        <div class="plan-feat"><span class="feat-no">–</span> Suporte prioritário 24h</div>
+      </div>
+      <a href="login.html" class="plan-cta">Assinar Starter →</a>
+    </div>
+
+    <!-- Pro (popular) -->
+    <div class="plan-card popular">
+      <div class="popular-label">⭐ Mais popular</div>
+      <div class="plan-tier">Pro</div>
+      <div class="plan-price-row">
+        <span class="plan-price-num" data-mensal="99" data-anual="79">R$99</span>
+        <span class="plan-price-period">/mês</span>
+      </div>
+      <p class="plan-desc">Para pesquisadores ativos que precisam de volume, qualidade e velocidade.</p>
+      <div class="plan-sep"></div>
+      <div class="plan-feats">
+        <div class="plan-feat"><span class="feat-ok">✓</span> ~12 artigos/mês</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> 300 mil tokens de IA</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Gemini 2.5 Flash · Claude · GPT-4o</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> ABNT + formatação por journal</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Review Studio ilimitado + PRISMA</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Peer review automático por IA</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Suporte prioritário</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Histórico completo de revisões</div>
+      </div>
+      <a href="login.html" class="plan-cta cta-primary">Assinar Pro →</a>
+    </div>
+
+    <!-- Institucional -->
+    <div class="plan-card">
+      <div class="plan-tier">Institucional</div>
+      <div class="plan-price-row">
+        <span class="plan-price-num" data-mensal="349" data-anual="289">R$349</span>
+        <span class="plan-price-period">/mês</span>
+      </div>
+      <p class="plan-desc">Para hospitais, faculdades e programas de residência com múltiplos usuários.</p>
+      <div class="plan-sep"></div>
+      <div class="plan-feats">
+        <div class="plan-feat"><span class="feat-ok">✓</span> ~60 artigos/mês · 1,5M tokens</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Usuários ilimitados</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Dashboard do coordenador</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Relatório de produção científica</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Alta disponibilidade</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Treinamento e onboarding</div>
+        <div class="plan-feat"><span class="feat-ok">✓</span> Suporte dedicado</div>
+      </div>
+      <a href="login.html" class="plan-cta">Assinar Institucional →</a>
+    </div>
+
+  </div>
+</section>
+
+<!-- COMPARISON TABLE -->
+<section class="compare-section">
+  <div class="container">
+    <div class="section-eyebrow">Comparativo completo</div>
+    <h2 class="section-h2">Veja o que cada plano inclui</h2>
+    <p class="section-sub">Todos os planos incluem acesso ao CaseOS (relatos) e ao Review Studio (revisões).</p>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th style="width:42%">Recurso</th>
+          <th>Gratuito</th>
+          <th>Starter</th>
+          <th class="th-popular">Pro</th>
+          <th>Institucional</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="group-row"><td colspan="5">Limites de uso</td></tr>
+        <tr>
+          <td>Artigos completos / mês</td>
+          <td>1</td><td>~6</td><td class="td-pop">~12</td><td>~60</td>
+        </tr>
+        <tr>
+          <td>Tokens de IA</td>
+          <td>50 mil</td><td>150 mil</td><td class="td-pop">300 mil</td><td>1,5 M</td>
+        </tr>
+        <tr>
+          <td>Usuários</td>
+          <td>1</td><td>1</td><td class="td-pop">1</td><td>Ilimitados</td>
+        </tr>
+
+        <tr class="group-row"><td colspan="5">CaseOS — Relatos de Caso</td></tr>
+        <tr>
+          <td>CARE Score automático</td>
+          <td><span class="check-y">✓</span></td><td><span class="check-y">✓</span></td><td class="td-pop"><span class="check-y">✓</span></td><td><span class="check-y">✓</span></td>
+        </tr>
+        <tr>
+          <td>Auditoria detalhada CARE</td>
+          <td><span class="check-n">–</span></td><td><span class="check-y">✓</span></td><td class="td-pop"><span class="check-y">✓</span></td><td><span class="check-y">✓</span></td>
+        </tr>
+        <tr>
+          <td>Busca científica (bases)</td>
+          <td>PubMed (10)</td><td>4 bases</td><td class="td-pop">4 bases · ilimitada</td><td>4 bases · ilimitada</td>
+        </tr>
+        <tr>
+          <td>Agentes multi-IA (Claude, Gemini, GPT-4o)</td>
+          <td><span class="check-n">–</span></td><td><span class="check-n">–</span></td><td class="td-pop"><span class="check-y">✓</span></td><td><span class="check-y">✓</span></td>
+        </tr>
+        <tr>
+          <td>Upload de imagens clínicas</td>
+          <td><span class="check-n">–</span></td><td><span class="check-y">✓</span></td><td class="td-pop"><span class="check-y">✓</span></td><td><span class="check-y">✓</span></td>
+        </tr>
+        <tr>
+          <td>ABNT + formatação por journal</td>
+          <td><span class="check-n">–</span></td><td><span class="check-n">–</span></td><td class="td-pop"><span class="check-y">✓</span></td><td><span class="check-y">✓</span></td>
+        </tr>
+        <tr>
+          <td>Exportar DOCX</td>
+          <td><span class="check-y">✓</span></td><td><span class="check-y">✓</span></td><td class="td-pop"><span class="check-y">✓</span></td><td><span class="check-y">✓</span></td>
+        </tr>
+        <tr>
+          <td>Peer review automático por IA</td>
+          <td><span class="check-n">–</span></td><td><span class="check-n">–</span></td><td class="td-pop"><span class="check-y">✓</span></td><td><span class="check-y">✓</span></td>
+        </tr>
+
+        <tr class="group-row"><td colspan="5">Review Studio — Revisões de Literatura</td></tr>
+        <tr>
+          <td>Revisões ativas</td>
+          <td>1</td><td>3</td><td class="td-pop">Ilimitadas</td><td>Ilimitadas</td>
+        </tr>
+        <tr>
+          <td>Fontes aprovadas por revisão</td>
+          <td>10</td><td>50</td><td class="td-pop">Ilimitadas</td><td>Ilimitadas</td>
+        </tr>
+        <tr>
+          <td>Diagrama PRISMA 2020</td>
+          <td><span class="check-y">✓</span></td><td><span class="check-y">✓</span></td><td class="td-pop"><span class="check-y">✓</span></td><td><span class="check-y">✓</span></td>
+        </tr>
+        <tr>
+          <td>Exportação DOCX da revisão</td>
+          <td><span class="check-n">–</span></td><td><span class="check-y">✓</span></td><td class="td-pop"><span class="check-y">✓</span></td><td><span class="check-y">✓</span></td>
+        </tr>
+
+        <tr class="group-row"><td colspan="5">Suporte &amp; Gestão</td></tr>
+        <tr>
+          <td>Suporte por e-mail</td>
+          <td>Comunidade</td><td><span class="check-y">✓</span></td><td class="td-pop">Prioritário</td><td>Dedicado</td>
+        </tr>
+        <tr>
+          <td>Dashboard do coordenador</td>
+          <td><span class="check-n">–</span></td><td><span class="check-n">–</span></td><td class="td-pop"><span class="check-n">–</span></td><td><span class="check-y">✓</span></td>
+        </tr>
+        <tr>
+          <td>Relatório de produção científica</td>
+          <td><span class="check-n">–</span></td><td><span class="check-n">–</span></td><td class="td-pop"><span class="check-n">–</span></td><td><span class="check-y">✓</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq-section">
+  <div class="container">
+    <div class="section-eyebrow">FAQ</div>
+    <h2 class="section-h2">Perguntas frequentes</h2>
+
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          O que são "tokens" e como funcionam?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">Tokens são a unidade de medida do uso de IA. Cada vez que você gera um texto — seção de relato, resumo, resposta no chat da revisão — a IA consome tokens. Em média, 1.000 tokens equivalem a cerca de 750 palavras. O plano Gratuito oferece 50k tokens, suficientes para 1 artigo completo por mês. Tokens não utilizados <strong>não acumulam</strong> entre meses.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Posso cancelar a qualquer momento?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">Sim. Você pode cancelar sua assinatura a qualquer momento pelo painel da conta, sem multa e sem burocracia. O acesso continua ativo até o final do período já pago. Seus dados e revisões ficam salvos por 30 dias após o cancelamento para você exportar.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          O CaseOS e o Review Studio estão incluídos no mesmo plano?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">Sim. Todos os planos — incluindo o Gratuito — dão acesso a ambos os produtos: <strong>CaseOS</strong> (relatos de caso clínico, CARE Score) e <strong>Review Studio</strong> (revisões de literatura, PRISMA 2020, busca em bases científicas). Um login, dois produtos.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Quais modelos de IA estão disponíveis?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">No plano Pro e Institucional você pode escolher entre <strong>Gemini 2.5 Flash</strong> (Google), <strong>Claude Sonnet</strong> (Anthropic) e <strong>GPT-4o</strong> (OpenAI). Nos planos Gratuito e Starter, o sistema seleciona automaticamente o melhor modelo disponível para cada tarefa.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          O plano Institucional funciona para residências médicas?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">Sim. O plano Institucional foi desenhado especialmente para programas de residência, hospitais universitários e faculdades de saúde. Inclui dashboard do coordenador, usuários ilimitados e relatório de produção científica. Entre em contato para demonstração personalizada.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Como funciona o desconto anual?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">Ao escolher o plano anual, você paga de uma vez por 12 meses com 20% de desconto em relação ao valor mensal. Por exemplo: o Pro anual sai a R$79/mês (cobrado R$948/ano), versus R$99/mês na opção mensal.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="container">
+    <h2 class="cta-h2">Comece agora.<br><em>Gratuitamente.</em></h2>
+    <p class="cta-sub">1 relato de caso completo e 1 revisão de literatura. Sem cartão de crédito.</p>
+    <div class="cta-btns">
+      <a href="login.html" class="btn-acid">Criar conta grátis →</a>
+      <a href="login.html" class="btn-ghost-light">Entrar na conta</a>
+    </div>
+    <p class="cta-note">Gemini 2.5 Flash · Claude · GPT-4o · PubMed · ABNT · CARE 2013 · PRISMA 2020</p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-logo">
+      <svg width="26" height="26" viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="10" fill="#1C1C1E"/><path d="M7 10.5C7 9.12 8.12 8 9.5 8H26.5C27.88 8 29 9.12 29 10.5V21C29 22.38 27.88 23.5 26.5 23.5H21.5L18 28.5L14.5 23.5H9.5C8.12 23.5 7 22.38 7 21V10.5Z" stroke="#C8FF00" stroke-width="1.5" fill="none"/></svg>
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:rgba(255,255,255,.7)">neuraxIA CaseOS</span>
+    </div>
+    <div class="footer-links">
+      <a href="landing.html">Home</a>
+      <a href="precos.html">Preços</a>
+      <a href="https://reviewstudio.voandonaia.com" target="_blank">Review Studio</a>
+      <a href="termos.html">Termos</a>
+      <a href="privacidade.html">Privacidade</a>
+    </div>
+    <div class="footer-copy">© 2025 neuraxIA. Todos os direitos reservados.</div>
+  </div>
+</footer>
+
+<script>
+  // Nav scroll behavior
+  const nav = document.getElementById('mainNav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 40);
+  }, { passive: true });
+
+  // Billing toggle
+  let billingMode = 'mensal';
+  function setBilling(mode) {
+    billingMode = mode;
+    document.getElementById('toggleMensal').classList.toggle('active', mode === 'mensal');
+    document.getElementById('toggleAnual').classList.toggle('active', mode === 'anual');
+    document.querySelectorAll('.plan-price-num[data-mensal]').forEach(el => {
+      const val = mode === 'anual' ? el.dataset.anual : el.dataset.mensal;
+      if (val) el.textContent = 'R$' + val;
+    });
+  }
+
+  // FAQ toggle
+  function toggleFaq(el) {
+    const item = el.closest('.faq-item');
+    const wasOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+    if (!wasOpen) item.classList.add('open');
+  }
+</script>
+</body>
+</html>
